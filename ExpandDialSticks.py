@@ -1,14 +1,5 @@
-# enable i2c using sudo raspi-config and test using sudo i2cdetect -y 1
-#sudo apt-get install -y python-smbus
-#pip3 install smbus2
-#sudo apt-get install -y mosquitto mosquitto-clients
-#test with mosquitto_sub -h localhost -t "test"
-#text with mosquitto_pub -h localhost -t "test" -m "Hello"
-#to know IP address using hostname -I
-#pip3 install paho-mqtt
 import sys
 import paho.mqtt.client as mqtt
-#import smbus2 as smbus#, smsbus2
 from smbus2 import SMBus, i2c_msg
 from bitarray import bitarray
 import time
@@ -30,7 +21,7 @@ MQTT_MISSING_KEY = "missing key"
 MQTT_UNKNOWN_CMD = "unknown command"
 MQTT_VALUE_ERROR = "json value error"
 MQTT_SUCCESS = "success"
-SMBUS_IO_ERROR = "I/Oerror"
+SMBUS_IO_ERROR = "I/O error"
 NONE_ANS = -1
 SUCCESS_ANS = 0
 DURATION_ERROR_ANS = 1
