@@ -2,7 +2,9 @@
 #include <Servo.h>
 #include <Wire.h>
 
-#define I2C_BUS 0
+#define I2C_BUS 0x13
+#define I2C_BAUDRATE 200000 //hz
+
 
 #define NO_CMD 0x0
 #define GET_CMD 0x01
@@ -21,16 +23,6 @@
 
 #define DEBUG 0
 
-/*#define DEBUG 1
-
-#ifdef DEBUG
-#define PRINT(x) Serial.print(x)
-#define PRINTLN(x) Serial.println(x)
-#else
-#define PRINT(x)
-#define PRINTLN(x)
-#endif*/
-
 // COMMUNICATION PARAMETERS
 unsigned char requestedCmd = NO_CMD;
 signed char requestAns [MAX_DIALSTICK];
@@ -48,16 +40,16 @@ bool displayMode = false;
 // JOYSTICK PARAMETERS
 const int MIN_VAL_FROM = 0;
 const int MAX_VAL_FROM = 1023;
-const int MIN_VAL_TO = -127;
+const int MIN_VAL_TO = -128;
 const int MAX_VAL_TO = 127;
 
 const int pinAxisX [MAX_DIALSTICK] = {A5, A4, A3, A2, A1, A0};
 const int pinAxisY [MAX_DIALSTICK] = {A11, A10, A9, A8, A7, A6};
 const int pinButton [MAX_DIALSTICK] = {2, 3, 4, 5, 6, 7};
-signed char xAxisValue [MAX_DIALSTICK] = {0, 0, 0, 0, 0, 0};
-signed char yAxisValue [MAX_DIALSTICK] = {0, 0, 0, 0, 0, 0};
-bool buttonValue [MAX_DIALSTICK] = {false, false, false, false, false, false};
-unsigned char selectCount [MAX_DIALSTICK] = {0, 0, 0, 0, 0, 0};
+volatile signed char xAxisValue [MAX_DIALSTICK] = {0, 0, 0, 0, 0, 0};
+volatile signed char yAxisValue [MAX_DIALSTICK] = {0, 0, 0, 0, 0, 0};
+volatile bool buttonValue [MAX_DIALSTICK] = {false, false, false, false, false, false};
+volatile unsigned char selectCount [MAX_DIALSTICK] = {0, 0, 0, 0, 0, 0};
 unsigned long DEBOUNCE_DELAY_MS = 5;
 unsigned long prevDebounceMillis [MAX_DIALSTICK] = {0, 0, 0, 0, 0, 0};
 unsigned long currentDebounceMillis [MAX_DIALSTICK] = {0, 0, 0, 0, 0, 0};
@@ -239,31 +231,7 @@ void encode5(){
    else if (result == DIR_CCW) encoderValue[5] = max(0, encoderValue[5]-1);
 }
 
-void setup() {
-
-  for (int i = 0; i < NUM_DIALSTICK; i++){
-    // JOYSTICK SETUP 
-    pinMode(pinAxisX[i], INPUT);
-    pinMode(pinAxisY[i], INPUT);
-    pinMode(pinButton[i], INPUT);
-    pinMode(pinButton[i], INPUT_PULLUP);
-  
-    // DIAL SETUP
-    pinMode(pinRotationA[i], INPUT);
-    pinMode(pinRotationA[i], INPUT_PULLUP);
-    pinMode(pinRotationB[i], INPUT);
-    pinMode(pinRotationB[i], INPUT_PULLUP);
-    
-    // ENCODER SETUP
-    pinMode(pinPositionA[i], INPUT);
-    pinMode(pinPositionA[i], INPUT_PULLUP);
-    pinMode(pinPositionB[i], INPUT);
-    pinMode(pinPositionB[i], INPUT_PULLUP);
-  
-    // ENDSTOP SETUP
-    pinMode(pinSwitch[i], INPUT);
-    pinMode(pinSwitch[i], INPUT_PULLUP);
-  }
+void attachAllInterrupts(){
   
   // INTERUPTION ATTACHMENT
   if(NUM_DIALSTICK > 0){
@@ -313,6 +281,89 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(pinPositionA[5]), encode5, CHANGE); 
     attachInterrupt(digitalPinToInterrupt(pinPositionB[5]), encode5, CHANGE);
   }
+}
+
+
+void detachAllInterrupts(){
+  
+  // INTERUPTION ATTACHMENT
+  if(NUM_DIALSTICK > 0){
+    detachInterrupt(digitalPinToInterrupt(pinRotationA[0])); 
+    detachInterrupt(digitalPinToInterrupt(pinRotationB[0]));
+  
+    detachInterrupt(digitalPinToInterrupt(pinPositionA[0])); 
+    detachInterrupt(digitalPinToInterrupt(pinPositionB[0]));
+  }
+  
+  if(NUM_DIALSTICK > 1){
+    detachInterrupt(digitalPinToInterrupt(pinRotationA[1])); 
+    detachInterrupt(digitalPinToInterrupt(pinRotationB[1]));
+  
+    detachInterrupt(digitalPinToInterrupt(pinPositionA[1])); 
+    detachInterrupt(digitalPinToInterrupt(pinPositionB[1]));
+  }
+  
+  if(NUM_DIALSTICK > 2){
+    detachInterrupt(digitalPinToInterrupt(pinRotationA[2])); 
+    detachInterrupt(digitalPinToInterrupt(pinRotationB[2]));
+  
+    detachInterrupt(digitalPinToInterrupt(pinPositionA[2])); 
+    detachInterrupt(digitalPinToInterrupt(pinPositionB[2]));
+  }
+  
+  if(NUM_DIALSTICK > 3){
+    detachInterrupt(digitalPinToInterrupt(pinRotationA[3])); 
+    detachInterrupt(digitalPinToInterrupt(pinRotationB[3]));
+  
+    detachInterrupt(digitalPinToInterrupt(pinPositionA[3])); 
+    detachInterrupt(digitalPinToInterrupt(pinPositionB[3]));
+  }
+  
+  if(NUM_DIALSTICK > 4){
+    detachInterrupt(digitalPinToInterrupt(pinRotationA[4])); 
+    detachInterrupt(digitalPinToInterrupt(pinRotationB[4]));
+  
+    detachInterrupt(digitalPinToInterrupt(pinPositionA[4])); 
+    detachInterrupt(digitalPinToInterrupt(pinPositionB[4]));
+  }
+  
+  if(NUM_DIALSTICK > 5){
+    detachInterrupt(digitalPinToInterrupt(pinRotationA[5])); 
+    detachInterrupt(digitalPinToInterrupt(pinRotationB[5]));
+  
+    detachInterrupt(digitalPinToInterrupt(pinPositionA[5])); 
+    detachInterrupt(digitalPinToInterrupt(pinPositionB[5]));
+  }
+}
+
+void setup() {
+
+  for (int i = 0; i < NUM_DIALSTICK; i++){
+    // JOYSTICK SETUP 
+    pinMode(pinAxisX[i], INPUT);
+    pinMode(pinAxisY[i], INPUT);
+    pinMode(pinButton[i], INPUT);
+    pinMode(pinButton[i], INPUT_PULLUP);
+  
+    // DIAL SETUP
+    pinMode(pinRotationA[i], INPUT);
+    pinMode(pinRotationA[i], INPUT_PULLUP);
+    pinMode(pinRotationB[i], INPUT);
+    pinMode(pinRotationB[i], INPUT_PULLUP);
+    
+    // ENCODER SETUP
+    pinMode(pinPositionA[i], INPUT);
+    pinMode(pinPositionA[i], INPUT_PULLUP);
+    pinMode(pinPositionB[i], INPUT);
+    pinMode(pinPositionB[i], INPUT_PULLUP);
+  
+    // ENDSTOP SETUP
+    pinMode(pinSwitch[i], INPUT);
+    pinMode(pinSwitch[i], INPUT_PULLUP);
+  }
+  
+  // INTERUPTION ATTACHMENT
+  attachAllInterrupts();
 
   for (int i = 0; i < NUM_DIALSTICK; i++){
     moveTo(i, RESET_POSITION, MAX_DURATION, false);
@@ -320,12 +371,13 @@ void setup() {
 
   // I2C SETUP
   Wire.begin(I2C_BUS);                // join i2c bus with address #8
+  Wire.setClock(I2C_BAUDRATE);                // join i2c bus with address #8
   Wire.onReceive(receiveEvent); // register event
   Wire.onRequest(requestEvent); // register event
   
   
   // SERIAL SETUP
-  ////Serial.begin(9600);
+  Serial.begin(9600);
   
 }
 
@@ -395,7 +447,7 @@ void loop() {
     }
   }
   
-  /*
+    
 
     // READ COMMAND FROM SERIAL
     if(Serial.available() > 0)
@@ -529,7 +581,7 @@ void loop() {
     }
     Serial.println();
   }
-  */
+  
 }
 
 /*bool reset(int id){
@@ -565,6 +617,7 @@ bool setHold(int id, bool holding){
 // function that executes whenever data is received from master
 // this function is registered as an event, see setup()
 void receiveEvent(int howMany) {
+   detachAllInterrupts();
    String str;
    if(Wire.available()){
       char cmd = Wire.read();
@@ -613,11 +666,14 @@ void receiveEvent(int howMany) {
      }
      while(Wire.available())Wire.read();
    }
+  attachAllInterrupts();
 }
 
 void requestEvent(){
   //Serial.print("requestedCmd ");
   //Serial.println(requestedCmd);
+  
+  detachAllInterrupts();
   
   if(requestedCmd == GET_CMD){
     //Serial.println(" GET CMD ANSWER SENDED");
@@ -645,4 +701,5 @@ void requestEvent(){
   else {
     //Serial.println("CANNOT SEND ANSWSER TO UNDEFINED CMD");
   }
+  attachAllInterrupts();
 }
