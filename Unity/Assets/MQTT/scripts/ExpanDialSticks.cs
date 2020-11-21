@@ -120,7 +120,7 @@ public class ExpanDialStick
 
 	public const float diameter = 4.0f;
 	public const float height = 10.0f;
-	public const float offset = 0.3f;
+	public const float offset = 0.5f;
 
 	public bool animated;
 	public GameObject gameObject;
@@ -166,7 +166,8 @@ public class ExpanDialStick
 
 		this.gameObject = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
 		this.gameObject.transform.GetComponent<MeshRenderer>().material = transparentMaterial;
-		this.gameObject.transform.position = new Vector3(i * diameter + offset, this.positionCurrent, j * diameter + offset);
+		this.gameObject.name = "ExpanDialStick (" + i + ", " + j + ")";
+		this.gameObject.transform.position = new Vector3(i * (diameter + offset), this.positionCurrent, j * (diameter + offset));
 		this.gameObject.transform.localScale = new Vector3(diameter, height / 2, diameter);
 	}
 	public void set(sbyte xAxisTarget, sbyte yAxisTarget, byte selectCountTarget, sbyte rotationTarget, sbyte positionTarget, bool reachingTarget, bool holdingTarget, float duration)
@@ -245,8 +246,10 @@ public class ExpanDialSticks : MonoBehaviour
 	public int currMillis = 0;
 	public const int nbColumns = 6;
 	public const int nbRows = 5;
-
+	public const float cameraDistanceFromMatrix = 10f;
 	public Material transparentMaterial;
+
+	private Camera mainCamera;
 
 	private MqttClient client;
 	private ExpanDialStick [,] expanDialSticks = new ExpanDialStick[nbRows, nbColumns];
@@ -259,8 +262,24 @@ public class ExpanDialSticks : MonoBehaviour
 			for (int j = 0; j < nbColumns; j++)
 				expanDialSticks[i, j] = new ExpanDialStick(i, j, transparentMaterial);
 
-		client_MqttConnect();
 
+
+		// Set camera
+		mainCamera = Camera.main;
+		mainCamera.enabled = true;
+		mainCamera.pixelRect = new Rect(0, 0, 1920, 1080);
+		Vector3 cameraPosition = new Vector3((nbRows-1) * (ExpanDialStick.diameter + ExpanDialStick.offset)/2, cameraDistanceFromMatrix, (nbColumns-1) * (ExpanDialStick.diameter + ExpanDialStick.offset)/2);
+		mainCamera.transform.position = cameraPosition;
+
+		Vector3 cameraLookAtPosition = cameraPosition - new Vector3(0f, cameraDistanceFromMatrix, 0f);
+		mainCamera.transform.LookAt(cameraLookAtPosition);
+
+		Vector3 targetOrientationPosition = new Vector3(0, cameraDistanceFromMatrix, (nbColumns - 1) * (ExpanDialStick.diameter + ExpanDialStick.offset) / 2);
+		Vector3 targetOrientationDir = targetOrientationPosition - cameraPosition;
+		float zAngle = Vector3.Angle(targetOrientationDir, Vector3.up);
+		mainCamera.transform.Rotate(0f, 0f, zAngle, Space.Self);
+
+		//client_MqttConnect();
 
 	}
 
