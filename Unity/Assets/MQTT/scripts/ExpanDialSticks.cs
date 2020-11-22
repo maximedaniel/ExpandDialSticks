@@ -8,6 +8,7 @@ using uPLibrary.Networking.M2Mqtt;
 using uPLibrary.Networking.M2Mqtt.Messages;
 using uPLibrary.Networking.M2Mqtt.Utility;
 using uPLibrary.Networking.M2Mqtt.Exceptions;
+using TMPro;
 
 using System;
 
@@ -115,7 +116,7 @@ public class SetAns
 
 }
 
-public class ExpanDialStick 
+public class ExpanDialStickModel
 {
 
 	public const float diameter = 4.0f;
@@ -150,7 +151,11 @@ public class ExpanDialStick
 	public float holdingCurrent;
 	public float holdingTarget;
 
-	public ExpanDialStick(int i, int j, Material transparentMaterial)
+	public Color colorCurrent;
+	public Color colorTarget;
+
+
+	public ExpanDialStickModel(int i, int j, Material transparentMaterial)
 	{
 		this.animated = false;
 		this.i = i;
@@ -162,6 +167,7 @@ public class ExpanDialStick
 		this.positionCurrent = this.positionTarget = 0f;
 		this.reachingCurrent = reachingTarget = 0f;
 		this.holdingCurrent = holdingTarget = 0f;
+		this.colorCurrent = colorTarget = Color.white;
 		this.duration = 0f;
 
 		this.gameObject = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -170,9 +176,35 @@ public class ExpanDialStick
 		this.gameObject.transform.position = new Vector3(i * (diameter + offset), this.positionCurrent, j * (diameter + offset));
 		this.gameObject.transform.localScale = new Vector3(diameter, height / 2, diameter);
 	}
-	public void set(sbyte xAxisTarget, sbyte yAxisTarget, byte selectCountTarget, sbyte rotationTarget, sbyte positionTarget, bool reachingTarget, bool holdingTarget, float duration)
+	public void set(Color colorTarget, sbyte xAxisTarget, sbyte yAxisTarget, byte selectCountTarget, sbyte rotationTarget, sbyte positionTarget, bool reachingTarget, bool holdingTarget, float duration)
 	{
 
+		this.colorTarget = colorTarget;
+		float xAxisTargetNormal = Mathf.InverseLerp(-128, 127, xAxisTarget);
+		this.xAxisTarget = Mathf.Lerp(-45f, 45f, xAxisTargetNormal);
+
+		float yAxisTargetNormal = Mathf.InverseLerp(-128, 127, yAxisTarget);
+		this.yAxisTarget = Mathf.Lerp(-45f, 45f, yAxisTargetNormal);
+
+		this.selectCountTarget = Mathf.InverseLerp(0, 255, selectCountTarget);
+
+		float rotationTargetNormal = Mathf.InverseLerp(-128, 127, rotationTarget);
+		this.rotationTarget = Mathf.Lerp(-360f * 8, 360f * 8, rotationTargetNormal) % 360f;
+
+		float positionTargetNormal = Mathf.InverseLerp(0, 40, positionTarget);
+		this.positionTarget = Mathf.Lerp(0f, 10f, positionTargetNormal);
+
+		this.reachingTarget = reachingTarget ? 1f : 0f;
+
+		this.holdingTarget = holdingTarget ? 1f : 0f;
+
+		this.duration = duration;
+
+		animated = true;
+	}
+
+	public void set(sbyte xAxisTarget, sbyte yAxisTarget, byte selectCountTarget, sbyte rotationTarget, sbyte positionTarget, bool reachingTarget, bool holdingTarget, float duration)
+	{
 		float xAxisTargetNormal = Mathf.InverseLerp(-128, 127, xAxisTarget);
 		this.xAxisTarget = Mathf.Lerp(-45f, 45f, xAxisTargetNormal);
 
@@ -217,7 +249,8 @@ public class ExpanDialStick
 				this.gameObject.transform.RotateAround(this.gameObject.transform.position - new Vector3(0f, height / 2, 0f), Vector3.up, (float)this.rotationCurrent);
 				this.gameObject.transform.RotateAround(this.gameObject.transform.position - new Vector3(0f, height / 2, 0f), Vector3.left, (float)this.yAxisCurrent);
 				this.gameObject.transform.RotateAround(this.gameObject.transform.position - new Vector3(0f, height / 2, 0f), Vector3.back, (float)this.xAxisCurrent);
-				this.gameObject.transform.GetComponent<MeshRenderer>().material.color = new Color(1.0f, 1.0f - this.holdingCurrent, 1.0f - this.holdingCurrent, 1.0f - this.reachingCurrent);
+
+				this.gameObject.transform.GetComponent<MeshRenderer>().material.color += (this.colorTarget - this.colorCurrent) / this.duration * Time.deltaTime;
 
 				this.duration -= Time.deltaTime;
 			} 
@@ -229,6 +262,12 @@ public class ExpanDialStick
 
 public class ExpanDialSticks : MonoBehaviour
 {
+
+	public float diameter = 4.0f;
+	public float height = 10.0f;
+	public float offset = 0.5f;
+
+
 	public const string MQTT_BAD_VALUES = "bad values";
 	public const string MQTT_WRONG_LENGTH = "wrong length";
 	public const string MQTT_MISSING_KEY = "missing key";
@@ -247,12 +286,19 @@ public class ExpanDialSticks : MonoBehaviour
 	public const int nbColumns = 6;
 	public const int nbRows = 5;
 	public const float cameraDistanceFromMatrix = 10f;
-	public Material transparentMaterial;
+
+	public GameObject expanDialStickPrefab;
+	public GUISkin guiSkin;
+	public TextMeshPro textMeshPro;
 
 	private Camera mainCamera;
 
 	private MqttClient client;
-	private ExpanDialStick [,] expanDialSticks = new ExpanDialStick[nbRows, nbColumns];
+
+	private GameObject[,] matrix = new GameObject[nbRows, nbColumns];
+
+
+	//private ExpanDialStickModel[,] expanDialSticks = new ExpanDialStickModel[nbRows, nbColumns];
 
 	// Use this for initialization
 	void Start () {
@@ -260,28 +306,87 @@ public class ExpanDialSticks : MonoBehaviour
 		// Init ExpanDialSticks Matrix
 		for (int i = 0; i < nbRows; i++)
 			for (int j = 0; j < nbColumns; j++)
-				expanDialSticks[i, j] = new ExpanDialStick(i, j, transparentMaterial);
+			{
+				matrix[i, j] = Instantiate(expanDialStickPrefab);
+				matrix[i, j].GetComponent<ExpanDialStick>().setConstants(diameter, height, offset);
+				matrix[i, j].GetComponent<ExpanDialStick>().setIndexes(i, j);
 
-
+}
 
 		// Set camera
 		mainCamera = Camera.main;
 		mainCamera.enabled = true;
 		mainCamera.pixelRect = new Rect(0, 0, 1920, 1080);
-		Vector3 cameraPosition = new Vector3((nbRows-1) * (ExpanDialStick.diameter + ExpanDialStick.offset)/2, cameraDistanceFromMatrix, (nbColumns-1) * (ExpanDialStick.diameter + ExpanDialStick.offset)/2);
+		Vector3 cameraPosition = new Vector3((nbRows - 1) * (diameter + offset) / 2, cameraDistanceFromMatrix, (nbColumns - 1) * (diameter + offset) / 2);
 		mainCamera.transform.position = cameraPosition;
 
 		Vector3 cameraLookAtPosition = cameraPosition - new Vector3(0f, cameraDistanceFromMatrix, 0f);
 		mainCamera.transform.LookAt(cameraLookAtPosition);
 
-		Vector3 targetOrientationPosition = new Vector3(0, cameraDistanceFromMatrix, (nbColumns - 1) * (ExpanDialStick.diameter + ExpanDialStick.offset) / 2);
+		Vector3 targetOrientationPosition = new Vector3(0, cameraDistanceFromMatrix, (nbColumns - 1) * (diameter + offset) / 2);
 		Vector3 targetOrientationDir = targetOrientationPosition - cameraPosition;
 		float zAngle = Vector3.Angle(targetOrientationDir, Vector3.up);
 		mainCamera.transform.Rotate(0f, 0f, zAngle, Space.Self);
 
-		//client_MqttConnect();
+		// Border Quads
+		GameObject topBorderBackground = GameObject.CreatePrimitive(PrimitiveType.Quad);
+		topBorderBackground.transform.LookAt(Vector3.down);
+		topBorderBackground.transform.position = new Vector3(-(diameter + offset), 0f, ((nbColumns - 1) * (diameter + offset) / 2));
+		GameObject topBorderText = Instantiate(topBorderBackground);
+		topBorderBackground.transform.localScale = new Vector3(diameter, nbColumns * (diameter + offset), 1f);
+		topBorderText.transform.Rotate(new Vector3(0f, 0f, 90f), Space.Self);
+		topBorderText.transform.position += new Vector3(0f, 1f, 0f);
+		TextMeshPro topBorderTmp = topBorderText.AddComponent<TextMeshPro>();
+		topBorderTmp.alignment = TextAlignmentOptions.Center;
+		topBorderTmp.fontSize = 16;
+		topBorderTmp.color = Color.black;
+		topBorderTmp.text = "A simple line of text.";
 
+		GameObject rightBorderBackground = GameObject.CreatePrimitive(PrimitiveType.Quad);
+		rightBorderBackground.transform.LookAt(Vector3.down);
+		rightBorderBackground.transform.position = new Vector3((nbRows - 1) * (diameter + offset) / 2, 0f, nbColumns * (diameter + offset));
+		rightBorderBackground.transform.Rotate(new Vector3(0f, 0f, 90f), Space.Self);
+		GameObject rightBorderText = Instantiate(rightBorderBackground);
+		rightBorderBackground.transform.localScale = new Vector3(diameter, nbRows * (diameter + offset), 1f);
+
+		GameObject bottomBorderBackground = GameObject.CreatePrimitive(PrimitiveType.Quad);
+		bottomBorderBackground.transform.LookAt(Vector3.down); ;
+		bottomBorderBackground.transform.position = new Vector3(nbRows * (diameter + offset), 0f, ((nbColumns - 1) * (diameter + offset) / 2));
+		GameObject bottomBorderText = Instantiate(bottomBorderBackground);
+		bottomBorderBackground.transform.localScale = new Vector3(diameter, nbColumns * (diameter + offset), 1f);
+
+		GameObject leftBorderBackground = GameObject.CreatePrimitive(PrimitiveType.Quad);
+		leftBorderBackground.transform.LookAt(Vector3.down);
+		leftBorderBackground.transform.position = new Vector3((nbRows - 1) * (diameter + offset) / 2, 0f, -(diameter + offset));
+		GameObject leftBorderText = Instantiate(leftBorderBackground);
+		leftBorderBackground.transform.Rotate(new Vector3(0f, 0f, -90f), Space.Self);
+		leftBorderBackground.transform.localScale = new Vector3(diameter, nbRows * (diameter + offset), 1f);
+
+		// Corner Quads
+
+		GameObject topRightCornerQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+		topRightCornerQuad.transform.localScale = new Vector3(diameter, diameter, 1f);
+		topRightCornerQuad.transform.LookAt(Vector3.down);
+		topRightCornerQuad.transform.position = new Vector3(-(diameter + offset), 0f, nbColumns * (diameter + offset));
+
+		GameObject bottomRightCornerQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+		bottomRightCornerQuad.transform.localScale = new Vector3(diameter, diameter, 1f);
+		bottomRightCornerQuad.transform.LookAt(Vector3.down);
+		bottomRightCornerQuad.transform.position = new Vector3(nbRows * (diameter + offset), 0f, nbColumns * (diameter + offset));
+
+		GameObject bottomLeftCornerQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+		bottomLeftCornerQuad.transform.localScale = new Vector3(diameter, diameter, 1f);
+		bottomLeftCornerQuad.transform.LookAt(Vector3.down);
+		bottomLeftCornerQuad.transform.position = new Vector3(nbRows * (diameter + offset), 0f, -(diameter + offset));
+
+		GameObject topLeftCornerQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+		topLeftCornerQuad.transform.localScale = new Vector3(diameter, diameter, 1f);
+		topLeftCornerQuad.transform.LookAt(Vector3.down);
+		topLeftCornerQuad.transform.position = new Vector3(-(diameter + offset), 0f, -(diameter + offset));
+
+		//client_MqttConnect();
 	}
+
 
 	void client_MqttConnect()
 	{
@@ -344,7 +449,7 @@ public class ExpanDialSticks : MonoBehaviour
 				{
 					for (int j = 0; j < nbColumns; j++)
 					{
-						expanDialSticks[i, j].set(
+						matrix[i, j].GetComponent<ExpanDialStick>().setStateTarget(
 							 gans.ANS.content.xAxisValue[i * nbColumns + j], // xAxisValue (-128, 127)
 							 gans.ANS.content.yAxisValue[i * nbColumns + j], // yAxisValue (-128, 127)
 							 gans.ANS.content.selectCountValue[i * nbColumns + j],  // selectCountValue (0, 255)
@@ -354,7 +459,7 @@ public class ExpanDialSticks : MonoBehaviour
 							 (bool)(gans.ANS.content.holdingValue[i * nbColumns + j] == 1 ? true : false), // holdingValue (0, 1)
 							 MQTT_INTERVAL
 							 );
-
+						
 					}
 
 				}
@@ -470,6 +575,7 @@ public class ExpanDialSticks : MonoBehaviour
 
 	void OnGUI()
 	{
+		GUI.skin = guiSkin;
 		if (GUI.Button(new Rect(20, 40, 80, 20), "RESET"))
 		{
 			this.publishSetRequest();
@@ -478,13 +584,5 @@ public class ExpanDialSticks : MonoBehaviour
 
 	// Update is called once per frame
 	void Update () {
-		for (int i = 0; i < nbRows; i++)
-		{
-			for (int j = 0; j < nbColumns; j++)
-			{
-				expanDialSticks[i, j].animate();
-			}
-
-		}
 	}
 }
