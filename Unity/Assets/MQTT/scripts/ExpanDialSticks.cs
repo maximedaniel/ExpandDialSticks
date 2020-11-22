@@ -308,6 +308,7 @@ public class ExpanDialSticks : MonoBehaviour
 			for (int j = 0; j < nbColumns; j++)
 			{
 				matrix[i, j] = Instantiate(expanDialStickPrefab);
+				matrix[i, j].transform.parent = this.transform;
 				matrix[i, j].GetComponent<ExpanDialStick>().setConstants(diameter, height, offset);
 				matrix[i, j].GetComponent<ExpanDialStick>().setIndexes(i, j);
 

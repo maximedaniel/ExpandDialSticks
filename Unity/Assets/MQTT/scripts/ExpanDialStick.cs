@@ -4,12 +4,12 @@ using UnityEngine;
 
 public class ExpanDialStick : MonoBehaviour
 {
-	public float diameter = 4.0f;
-	public float height = 10.0f;
-	public float offset = 0.5f;
+	private float diameter = 4.0f;
+	private float height = 10.0f;
+	private float offset = 0.5f;
 
-	public int i = 0;
-	public int j = 0;
+	private int i = 0;
+	private int j = 0;
 
 	private float xAxisCurrent = 0f;
 	private float xAxisTarget = 0f;
