@@ -66,7 +66,7 @@ def on_message(client, userdata, msg):
         try: 
             msg_dict = json.loads(msg.payload.decode("utf-8"))
             
-            if 'ANS' not in msg_dict:
+            if request == {} and 'ANS' not in msg_dict:
                 
                     if 'GET' not in msg_dict and 'SET' not in msg_dict:
                             client.publish(MQTT_TOPIC, json.dumps({'ANS':{'status':MQTT_UNKNOWN_CMD, 'content':{}}}))
@@ -110,58 +110,6 @@ status = 0
 with SMBus(1) as bus:
     # READ
     while True :
-        # currMillis = int(round(time.time() * 1000))
-        # if(currMillis - prevMillis > I2C_DELAY_MILLIS):
-             # prevMillis = currMillis
-             # status = MQTT_SUCCESS
-             # for i, slaveAddress in enumerate(I2C_SLAVE_ADDRESS):
-                # try : 
-                    # write = i2c_msg.write(slaveAddress, [GET_CMD])
-                    # read = i2c_msg.read(slaveAddress, BUFFER_SIZE)
-                    # bus.i2c_rdwr(write, read)
-                    
-                    # k = 0
-                    # # X Axis Bytes
-                    # for j in range(MAX_DIALSTICK):
-                        # state['xAxisValue'][i*MAX_DIALSTICK + j] = int.from_bytes(read.buf[k], signed= 'true', byteorder='big')
-                        # k+=1
-                    
-                    # # Y Axis Bytes
-                    # for j in range(MAX_DIALSTICK):
-                        # state['yAxisValue'][i*MAX_DIALSTICK + j] = int.from_bytes(read.buf[k], signed= 'true', byteorder='big')
-                        # k+=1
-                    
-                    # # Select Count Bytes
-                    # for j in range(MAX_DIALSTICK):
-                        # state['selectCountValue'][i*MAX_DIALSTICK + j] = int.from_bytes(read.buf[k], signed= 'false', byteorder='big')
-                        # k+=1
-                    
-                    # # Rotation Bytes
-                    # for j in range(MAX_DIALSTICK):
-                        # state['rotationValue'][i*MAX_DIALSTICK + j] = int.from_bytes(read.buf[k], signed= 'true', byteorder='big')
-                        # k+=1
-                        
-                    # # Position Bytes
-                    # for j in range(MAX_DIALSTICK):
-                        # state['positionValue'][i*MAX_DIALSTICK + j] = int.from_bytes(read.buf[k], signed= 'true', byteorder='big')
-                        # k+=1
-                        
-                    # # Reaching Byte
-                    # reachingByte = read.buf[k][0]
-                    # k+=1
-                    # for j in range (MAX_DIALSTICK):
-                        # state['reachingValue'][i*MAX_DIALSTICK + j] = int(bool(reachingByte & (1 << (7- j))))
-                    
-                    # # Holding Byte
-                    # holdingByte = read.buf[k][0]
-                    # k+=1
-                    # for j in range (MAX_DIALSTICK):
-                        # state['holdingValue'][i*MAX_DIALSTICK + j] = int(bool(holdingByte & (1 << (7- j))))
-                    
-                        
-                # except OSError as err:
-                    # #print(slaveAddress, err)
-                    # status = SMBUS_IO_ERROR
         if 'GET' in request:
             status = MQTT_SUCCESS
             for i, slaveAddress in enumerate(I2C_SLAVE_ADDRESS):

@@ -278,9 +278,9 @@ public class ExpanDialSticks : MonoBehaviour
 	public IPAddress BROKER_ADDRESS = IPAddress.Parse("192.168.0.10"); // "test.mosquitto.org";
 	public int BROKER_PORT = 1883; // 8080; 
 	public string MQTT_TOPIC = "ExpanDialSticks";
-	public const float MQTT_DELAY_RECONNECT = 5f; // 0.2f;
-	public const float MQTT_DELAY_AT_START = 2f; // 0.2f;
-	public const float MQTT_INTERVAL = 0.2f; // 0.2f;
+	public float MQTT_DELAY_RECONNECT = 5f; // 0.2f;
+	public float MQTT_DELAY_AT_START = 2f; // 0.2f;
+	public float MQTT_INTERVAL = 0.2f; // 0.2f;
 	public int prevMillis = 0;
 	public int currMillis = 0;
 	public const int nbColumns = 6;
@@ -311,8 +311,7 @@ public class ExpanDialSticks : MonoBehaviour
 				matrix[i, j].transform.parent = this.transform;
 				matrix[i, j].GetComponent<ExpanDialStick>().setConstants(diameter, height, offset);
 				matrix[i, j].GetComponent<ExpanDialStick>().setIndexes(i, j);
-
-}
+			}
 
 		// Set camera
 		mainCamera = Camera.main;
@@ -536,54 +535,68 @@ public class ExpanDialSticks : MonoBehaviour
 		}
 	}
 
-
-	void publishSetRequest()
-	{
-		try {
-			int[] position = new int[nbRows * nbColumns];
-			for (int i = 0; i < position.Length; i++) position[i] = -1;
-			float[] duration = new float[nbRows * nbColumns];
-			for (int i = 0; i < duration.Length; i++) duration[i] = 1f;
-			int[] holding = new int[nbRows * nbColumns];
-			for (int i = 0; i < holding.Length; i++) holding[i] = 0;
-
-			// Create Set Request Object
-			SetRequest sreq = new SetRequest();
-
-			// Fill it
-			sreq.SET.position = position;
-			sreq.SET.duration = duration;
-			sreq.SET.holding = holding;
-
-			// Convert it to JSON String
-			string setJson = JsonUtility.ToJson(sreq);
-
-			#if DEBUG
-						Debug.Log("Sending...");
-			#endif
-
-			// Publish it
-			client.Publish(MQTT_TOPIC, System.Text.Encoding.UTF8.GetBytes(setJson), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
-
-			#if DEBUG
-						Debug.Log("Sended: " + setJson);
-			#endif
-		}
-		catch (Exception e4) {
-			Debug.LogException(e4, this);
-		}
-	}
-
 	void OnGUI()
 	{
 		GUI.skin = guiSkin;
 		if (GUI.Button(new Rect(20, 40, 80, 20), "RESET"))
 		{
-			this.publishSetRequest();
+			//this.publishSetRequest();
 		}
 	}
 
 	// Update is called once per frame
 	void Update () {
+
+		// INPUT 
+		for (int i = 0; i < nbRows; i++)
+		{
+			for(int j = 0; j < nbColumns; j++)
+			{
+				float[] events = matrix[i, j].GetComponent<ExpanDialStick>().readAndEraseStateDiffs();
+
+				// !!! CAN HANDLE THE SAME EVENT ONLY ONE TIME
+				if(events.Length > 6)
+				{
+					if (events[0] != 0f) //  X Axis events
+					{
+						Debug.Log("(" + i + ", " + j + ") X Axis Event.");
+					}
+
+					if (events[1] != 0f) //  Y Axis events
+					{
+						Debug.Log("(" + i + ", " + j + ") Y Axis Event.");
+					}
+
+					if (events[2] != 0f) // Select events
+					{
+						Debug.Log("(" + i + ", " + j + ") Select Event.");
+					}
+
+					if (events[3] != 0f) // Dial events
+					{
+						Debug.Log("(" + i + ", " + j + ") Dial Event.");
+					}
+
+					if (events[4] != 0f) // Encoder events
+					{
+						Debug.Log("(" + i + ", " + j + ") Encoder Event.");
+					}
+
+					if (events[5] != 0f) // Reaching events
+					{
+						Debug.Log("(" + i + ", " + j + ") Reaching Event.");
+					}
+
+					if (events[6] != 0f) // Holding events
+					{
+						Debug.Log("(" + i + ", " + j + ") Holding Event.");
+					}
+				}
+			}
+		}
+
+		// PROCESS
+
+		// OUTPUT
 	}
 }
