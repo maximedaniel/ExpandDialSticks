@@ -1,8 +1,15 @@
-﻿using System.Collections;
+﻿using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
+using System.Net;
+using uPLibrary.Networking.M2Mqtt;
+using uPLibrary.Networking.M2Mqtt.Messages;
+using uPLibrary.Networking.M2Mqtt.Utility;
+using uPLibrary.Networking.M2Mqtt.Exceptions;
+using TMPro;
+using System;
 
-public class ExpanDialStick : MonoBehaviour
+public class ExpanDialStickView : MonoBehaviour
 {
 	private float diameter = 4.0f;
 	private float height = 10.0f;
@@ -52,8 +59,11 @@ public class ExpanDialStick : MonoBehaviour
 	private float colorDurationDiff = 0f;
 	private float colorDurationTarget = 0f;
 
+	private string text = "";
 
 	public Material transparentMaterial;
+	
+	public TextMeshPro textMeshPro;
 
 
 	// Start is called before the first frame update
@@ -61,6 +71,19 @@ public class ExpanDialStick : MonoBehaviour
     {
 		this.transform.GetComponent<MeshRenderer>().material = transparentMaterial;
 		this.name = "ExpanDialStick (" + i + ", " + j + ")";
+		this.text = "(" + i + ", " + j + ")";
+		
+		GameObject textGameObject = new GameObject( "Text (" + i + ", " + j + ")");
+		textGameObject.transform.parent = this.transform;
+
+		TextMeshPro textMesh = textGameObject.AddComponent<TextMeshPro>();
+		textMesh.alignment = TextAlignmentOptions.Center;
+		textMesh.fontSize = 1;
+		textMesh.color = Color.black;
+		textMesh.text = this.text;
+		RectTransform textRectTransform = textGameObject.GetComponent<RectTransform>();
+		textRectTransform.position += new Vector3(0f, 1.01f, 0f);
+		textRectTransform.Rotate(90f, 0f, 0f, Space.Self);
 	}
 
 
@@ -97,9 +120,96 @@ public class ExpanDialStick : MonoBehaviour
 		this.colorDurationCurrent = this.colorDurationTarget;
 	}
 
+	public void setTargetAxisX(sbyte xAxisTarget)
+	{
+		this.xAxisTarget = xAxisTarget;
+		this.xAxisDiff += this.xAxisTarget - this.xAxisCurrent;
+	}
+	public sbyte getTargetAxisX()
+	{
+		return (sbyte)this.xAxisTarget;
+	}
+
+	public void setTargetAxisY(sbyte yAxisTarget)
+	{
+		this.yAxisTarget = yAxisTarget;
+		this.yAxisDiff += this.yAxisTarget - this.yAxisCurrent;
+	}
+	public sbyte getTargetAxisY()
+	{
+		return (sbyte)this.yAxisTarget;
+	}
+	
+
+	public void setTargetSelectCount(byte selectCountTarget)
+	{
+		this.selectCountTarget = selectCountTarget;
+		this.selectCountDiff += this.selectCountCurrent < this.selectCountTarget ? this.selectCountTarget - this.selectCountCurrent : 255 + this.selectCountTarget - this.selectCountCurrent;
+	}
+
+	public byte getTargetSelectCount()
+	{
+		return (byte)this.selectCountTarget;
+	}
+	
+	public void setTargetRotation(sbyte rotationTarget)
+	{
+		this.rotationTarget = rotationTarget;
+		this.rotationDiff += Mathf.Abs(this.rotationTarget - this.rotationCurrent) < 127 ? this.rotationTarget - this.rotationCurrent : 255 + this.rotationTarget - this.rotationCurrent;
+	}
+	public sbyte getTargetRotation()
+	{
+		return (sbyte)this.rotationTarget;
+	}
+
+	public void setTargetPosition(sbyte positionTarget)
+	{
+		this.positionTarget = positionTarget;
+		this.positionDiff += this.positionTarget - this.positionCurrent;
+	}
+	public sbyte getTargetPosition()
+	{
+		return (sbyte)this.positionTarget;
+	}
+
+	public void setTargetReaching(bool reachingTarget)
+	{		
+		this.reachingTarget = reachingTarget ? 1f : 0f;
+		this.reachingDiff += this.reachingTarget - this.reachingCurrent;
+
+	}
+	public bool getTargetReaching()
+	{
+		return (this.reachingTarget > 0f)? true: false;
+	}
 
 
-	public void setStateTarget(sbyte xAxisTarget, sbyte yAxisTarget, byte selectCountTarget, sbyte rotationTarget, sbyte positionTarget, bool reachingTarget, bool holdingTarget, float stateDuration)
+	public void setTargetHolding(bool holdingTarget)
+	{		
+		this.holdingTarget = holdingTarget ? 1f : 0f;
+		this.holdingDiff += this.holdingTarget - this.holdingCurrent;
+
+	}
+	public bool getTargetHolding()
+	{
+		return (this.holdingTarget > 0f)? true: false;
+	}
+
+
+	
+
+	public void setTargetDuration( float stateDuration)
+	{		
+		this.stateDurationTarget = stateDurationTarget;
+		this.stateDurationDiff += this.stateDurationTarget - this.stateDurationCurrent;
+	}
+
+	public float getTargetDuration()
+	{
+		return this.stateDurationTarget;
+	}
+
+	public void setStateTarget(sbyte xAxisTarget, sbyte yAxisTarget, byte selectCountTarget, sbyte rotationTarget, sbyte positionTarget, bool reachingTarget, bool holdingTarget, float stateDurationTarget)
 	{
 		this.xAxisTarget = xAxisTarget;
 		this.xAxisDiff += this.xAxisTarget - this.xAxisCurrent;
@@ -202,10 +312,8 @@ public class ExpanDialStick : MonoBehaviour
 
 	void render()
 	{
-
-
 		float positionCurrentInverseLerp = Mathf.InverseLerp(0f, 40f, this.positionCurrent);
-		float positionCurrentLerp = Mathf.InverseLerp(0f, 10f, positionCurrentInverseLerp);
+		float positionCurrentLerp = Mathf.Lerp(0f, 10f, positionCurrentInverseLerp);
 		this.transform.position = new Vector3(i * (diameter + offset), positionCurrentLerp, j * (diameter + offset));
 
 		this.transform.localScale = new Vector3(diameter, height / 2, diameter);
@@ -216,11 +324,11 @@ public class ExpanDialStick : MonoBehaviour
 		this.transform.RotateAround(this.transform.position - new Vector3(0f, height / 2, 0f), Vector3.up, rotationCurrentLerp);
 		
 		float yAxisCurrentInverseLerp = Mathf.InverseLerp(-128f, 127f, this.yAxisCurrent);
-		float yAxisCurrentLerp = Mathf.InverseLerp(-45f, 45f, yAxisCurrentInverseLerp);
+		float yAxisCurrentLerp = Mathf.Lerp(-45f, 45f, yAxisCurrentInverseLerp);
 		this.transform.RotateAround(this.transform.position - new Vector3(0f, height / 2, 0f), Vector3.left, yAxisCurrentLerp);
 		
 		float xAxisCurrentInverseLerp = Mathf.InverseLerp(-128f, 127f, this.xAxisCurrent);
-		float xAxisCurrentLerp = Mathf.InverseLerp(-45f, 45f, xAxisCurrentInverseLerp);
+		float xAxisCurrentLerp = Mathf.Lerp(-45f, 45f, xAxisCurrentInverseLerp);
 		this.transform.RotateAround(this.transform.position - new Vector3(0f, height / 2, 0f), Vector3.back, xAxisCurrentLerp);
 		
 		this.transform.GetComponent<MeshRenderer>().material.color = this.colorCurrent;
@@ -240,6 +348,7 @@ public class ExpanDialStick : MonoBehaviour
 			this.positionCurrent += (this.positionTarget - this.positionCurrent) / this.stateDurationTarget * Time.deltaTime;
 			this.reachingCurrent += (this.reachingTarget - this.reachingCurrent) / this.stateDurationTarget * Time.deltaTime;
 			this.holdingCurrent += (this.holdingTarget - this.holdingCurrent) / this.stateDurationTarget * Time.deltaTime;
+			if(this.i == 4 && this.j == 5) Debug.Log("["+ this.i + "," + this.j + "] " + this.positionCurrent);
 
 			this.stateDurationTarget -= Time.deltaTime;
 		}

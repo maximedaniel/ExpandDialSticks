@@ -2,8 +2,8 @@
 #include <Servo.h>
 #include <Wire.h>
 
-#define I2C_BUS 0x13
-#define I2C_BAUDRATE 200000 //hz
+#define I2C_BUS 0x14
+#define I2C_BAUDRATE 100000 //hz
 
 
 #define NO_CMD 0x0
@@ -371,7 +371,7 @@ void setup() {
 
   // I2C SETUP
   Wire.begin(I2C_BUS);                // join i2c bus with address #8
-  Wire.setClock(I2C_BAUDRATE);                // join i2c bus with address #8
+  Wire.setClock(I2C_BAUDRATE);       
   Wire.onReceive(receiveEvent); // register event
   Wire.onRequest(requestEvent); // register event
   
