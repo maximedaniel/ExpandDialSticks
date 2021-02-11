@@ -2,8 +2,8 @@
 #include <Servo.h>
 #include <Wire.h>
 
-#define I2C_BUS 0x14
-#define I2C_BAUDRATE 100000 //hz
+#define I2C_BUS 0x11
+#define I2C_BAUDRATE 200000 //hz
 
 
 #define NO_CMD 0x0
