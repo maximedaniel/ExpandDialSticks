@@ -730,6 +730,7 @@ public class ExpanDialSticks : MonoBehaviour
 						modelMatrix[i, j].TargetHolding,
 						modelMatrix[i, j].TargetShapeChangeDuration
 					);
+					modelMatrix[i, j].TargetShapeChangeDuration = 0f;
 				}
 			}
 			shapeChanging = true;
@@ -783,6 +784,7 @@ public class ExpanDialSticks : MonoBehaviour
 					modelMatrix[i, j].TargetText,
 					modelMatrix[i, j].TargetTextureChangeDuration
 				);
+					modelMatrix[i, j].TargetTextureChangeDuration = 0f;
 			}
 		}
 		textureChanging = true;
@@ -860,11 +862,12 @@ public class ExpanDialSticks : MonoBehaviour
 							//Debug.Log("(" + i + ", " + j + ") Dial Event.");
 						}
 
-						if (events[4] != 0f) // Position events
+						if (events[4] != 0f && !modelMatrix[i, j].CurrentHolding && !modelMatrix[i, j].CurrentReaching) // Push/Pull events
 						{
 							OnPositionChanged(this,  new ExpanDialStickEventArgs(i, j, events[4]));
 							//Debug.Log("(" + i + ", " + j + ") Encoder Event.");
 						}
+
 						if (events[2] != 0f && (events[4] == 0f || (events[4] != 0f && modelMatrix[i, j].CurrentHolding) )) // Click events
 						{
 							OnClickChanged(this,  new ExpanDialStickEventArgs(i, j, events[2]));
