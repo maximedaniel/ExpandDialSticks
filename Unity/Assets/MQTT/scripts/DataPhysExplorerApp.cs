@@ -456,8 +456,7 @@ public class DataPhysExplorerApp : MonoBehaviour
 	private void UpdateBarChartFromSelectedBar(PhysBarChartModel chart, PhysBarModel selectedBar)
 	{
 		// Mode changed
-		if(chart.Mode != selectedBar){ 
-			//if(selectedBar.)
+		if(chart.Mode != selectedBar.Mode){ 
 		}
 		DateTime xDateTimeValue = chart.Times[0];
 
@@ -487,7 +486,7 @@ public class DataPhysExplorerApp : MonoBehaviour
 				xSpace = "ESTIA1";
 				yDatum = data[xDateTimeValue.ToString( "MM")][chart.DataType];
 				label = xDateTimeValue.ToString("yyyy MMMM", en) + "\n<i>" + xSpace + "</i>\n<b>" + yDatum + "Wh</b>";
-				if(chart.MODE == TIME_MODE) xDateTimeValue = xDateTimeValue.AddMonths(1);
+				if(chart.Mode == TIME_MODE) xDateTimeValue = xDateTimeValue.AddMonths(1);
 				break;
 
 				case DAY_SCALE:
@@ -495,7 +494,7 @@ public class DataPhysExplorerApp : MonoBehaviour
 				xSpace = "ESTIA1";
 				yDatum = data[xDateTimeValue.ToString("MM dd")][chart.DataType];
 				label = xDateTimeValue.ToString("MMMM dd", en) + "\n<i>" + xSpace + "</i>\n<b>" + yDatum + "Wh</b>";
-				if(chart.MODE == TIME_MODE) xDateTimeValue = xDateTimeValue.AddDays(1);
+				if(chart.Mode == TIME_MODE) xDateTimeValue = xDateTimeValue.AddDays(1);
 				break;
 
 				case HOUR_SCALE:
@@ -503,7 +502,7 @@ public class DataPhysExplorerApp : MonoBehaviour
 				xSpace = "ESTIA1";
 				yDatum = data[xDateTimeValue.ToString("MM dd HH")][chart.DataType];
 				label = xDateTimeValue.ToString("hh:mm tt", en) + "\n<i>" + xSpace + "</i>\n <b>" + yDatum + "Wh</b>";
-				if(chart.MODE == TIME_MODE) xDateTimeValue = xDateTimeValue.AddHours(1);
+				if(chart.Mode == TIME_MODE) xDateTimeValue = xDateTimeValue.AddHours(1);
 				break;
 
 				default:
