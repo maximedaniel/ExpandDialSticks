@@ -116,7 +116,6 @@ public class DataPhysExplorerApp : MonoBehaviour
 
 
 	// Y axis
-	private int ONE_TO_ONE_SCALE = 0;
 
 	private Dictionary<string, List<int>> data;
 	
@@ -138,7 +137,6 @@ public class DataPhysExplorerApp : MonoBehaviour
 	private List<ExpanDialStickModel> errors;
 	private bool errorAnimating = false;
 	private Dictionary<ExpanDialStickModel, int> clicks;
-	private bool clickRendering = false;
 	
 
 	// Model mapping
@@ -151,8 +149,6 @@ public class DataPhysExplorerApp : MonoBehaviour
 	private ConcurrentQueue<PhysBarChartModel> renderBarCharts;
 	private ConcurrentQueue<PhysBarModel> renderBars;
 	private ConcurrentQueue<PhysBarChartModel> changeDataTypes;
-
-	private bool dialRendering = false;
 
 	private CultureInfo en = CultureInfo.CreateSpecificCulture("en-US");
 

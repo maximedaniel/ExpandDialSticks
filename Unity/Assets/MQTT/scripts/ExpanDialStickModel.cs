@@ -8,6 +8,7 @@ using TMPro;
 
 public class ExpanDialStickModel
 {
+	private const float AXIS_THRESHOLD = 10f;
 	private float diameter = 4.0f;
 	private float height = 10.0f;
 	private float offset = 0.5f;
@@ -17,10 +18,14 @@ public class ExpanDialStickModel
 
 	private float xAxisCurrent = 0f;
 	private float xAxisDiff = 0f;
+	private float xAxisRiseDiff = 0f;
+	private float xAxisFallDiff = 0f;
 	private float xAxisTarget = 0f;
 
 	private float yAxisCurrent = 0f;
 	private float yAxisDiff = 0f;
+	private float yAxisRiseDiff = 0f;
+	private float yAxisFallDiff = 0f;
 	private float yAxisTarget = 0f;
 
 	private float selectCountCurrent = 0f;	
@@ -43,6 +48,10 @@ public class ExpanDialStickModel
 	private float holdingDiff = 0f;
 	private float holdingTarget = 0f;
 
+	private float collidingCurrent = 0f;
+	private float collidingDiff = 0f;
+	private float collidingTarget = 0f;
+
 	private float shapeChangeDurationCurrent = 0f;
 	private float shapeChangeDurationDiff = 0f;
 	private float shapeChangeDurationTarget = 0f;
@@ -59,6 +68,10 @@ public class ExpanDialStickModel
 	private float textSizeDiff = 0f;
 	private float textSizeTarget = 1f;
 
+	private float textRotationCurrent = 0f;
+	private float textRotationDiff = 0f;
+	private float textRotationTarget = 0f;
+
 	private Color textColorCurrent = Color.black;
 	private Color textColorDiff = Color.white;
 	private Color textColorTarget = Color.black;
@@ -70,7 +83,14 @@ public class ExpanDialStickModel
 	private float textureChangeDurationDiff = 0f;
 	private float textureChangeDurationTarget = 0f;
 
+	private string planeTextureCurrent = "";
+	private string planeTextureTarget = "";
+	private float planeRotationTarget= 0f;
+	private float planeRotationCurrent= 0f;
+
 	private bool init = false;
+
+	private bool paused = false;
 
 
 	public Material transparentMaterial;
@@ -80,7 +100,11 @@ public class ExpanDialStickModel
 		get => this.init;
 		set => this.init = value;
 	}
-
+	public bool Paused
+	{
+		get => this.paused;
+		set => this.paused = value;
+	}
 	public int Row{
 		get => this.i;
 		set => this.i = value;
@@ -115,6 +139,8 @@ public class ExpanDialStickModel
 		get => (sbyte)this.xAxisCurrent;
 		set {
 			this.xAxisDiff += value - this.xAxisCurrent;
+			if (this.xAxisCurrent < AXIS_THRESHOLD && value > AXIS_THRESHOLD) this.xAxisRiseDiff++;
+			if (this.xAxisCurrent > AXIS_THRESHOLD && value < AXIS_THRESHOLD) this.xAxisFallDiff++;
 			this.xAxisCurrent = value;
 		}
 	}
@@ -128,6 +154,8 @@ public class ExpanDialStickModel
 		get => (sbyte)this.yAxisCurrent;
 		set {
 			this.yAxisDiff += value - this.yAxisCurrent;
+			if (this.yAxisCurrent < AXIS_THRESHOLD && value > AXIS_THRESHOLD) this.yAxisRiseDiff++;
+			if (this.yAxisCurrent > AXIS_THRESHOLD && value < AXIS_THRESHOLD) this.yAxisFallDiff++;
 			this.yAxisCurrent = value;
 		}
 	}
@@ -166,7 +194,7 @@ public class ExpanDialStickModel
 	public sbyte CurrentPosition{
 		get => (sbyte)this.positionCurrent;
 		set {
-			this.positionDiff += value - this.positionCurrent;
+			this.positionDiff += (CurrentReaching) ? 0 : value - this.positionCurrent;
 			this.positionCurrent = value;
 		}
 	}
@@ -196,6 +224,21 @@ public class ExpanDialStickModel
 			this.holdingCurrent = value ? 1f : 0f;
 		}
 	}
+	public bool TargetColliding
+	{
+		get => this.collidingTarget > 0f ? true : false;
+		set => this.collidingTarget = value ? 1f : 0f;
+	}
+
+	public bool CurrentColliding
+	{
+		get => this.collidingCurrent > 0f ? true : false;
+		set
+		{
+			this.collidingDiff += (value ? 1f : 0f) - this.collidingCurrent;
+			this.collidingCurrent = value ? 1f : 0f;
+		}
+	}
 
 	public float TargetShapeChangeDuration{
 		get => this.shapeChangeDurationTarget;
@@ -210,6 +253,26 @@ public class ExpanDialStickModel
 		}
 	}
 	// Texture Change
+
+	public string TargetPlaneTexture{
+		get => this.planeTextureTarget;
+		set => this.planeTextureTarget = value;
+	}
+	
+	public string CurrentPlaneTexture{
+		get => this.planeTextureCurrent;
+		set => this.planeTextureCurrent = value;
+	}
+
+	public float TargetPlaneRotation{
+		get => this.planeRotationTarget;
+		set => this.planeRotationTarget = value;
+	}
+	
+	public float CurrentPlaneRotation{
+		get => this.planeRotationCurrent;
+		set => this.planeRotationCurrent = value;
+	}
 
 	public TextAlignmentOptions TargetTextAlignment{
 		get => this.textAlignmentTarget;
@@ -231,6 +294,21 @@ public class ExpanDialStickModel
 		set {
 			this.textSizeDiff += value - this.textSizeCurrent;
 			this.textSizeCurrent = value;
+		}
+	}
+	public float TargetTextRotation
+	{
+		get => this.textRotationTarget;
+		set => this.textRotationTarget = value;
+	}
+
+	public float CurrentTextRotation
+	{
+		get => this.textRotationCurrent;
+		set
+		{
+			this.textRotationDiff += value - this.textRotationCurrent;
+			this.textRotationCurrent = value;
 		}
 	}
 
@@ -284,49 +362,78 @@ public class ExpanDialStickModel
 		}
 	}
 	
-	public void setShapeChangeTarget(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, float shapeChangeDuration)
+	public void setShapeChangeTarget(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, bool colliding, float shapeChangeDuration)
 	{
 		TargetAxisX = xAxis;
 		TargetAxisY = yAxis;
 		TargetSelectCount = selectCount;
 		TargetRotation = rotation;
-		TargetPosition = position;
 		TargetReaching = reaching;
 		TargetHolding = holding;
+		TargetPosition = position;
+		TargetColliding = colliding;
 		TargetShapeChangeDuration = shapeChangeDuration;
 	}
 	
-	public void setShapeChangeCurrent(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, float shapeChangeDuration)
+	public void setShapeChangeCurrent(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, bool colliding, float shapeChangeDuration)
 	{
+		
 		CurrentAxisX = xAxis;
 		CurrentAxisY = yAxis;
 		CurrentSelectCount = selectCount;
 		CurrentRotation = rotation;
-		CurrentPosition = position;
-		CurrentReaching = reaching;
 		CurrentHolding = holding;
+		TargetColliding = colliding;
+
+		if (this.reachingCurrent > 0f  && reaching == false){
+			CurrentPosition = position;
+			CurrentReaching = reaching;
+		} else {
+			CurrentReaching = reaching;
+			CurrentPosition = position;
+		}
+
 		CurrentShapeChangeDuration = shapeChangeDuration;
+		
 		if(!this.init){
 			eraseShapeDiffs();
 			this.init = !this.init;
 		}
 	}
 
-	public void setTextureChangeTarget(Color color, TextAlignmentOptions textAlignment, float textSize, Color textColor, string text, float textureChangeDuration )
+	public void setTextureChangeTarget(Color color, string textureName, float textureRotation, float textureChangeDuration )
+	{
+		TargetColor = color;
+		TargetPlaneTexture = textureName;
+		TargetPlaneRotation = textureRotation;
+		TargetTextureChangeDuration = textureChangeDuration;
+	}
+
+	public void setTextureChangeCurrent(Color color, string textureName, float textureRotation,  float textureChangeDuration )
+	{
+		CurrentColor = color;
+		CurrentPlaneTexture = textureName;
+		CurrentPlaneRotation = textureRotation;
+		CurrentTextureChangeDuration = textureChangeDuration;
+	}
+
+	public void setTextChangeTarget(Color color, TextAlignmentOptions textAlignment, float textSize, float textRotation, Color textColor, string text, float textureChangeDuration )
 	{
 		TargetColor = color;
 		TargetTextAlignment = textAlignment;
 		TargetTextSize = textSize;
+		TargetTextRotation = textRotation;
 		TargetTextColor = textColor;
 		TargetText = text;
 		TargetTextureChangeDuration = textureChangeDuration;
 	}
 
-	public void setTextureChangeCurrent(Color color, TextAlignmentOptions textAlignment, float textSize, Color textColor, string text, float textureChangeDuration )
+	public void setTextChangeCurrent(Color color, TextAlignmentOptions textAlignment, float textSize, float textRotation, Color textColor, string text, float textureChangeDuration )
 	{
 		CurrentColor = color;
 		CurrentTextAlignment = textAlignment;
 		CurrentTextSize = textSize;
+		CurrentTextRotation = textRotation;
 		CurrentTextColor = textColor;
 		CurrentText = text;
 		CurrentTextureChangeDuration = textureChangeDuration;
@@ -342,6 +449,7 @@ public class ExpanDialStickModel
 			this.positionDiff,
 			this.reachingDiff,
 			this.holdingDiff,
+			this.collidingDiff,
 			this.shapeChangeDurationDiff
 		};
 	}
@@ -364,6 +472,7 @@ public class ExpanDialStickModel
 			= this.positionDiff
 			= this.reachingDiff
 			= this.holdingDiff
+			= this.collidingDiff
 			= this.shapeChangeDurationDiff
 			= 0f;
 	}

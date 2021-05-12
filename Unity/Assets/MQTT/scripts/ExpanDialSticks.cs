@@ -23,11 +23,17 @@ public class MqttConnectionEventArgs : EventArgs
 
 public class ExpanDialStickEventArgs : EventArgs
 {
+	public DateTime t;
 	public int i, j;
+	public float prev;
+	public float next;
 	public float diff;
-	public ExpanDialStickEventArgs(int i, int j, float diff){
+	public ExpanDialStickEventArgs(DateTime t, int i, int j, float prev, float next, float diff){
+		this.t = t;
 		this.i = i;
 		this.j = j;
+		this.prev = prev;
+		this.next = next;
 		this.diff = diff;
 	}
 }
@@ -84,32 +90,6 @@ public class SetRequest
 	{
 		SET = new Content();
 	}
-
-	/*public void setPositionByteArray(int[] positionArray)
-	{
-		SET.position = new sbyte[positionArray.Length];
-		for (int i = 0; i < positionArray.Length; i++)
-		{
-			sbyte[] intBytes = Array.ConvertAll(BitConverter.GetBytes(positionArray[i]), b => unchecked((sbyte)b));
-			if (BitConverter.IsLittleEndian) Array.Reverse(intBytes);
-			SET.position[i] = intBytes[intBytes.Length - 1];
-		}
-	}
-	public void setDurationByteArray(float[] durationArray)
-	{
-		SET.duration = new byte[durationArray.Length * sizeof(float)];
-		for (int i = 0; i < durationArray.Length; i++)
-		{
-			byte[] floatBytes = BitConverter.GetBytes(durationArray[i]);
-			if (BitConverter.IsLittleEndian) Array.Reverse(floatBytes);
-			for (int j = 0; j < sizeof(float); j++) SET.duration[i * sizeof(float) + j] = floatBytes[j];
-		}
-	}
-	public void setHoldingByte(bool[] holdingArray)
-	{
-		SET.holding = 0x00;
-		for (int i = 0; i < holdingArray.Length; i++) SET.holding |= (byte)((holdingArray[i] ? 1 : 0) << (7 - i));
-	}*/
 }
 
 [Serializable]
@@ -138,12 +118,14 @@ public class SetAns
 
 public class ExpanDialSticks : MonoBehaviour
 {
-
+	public Texture buttonTexture;
 	public bool SIMULATION = true;
 	public float diameter = 4.0f;
 	public float height = 10.0f;
 	public float offset = 0.5f;
 
+
+	public const float JOYSTICK_THRESHOLD = 10f;
 
 	public const string MQTT_BAD_VALUES = "bad values";
 	public const string MQTT_WRONG_LENGTH = "wrong length";
@@ -159,12 +141,11 @@ public class ExpanDialSticks : MonoBehaviour
 	public float MQTT_DELAY_AT_START = 5f; // 0.2f;
 	public float MQTT_INTERVAL = 0.2f; // 0.2f;
 	public float EVENT_INTERVAL = 0.5f; // 0.2f;
-	public float prevEventTimeCheck = 0f;
-	public float currEventTimeCheck = 0f;
 	public const int nbColumns = 6;
 	public const int nbRows = 5;
-	public float cameraDistanceFromMatrix = 30f;
-	float xOffsetCamera = -3f; //5f
+	float cameraDistanceFromMatrix = 70f;
+
+	float borderOffset = 2.0f;
 
 	public GameObject expanDialStickPrefab;
 	public GUISkin guiSkin;
@@ -174,6 +155,7 @@ public class ExpanDialSticks : MonoBehaviour
 	private MqttClient client;
 
 	private GameObject[,] gameObjectMatrix = new GameObject[nbRows, nbColumns];
+	private ExpanDialStickCollision[,] collisionMatrix = new ExpanDialStickCollision [nbRows, nbColumns];
 	private ExpanDialStickView[,] viewMatrix = new ExpanDialStickView[nbRows, nbColumns];
 	private ExpanDialStickModel[,] modelMatrix = new ExpanDialStickModel[nbRows, nbColumns];
 	
@@ -239,7 +221,8 @@ public class ExpanDialSticks : MonoBehaviour
 	public event EventHandler<ExpanDialStickEventArgs> OnPositionChanged = (sender, e) => {};
 	public event EventHandler<ExpanDialStickEventArgs> onHoldingChanged = (sender, e) => {};
 	public event EventHandler<ExpanDialStickEventArgs> onReachingChanged = (sender, e) => {};
-	
+	public event EventHandler<ExpanDialStickEventArgs> onCollidingChanged = (sender, e) => { };
+
 	public int NbRows{
 		get => nbRows;
 	}
@@ -247,7 +230,19 @@ public class ExpanDialSticks : MonoBehaviour
 	public int NbColumns{
 		get => nbColumns;
 	}
-
+	void OnGUI()
+	{
+		if (GUI.Button(new Rect(10, 10, 50, 50), buttonTexture))
+		{
+			for (int i = 0; i < nbRows; i++)
+			{ 
+				for (int j = 0; j < nbColumns; j++)
+				{
+					collisionMatrix[i, j].EnableCollision();
+				}
+			}
+		}
+	}
 	// Use this for initialization
 	void Start () {
 		shapeChanging = textureChanging = false;
@@ -287,62 +282,75 @@ public class ExpanDialSticks : MonoBehaviour
 				viewMatrix[i, j].Height = height;
 				viewMatrix[i, j].Offset = offset;
 
+				// collision
+				collisionMatrix[i, j] = gameObjectMatrix[i, j].GetComponent<ExpanDialStickCollision>();
+				collisionMatrix[i, j].Row = i;
+				collisionMatrix[i, j].Column = j;
+				collisionMatrix[i, j].Diameter = diameter;
+				collisionMatrix[i, j].Height = height;
+				collisionMatrix[i, j].Offset = offset;
+				//collisionMatrix[i, j].EnableCollision();
 			}
 
 		// Set camera
 		mainCamera = Camera.main;
 		mainCamera.enabled = true;
 		mainCamera.pixelRect = new Rect(0, 0, 1920, 1080);
-		Vector3 cameraPosition = new Vector3((nbRows - 1) * (diameter + offset) / 2 - xOffsetCamera, cameraDistanceFromMatrix, (nbColumns - 1) * (diameter + offset) / 2);
+		// (nbRows - 1) * (diameter + offset)
+		Vector3 cameraPosition = new Vector3(-(diameter/2 + offset), cameraDistanceFromMatrix, (nbColumns - 1) * (diameter + offset) / 2);
 		mainCamera.transform.position = cameraPosition;
 
 		Vector3 cameraLookAtPosition = cameraPosition - new Vector3(0f, cameraDistanceFromMatrix, 0f);
 		mainCamera.transform.LookAt(cameraLookAtPosition);
-
-		Vector3 targetOrientationPosition = new Vector3(0, cameraDistanceFromMatrix, (nbColumns - 1) * (diameter + offset) / 2);
+		mainCamera.transform.eulerAngles += new Vector3(0f, 90f, 0f);
+		/*Vector3 targetOrientationPosition = new Vector3(0, cameraDistanceFromMatrix, (nbColumns - 1) * (diameter + offset) / 2);
 		Vector3 targetOrientationDir = targetOrientationPosition - cameraPosition;
 		float zAngle = Vector3.Angle(targetOrientationDir, Vector3.up);
 		mainCamera.transform.Rotate(0f, 0f, zAngle, Space.Self);
-		mainCamera.transform.Rotate(0f, 0f, 180f, Space.Self);
+		mainCamera.transform.Rotate(0f, 0f, 180f, Space.Self);*/
 
 		// Border Quads
-		GameObject topBorderBackground = GameObject.CreatePrimitive(PrimitiveType.Quad);
+		/*GameObject topBorderBackground = GameObject.CreatePrimitive(PrimitiveType.Quad);
 		topBorderBackground.transform.LookAt(Vector3.down);
-		topBorderBackground.transform.position = new Vector3(-(diameter + offset), height/2, ((nbColumns - 1) * (diameter + offset) / 2));
+		topBorderBackground.transform.position = new Vector3(-(diameter + offset + borderOffset/2), height/2, ((nbColumns - 1) * (diameter + offset) / 2));
 		topBorderText = Instantiate(topBorderBackground);
-		topBorderBackground.transform.localScale = new Vector3(diameter, nbColumns * (diameter + offset), 1f);
+		topBorderBackground.transform.localScale = new Vector3(diameter - borderOffset, nbColumns * (diameter + offset) + 2*offset + 1.5f*borderOffset, 1f);
 		topBorderText.transform.Rotate(new Vector3(0f, 0f, 90f), Space.Self);
 		topBorderText.transform.position += new Vector3(0f, 1f, 0f);
 
 		textMeshTop = topBorderText.AddComponent<TextMeshPro>();
+		topBorderText.GetComponent<RectTransform>().sizeDelta = new Vector2(nbColumns * diameter, diameter);
 		textMeshTop.alignment = textAlignmentTop = TextAlignmentOptions.Center;
 		textMeshTop.fontSize = textSizeTop = 16;
 		textMeshTop.color = textColorTop =  Color.black;
 		textMeshTop.text = textTop = "";
-		textRotationTop = new Vector3(90f, 0f, 0f);
+		textRotationTop = new Vector3(90f, 90f, 0f);*/
 
 		GameObject rightBorderBackground = GameObject.CreatePrimitive(PrimitiveType.Quad);
 		rightBorderBackground.transform.LookAt(Vector3.down);
-		rightBorderBackground.transform.position = new Vector3((nbRows - 1) * (diameter + offset) / 2, height/2, nbColumns * (diameter + offset));
+		rightBorderBackground.transform.position = new Vector3((nbRows - 1) * (diameter + offset) / 2, height/2, nbColumns * (diameter + offset) + borderOffset);
 		rightBorderBackground.transform.Rotate(new Vector3(0f, 0f, 90f), Space.Self);
 		rightBorderText = Instantiate(rightBorderBackground);
-		rightBorderBackground.transform.localScale = new Vector3(diameter, nbRows * (diameter + offset), 1f);
+		rightBorderBackground.transform.localScale = new Vector3((diameter + borderOffset/2), nbRows * (diameter + offset) + 2*offset + 2*borderOffset, 1f);
+		rightBorderText.transform.position += new Vector3(0f, 1f, 0f);
 		//rightBorderText.transform.Rotate(new Vector3(0f, 0f, 90f), Space.Self);
 		textMeshRight = rightBorderText.AddComponent<TextMeshPro>();
+		rightBorderText.GetComponent<RectTransform>().sizeDelta = new Vector2(nbRows * diameter, diameter);
 		textMeshRight.alignment  = textAlignmentRight = TextAlignmentOptions.Center;
 		textMeshRight.fontSize = textSizeRight = 16;
 		textMeshRight.color = textColorRight = Color.black;
 		textMeshRight.text = textRight = "";
-		textRotationRight = new Vector3(90f, 0f, 0f);
+		textRotationRight = new Vector3(90f, 180f, 0f);
 
 		GameObject bottomBorderBackground = GameObject.CreatePrimitive(PrimitiveType.Quad);
 		bottomBorderBackground.transform.LookAt(Vector3.down); ;
-		bottomBorderBackground.transform.position = new Vector3(nbRows * (diameter + offset), height/2, ((nbColumns - 1) * (diameter + offset) / 2));
+		bottomBorderBackground.transform.position = new Vector3(nbRows * (diameter + offset) + borderOffset/2, height/2, ((nbColumns - 1) * (diameter + offset) / 2));
 		bottomBorderText = Instantiate(bottomBorderBackground);
-		bottomBorderBackground.transform.localScale = new Vector3(diameter, nbColumns * (diameter + offset), 1f);
+		bottomBorderBackground.transform.localScale = new Vector3(diameter  - borderOffset, nbColumns * (diameter + offset) + 2*offset + 1.5f * borderOffset, 1f);
 		//bottomBorderText.transform.Rotate(new Vector3(0f, 0f, 90f), Space.Self);
 		bottomBorderText.transform.position += new Vector3(0f, 1f, 0f);
 		textMeshBottom = bottomBorderText.AddComponent<TextMeshPro>();
+		bottomBorderText.GetComponent<RectTransform>().sizeDelta = new Vector2(nbColumns * diameter, diameter  - borderOffset);
 		textMeshBottom.alignment = textAlignmentBottom = TextAlignmentOptions.Center;
 		textMeshBottom.fontSize = textSizeBottom = 16;
 		textMeshBottom.color = textColorBottom = Color.black;
@@ -352,12 +360,14 @@ public class ExpanDialSticks : MonoBehaviour
 
 		GameObject leftBorderBackground = GameObject.CreatePrimitive(PrimitiveType.Quad);
 		leftBorderBackground.transform.LookAt(Vector3.down);
-		leftBorderBackground.transform.position = new Vector3((nbRows - 1) * (diameter + offset) / 2, height/2, -(diameter + offset));
+		leftBorderBackground.transform.position = new Vector3((nbRows - 1) * (diameter + offset) / 2, height/2, -(diameter + offset + borderOffset));
 		leftBorderText = Instantiate(leftBorderBackground);
 		leftBorderBackground.transform.Rotate(new Vector3(0f, 0f, -90f), Space.Self);
-		leftBorderBackground.transform.localScale = new Vector3(diameter, nbRows * (diameter + offset), 1f);
+		leftBorderBackground.transform.localScale = new Vector3((diameter + borderOffset/2), nbRows * (diameter + offset) + 2*offset + 2*borderOffset, 1f);
+		leftBorderText.transform.position += new Vector3(0f, 1f, 0f);
 
 		textMeshLeft = leftBorderText.AddComponent<TextMeshPro>();
+		leftBorderText.GetComponent<RectTransform>().sizeDelta = new Vector2(nbRows * diameter, diameter);
 		textMeshLeft.alignment = textAlignmentLeft = TextAlignmentOptions.Center;
 		textMeshLeft.fontSize = textSizeLeft = 16;
 		textMeshLeft.color = textColorLeft = Color.black;
@@ -366,25 +376,27 @@ public class ExpanDialSticks : MonoBehaviour
 
 		// Corner Quads
 
-		GameObject topRightCornerQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+		/*GameObject topRightCornerQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
 		topRightCornerQuad.transform.localScale = new Vector3(diameter, diameter, 1f);
 		topRightCornerQuad.transform.LookAt(Vector3.down);
-		topRightCornerQuad.transform.position = new Vector3(-(diameter + offset), height/2, nbColumns * (diameter + offset));
+		topRightCornerQuad.transform.position = new Vector3(-(diameter + offset), height/2, nbColumns * (diameter + offset));*/
 
 		GameObject bottomRightCornerQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
-		bottomRightCornerQuad.transform.localScale = new Vector3(diameter, diameter, 1f);
+		bottomRightCornerQuad.transform.localScale = new Vector3(diameter  - borderOffset, diameter  + borderOffset/2, 1f);
 		bottomRightCornerQuad.transform.LookAt(Vector3.down);
-		bottomRightCornerQuad.transform.position = new Vector3(nbRows * (diameter + offset), height/2, nbColumns * (diameter + offset));
+		bottomRightCornerQuad.transform.position = new Vector3(nbRows * (diameter + offset) + borderOffset/2, height/2,  nbColumns * (diameter + offset) + borderOffset);
+
+
 
 		GameObject bottomLeftCornerQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
-		bottomLeftCornerQuad.transform.localScale = new Vector3(diameter, diameter, 1f);
+		bottomLeftCornerQuad.transform.localScale = new Vector3(diameter  - borderOffset, diameter  + borderOffset/2, 1f);
 		bottomLeftCornerQuad.transform.LookAt(Vector3.down);
-		bottomLeftCornerQuad.transform.position = new Vector3(nbRows * (diameter + offset), height/2, -(diameter + offset));
+		bottomLeftCornerQuad.transform.position = new Vector3(nbRows * (diameter + offset) + borderOffset/2, height/2, -(diameter + offset + borderOffset));
 
-		GameObject topLeftCornerQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+		/*GameObject topLeftCornerQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
 		topLeftCornerQuad.transform.localScale = new Vector3(diameter, diameter, 1f);
 		topLeftCornerQuad.transform.LookAt(Vector3.down);
-		topLeftCornerQuad.transform.position = new Vector3(-(diameter + offset), height/2, -(diameter + offset));
+		topLeftCornerQuad.transform.position = new Vector3(-(diameter + offset), height/2, -(diameter + offset));*/
 
 		//client_MqttConnect();
 	}
@@ -453,13 +465,23 @@ public class ExpanDialSticks : MonoBehaviour
 			GetAns gans = JsonUtility.FromJson<GetAns>(System.Text.Encoding.UTF8.GetString(e.Message));
 			if (gans.GET != null && gans.ANS.status != null)
 			{
+				// Prepare Safety Response
+
+				int[] positions = new int[nbRows * nbColumns];
+				float[] durations = new float[nbRows * nbColumns];
+				int[] holdings = new int[nbRows * nbColumns];
+				bool safe = true;
+
 				if (gans.ANS.status != MQTT_SUCCESS) Debug.LogWarning("GET -> " + gans.ANS.status);
 				else {
+					// IF PREVIOUS SHAPE FRAME HAS BEEN HANDLE THEN PROCEED WITH NEXT
 					if(shapeChanging == false){
 						for (int i = 0; i < nbRows; i++)
 						{
 							for (int j = 0; j < nbColumns; j++)
 							{
+								bool isColliding = collisionMatrix[i, j].IsColliding();
+
 								modelMatrix[i, j].setShapeChangeCurrent(
 									gans.ANS.content.xAxisValue[i * nbColumns + j], // xAxisValue (-128, 127)
 									gans.ANS.content.yAxisValue[i * nbColumns + j], // yAxisValue (-128, 127)
@@ -468,16 +490,62 @@ public class ExpanDialSticks : MonoBehaviour
 									gans.ANS.content.positionValue[i * nbColumns + j], // positionValue (0, 40)
 									(bool)(gans.ANS.content.reachingValue[i * nbColumns + j] == 1 ? true : false), // reachingValue (0, 1)
 									(bool)(gans.ANS.content.holdingValue[i * nbColumns + j] == 1 ? true : false), // holdingValue (0, 1)
+									isColliding,
 									MQTT_INTERVAL
 									);
-								
+								// doing nothing for each pin
+								positions[i * nbColumns + j] = modelMatrix[i, j].CurrentPosition;
+								holdings[i * nbColumns + j] = modelMatrix[i, j].CurrentHolding ? 1 : 0;
+								durations[i * nbColumns + j] = 0f;
+
+								if (isColliding)
+								{
+									if (modelMatrix[i, j].CurrentReaching)
+									{
+										if (!modelMatrix[i, j].Paused)
+										{
+											//Debug.Log("modelMatrix[" + i + "," + j + "] pause!");
+											modelMatrix[i, j].Paused = true;
+											positions[i * nbColumns + j] = modelMatrix[i, j].CurrentPosition;
+											holdings[i * nbColumns + j] = 0;
+											durations[i * nbColumns + j] = 0.1f;
+											safe = false;
+										} else
+										{
+											//Debug.Log("modelMatrix[" + i + "," + j + "] stopping from collision...");
+										}
+									}
+								}
+								else
+								{
+									if (!modelMatrix[i, j].CurrentReaching)
+									{
+										if (modelMatrix[i, j].Paused)
+										{
+											//Debug.Log("modelMatrix[" + i + "," + j + "] unpause!");
+											modelMatrix[i, j].Paused = false;
+											positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
+											holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
+
+											float safetySpeed = 20f; // 20 pos per sec
+											float distance = Math.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition);
+											float safetyDuration = distance / safetySpeed;
+											durations[i * nbColumns + j] = safetyDuration;
+											safe = false;
+										}
+									}
+								}
 							}
 
 						}
 						shapeChanging = true;
 					}
 				}
-				
+				// unsafety detected then command related pins to stop!
+				if (!safe)
+				{
+					publishSetRequest(positions, durations, holdings);
+				}
 				return;
 			}
 			SetAns sans = JsonUtility.FromJson<SetAns>(System.Text.Encoding.UTF8.GetString(e.Message));
@@ -549,147 +617,7 @@ public class ExpanDialSticks : MonoBehaviour
 			Debug.LogException(e3, this);
 		}
 	}
-
-	/*void OnGUI()
-	{
-		GUI.skin = guiSkin;
-		if (GUI.Button(new Rect(20, 40, 80, 20), "RESET"))
-		{
-			//this.publishSetRequest();
-		}
-	}*/
-	
-	/*public void prepareTextChange(int i, int j, TextAlignmentOptions textAlignment, float textSize, Color textColor, string text)
-	{	
-		this.textAlignments[i * nbColumns + j] = textAlignment;
-		this.textSizes[i * nbColumns + j] = textSize;
-		this.textColors[i * nbColumns + j] = textColor;
-		this.texts[i * nbColumns + j] = text;
-		this.textChanging[i * nbColumns + j]  = true;
-	}
-
-
-	public void executeTextChange()
-	{	
-		for (int i = 0; i < nbRows; i++){
-			for (int j = 0; j < nbColumns; j++){
-					if(this.textChanging[i * nbColumns + j]){
-						this.modelMatrix[i, j].setText(
-							textAlignments[i * nbColumns + j], 
-							textSizes[i * nbColumns + j], 
-							textColors[i * nbColumns + j], 
-							texts[i * nbColumns + j]
-						);
-						this.viewMatrix[i, j].setText(
-							textAlignments[i * nbColumns + j], 
-							textSizes[i * nbColumns + j], 
-							textColors[i * nbColumns + j], 
-							texts[i * nbColumns + j]
-						);
-					}
-			}
-		}
-		
-		for(int i = 0; i < nbRows * nbColumns; i++) {
-			this.textAlignments[i] = 0;
-			this.textSizes[i] = 0;
-			this.textColors[i] = new Color();
-			this.texts[i] = "";
-			this.textChanging[i]  = false;
-		}
-	}
-
-	public void prepareColorChange(int i, int j, Color color, float duration)
-	{	
-		
-		this.colors[i * nbColumns + j] = color;
-		this.colorChangeDurations[i * nbColumns + j] = duration;
-		this.colorChanging[i * nbColumns + j]  = true;
-	}
-
-	public void executeColorChange()
-	{	
-		for (int i = 0; i < nbRows; i++){
-			for (int j = 0; j < nbColumns; j++){
-					if(this.colorChanging[i * nbColumns + j]){
-						this.modelMatrix[i, j].setColorTarget(this.colors[i * nbColumns + j], this.colorChangeDurations[i * nbColumns + j]);
-						this.viewMatrix[i, j].setColorTarget(
-										this.modelMatrix[i, j].getTargetColor(),
-										this.modelMatrix[i, j].getTargetColorDuration()
-						);
-					}
-			}
-		}
-		
-		for(int i = 0; i < nbRows * nbColumns; i++) {
-			this.colors[i] = new Color();
-			this.colorChangeDurations[i] = 0f;
-			this.colorChanging[i] = false;
-		}
-	}
-	
-	public void prepareShapeChange(int i, int j, int position, int holding, float duration)
-	{
-		// publish ?
-		this.positions[i * nbColumns + j] = position;
-		this.holdings[i * nbColumns + j] = holding;
-		this.shapeChangeDurations[i * nbColumns + j] = duration;
-		this.shapeChanging[i * nbColumns + j] = true;
-	}
-	
-	public void executeShapeChange(){
-		if(SIMULATION){
-			for (int i = 0; i < nbRows; i++)
-			{
-				for(int j = 0; j < nbColumns; j++)
-				{
-					if(this.shapeChanging[i * nbColumns + j]){
-						this.modelMatrix[i, j].setStateTarget(
-							modelMatrix[i, j].getTargetAxisX(),
-							modelMatrix[i, j].getTargetAxisY(),
-							modelMatrix[i, j].getTargetSelectCount(),
-							modelMatrix[i, j].getTargetRotation(),
-							(sbyte)this.positions[i * nbColumns + j],
-							modelMatrix[i, j].getTargetReaching(),
-							this.holdings[i * nbColumns + j] > 0 ? true : false,
-							this.shapeChangeDurations[i * nbColumns + j]
-							);
-						viewMatrix[i, j].setStateTarget(
-							modelMatrix[i, j].getTargetAxisX(),
-							modelMatrix[i, j].getTargetAxisY(),
-							modelMatrix[i, j].getTargetSelectCount(),
-							modelMatrix[i, j].getTargetRotation(),
-							modelMatrix[i, j].getTargetPosition(),
-							modelMatrix[i, j].getTargetReaching(),
-							modelMatrix[i, j].getTargetHolding(),
-							modelMatrix[i, j].getTargetDuration()
-						);
-					}
-				}
-			}
-		}
-		else {
-			publishSetRequest(this.positions, this.shapeChangeDurations, this.holdings);
-		}
-
-		for(int i = 0; i < nbRows * nbColumns; i++) {
-			this.positions[i] = 0;
-			this.holdings[i] = 0;
-			this.shapeChangeDurations[i] = 0f;
-			this.shapeChanging[i] = false;
-		}
-	}*/
-
-	public void setTopBorderText(TextAlignmentOptions textAlignment, int textSize, Color textColor, string text, Vector3 textRotation){         
-		this.textAlignmentTop = textAlignment;
-		this.textSizeTop = textSize;
-		this.textColorTop = textColor;
-		this.textTop = text;
-		this.textRotationTop = textRotation;
-	}
-	
 	public void setBottomBorderText(TextAlignmentOptions textAlignment, int textSize, Color textColor, string text, Vector3 textRotation){
-		Debug.Log("setBottomBorderText -> " + text);
 		this.textAlignmentBottom = textAlignment;
 		this.textSizeBottom = textSize;
 		this.textColorBottom = textColor;
@@ -720,14 +648,16 @@ public class ExpanDialSticks : MonoBehaviour
 			{
 				for(int j = 0; j < nbColumns; j++)
 				{
+					bool reaching = modelMatrix[i, j].TargetShapeChangeDuration > 0f &&  (modelMatrix[i, j].CurrentPosition != modelMatrix[i, j].TargetPosition);
 					modelMatrix[i, j].setShapeChangeCurrent(
 						modelMatrix[i, j].TargetAxisX,
 						modelMatrix[i, j].TargetAxisY,
 						modelMatrix[i, j].TargetSelectCount,
 						modelMatrix[i, j].TargetRotation,
 						modelMatrix[i, j].TargetPosition,
-						modelMatrix[i, j].TargetReaching,
+						reaching,
 						modelMatrix[i, j].TargetHolding,
+						modelMatrix[i, j].TargetColliding,
 						modelMatrix[i, j].TargetShapeChangeDuration
 					);
 					modelMatrix[i, j].TargetShapeChangeDuration = 0f;
@@ -743,9 +673,41 @@ public class ExpanDialSticks : MonoBehaviour
 			{
 				for(int j = 0; j < nbColumns; j++)
 				{
-					positions [i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
-					durations [i * nbColumns + j] = modelMatrix[i, j].TargetShapeChangeDuration;
-					holdings [i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
+					/*
+					// if collision and not yet paused then pause
+					if (modelMatrix[i, j].CurrentColliding && !modelMatrix[i, j].Paused)
+					{
+						positions[i * nbColumns + j] = modelMatrix[i, j].CurrentPosition; // stay at curren pos
+						holdings[i * nbColumns + j] = 0; // not holding
+						durations[i * nbColumns + j] = 0.1f; // very fast
+						modelMatrix[i, j].Paused = true;
+					}
+					// if no collision and still paused then unpause
+					else if (!modelMatrix[i, j].CurrentColliding && modelMatrix[i, j].Paused)
+					{
+						positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
+						holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
+						durations[i * nbColumns + j] = modelMatrix[i, j].TargetShapeChangeDuration;
+						modelMatrix[i, j].Paused = false;
+					}
+					else if (modelMatrix[i, j].CurrentColliding && modelMatrix[i, j].Paused) { // else do nothing special
+						positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
+						holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
+						durations[i * nbColumns + j] = 0f; 
+					}
+					else
+					{*/
+						positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
+						holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
+					    if(!modelMatrix[i, j].CurrentColliding)
+						{ 
+							durations[i * nbColumns + j] = modelMatrix[i, j].TargetShapeChangeDuration;
+						} else {
+							//Debug.Log("modelMatrix[" + i + "," + j + "] pause at start!");
+							modelMatrix[i, j].Paused = true;
+							durations[i * nbColumns + j] = 0f;
+						}
+					//}
 					// Reset TargetShapeChangeDuration to zero to prevent previous animations
 					modelMatrix[i, j].TargetShapeChangeDuration = 0f;
 				}
@@ -776,15 +738,22 @@ public class ExpanDialSticks : MonoBehaviour
 		{
 			for(int j = 0; j < nbColumns; j++)
 			{
-				modelMatrix[i, j].setTextureChangeCurrent(
+				modelMatrix[i, j].setTextChangeCurrent(
 					modelMatrix[i, j].TargetColor,
 					modelMatrix[i, j].TargetTextAlignment,
 					modelMatrix[i, j].TargetTextSize,
+					modelMatrix[i, j].TargetTextRotation,
 					modelMatrix[i, j].TargetTextColor,
 					modelMatrix[i, j].TargetText,
 					modelMatrix[i, j].TargetTextureChangeDuration
 				);
-					modelMatrix[i, j].TargetTextureChangeDuration = 0f;
+				modelMatrix[i, j].setTextureChangeCurrent(
+					modelMatrix[i, j].TargetColor,
+					modelMatrix[i, j].TargetPlaneTexture,
+					modelMatrix[i, j].TargetPlaneRotation,
+					modelMatrix[i, j].TargetTextureChangeDuration
+				);
+				modelMatrix[i, j].TargetTextureChangeDuration = 0f;
 			}
 		}
 		textureChanging = true;
@@ -794,10 +763,85 @@ public class ExpanDialSticks : MonoBehaviour
 		get => modelMatrix[i, j];
     	set => modelMatrix[i, j] = value;
 	}
+
+	public void simulateSecureShapeChange()
+	{
+		for (int i = 0; i < nbRows; i++)
+		{
+			for (int j = 0; j < nbColumns; j++)
+			{
+				if (modelMatrix[i, j].CurrentColliding)
+				{
+					if (!modelMatrix[i, j].Paused)
+					{
+						///Debug.Log("modelMatrix[" + i + "," + j + "] pause!");
+						modelMatrix[i, j].Paused = true;
+
+						modelMatrix[i, j].setShapeChangeCurrent(
+							modelMatrix[i, j].CurrentAxisX,
+							modelMatrix[i, j].CurrentAxisY,
+							modelMatrix[i, j].CurrentSelectCount,
+							modelMatrix[i, j].CurrentRotation,
+							viewMatrix[i, j].CurrentPosition, // set to view current pos
+							modelMatrix[i, j].CurrentHolding,
+							modelMatrix[i, j].CurrentReaching,
+							modelMatrix[i, j].CurrentColliding,
+							0.1f // very fast
+						);
+						shapeChanging = true;
+					}
+					else
+					{
+						//Debug.Log("modelMatrix[" + i + "," + j + "] stopping from collision...");
+					}
+				}
+				else
+				{
+						if (modelMatrix[i, j].Paused)
+						{
+							//Debug.Log("modelMatrix[" + i + "," + j + "] unpause!");
+							modelMatrix[i, j].Paused = false;
+
+							float safetySpeed = 20f; // 20 pos per sec
+							float distance = Math.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition);
+							float safetyDuration = distance / safetySpeed;
+
+							modelMatrix[i, j].setShapeChangeCurrent(
+								modelMatrix[i, j].CurrentAxisX,
+								modelMatrix[i, j].CurrentAxisY,
+								modelMatrix[i, j].CurrentSelectCount,
+								modelMatrix[i, j].CurrentRotation,
+								modelMatrix[i, j].TargetPosition, // set to view current pos
+								modelMatrix[i, j].TargetHolding,
+								modelMatrix[i, j].CurrentReaching,
+								modelMatrix[i, j].CurrentColliding,
+								safetyDuration //  fast
+							);
+							shapeChanging = true;
+						}
+				}
+			}
+		}
+	}
+
 	// Update is called once per frame
 	void Update () {
+		// CHECK FOR COLLISION AND SECURE SHAPE-CHANGE ACCORDINGLY
+		if (SIMULATION)
+		{
+			for (int i = 0; i < nbRows; i++)
+			{
+				for (int j = 0; j < nbColumns; j++)
+				{
+					viewMatrix[i, j].CurrentColliding = modelMatrix[i, j].CurrentColliding = collisionMatrix[i, j].IsColliding();
+				}
+			}
+			simulateSecureShapeChange();
+		}
+
 		// UPDATE VIEW FROM MODEL
-		if(shapeChanging){	
+		if (shapeChanging){
+			DateTime t = DateTime.Now;
 			for (int i = 0; i < nbRows; i++)
 			{
 				for(int j = 0; j < nbColumns; j++)
@@ -810,8 +854,62 @@ public class ExpanDialSticks : MonoBehaviour
 						modelMatrix[i, j].CurrentPosition,
 						modelMatrix[i, j].CurrentReaching,
 						modelMatrix[i, j].CurrentHolding,
+						modelMatrix[i, j].CurrentColliding,
 						modelMatrix[i, j].CurrentShapeChangeDuration
 					);
+					// READ EVENT
+					float[] events = modelMatrix[i, j].readAndEraseShapeDiffs();
+					// !!! CAN HANDLE THE SAME EVENT ONLY ONE TIME
+					if (events.Length > 7)
+					{
+						if (events[0] != 0f) //  X Axis events
+						{   // Trigger event
+							OnXAxisChanged(this, new ExpanDialStickEventArgs(t, i, j, modelMatrix[i, j].CurrentAxisX - events[0], modelMatrix[i, j].CurrentAxisX, events[0]));
+							//Debug.Log("(" + i + ", " + j + ") X Axis Event.");
+						}
+
+						if (events[1] != 0f) //  Y Axis events
+						{
+							OnYAxisChanged(this, new ExpanDialStickEventArgs(t, i, j, modelMatrix[i, j].CurrentAxisY - events[1], modelMatrix[i, j].CurrentAxisY, events[1]));
+							//Debug.Log("(" + i + ", " + j + ") Y Axis Event.");
+						}
+						if (events[3] != 0f) // Rotation events
+						{
+							OnRotationChanged(this, new ExpanDialStickEventArgs(t, i, j, modelMatrix[i, j].CurrentRotation - events[3], modelMatrix[i, j].CurrentRotation, events[3]));
+							//Debug.Log("(" + i + ", " + j + ") Dial Event.");
+						}
+
+						if (events[4] != 0f && !modelMatrix[i, j].CurrentHolding && !modelMatrix[i, j].CurrentReaching) // Push/Pull events
+						{
+							OnPositionChanged(this, new ExpanDialStickEventArgs(t, i, j, modelMatrix[i, j].CurrentPosition - events[4], modelMatrix[i, j].CurrentPosition, events[4]));
+							//Debug.Log("(" + i + ", " + j + ") Encoder Event.");
+						}
+
+						if (events[2] != 0f && (events[4] == 0f || (events[4] != 0f && modelMatrix[i, j].CurrentHolding))) // Click events
+						{
+							OnClickChanged(this, new ExpanDialStickEventArgs(t, i, j, modelMatrix[i, j].CurrentSelectCount - events[2], modelMatrix[i, j].CurrentSelectCount, events[2]));
+							//Debug.Log("(" + i + ", " + j + ") Select Event.");
+						}
+
+						if (events[5] != 0f) // Reaching events
+						{
+							onReachingChanged(this, new ExpanDialStickEventArgs(t, i, j, Convert.ToSingle(modelMatrix[i, j].CurrentReaching) - events[5], Convert.ToSingle(modelMatrix[i, j].CurrentReaching), events[5]));
+							//Debug.Log("(" + i + ", " + j + ") Reaching Event.");
+						}
+
+						if (events[6] != 0f) // Holding events
+						{
+							onHoldingChanged(this, new ExpanDialStickEventArgs(t, i, j, Convert.ToSingle(modelMatrix[i, j].CurrentHolding) - events[6], Convert.ToSingle(modelMatrix[i, j].CurrentHolding), events[6]));
+							//Debug.Log("(" + i + ", " + j + ") Holding Event.");
+						}
+
+						if (events[7] != 0f) // Colliding events
+						{
+							onCollidingChanged(this, new ExpanDialStickEventArgs(t, i, j, Convert.ToSingle(modelMatrix[i, j].CurrentColliding) - events[7], Convert.ToSingle(modelMatrix[i, j].CurrentColliding), events[7]));
+							//Debug.Log("(" + i + ", " + j + ") Holding Event.");
+						}
+					}
+
 				}
 			}
 			shapeChanging = false;
@@ -822,20 +920,29 @@ public class ExpanDialSticks : MonoBehaviour
 			{
 				for(int j = 0; j < nbColumns; j++)
 				{
-					viewMatrix[i, j].setTextureChangeTarget(
+					viewMatrix[i, j].setTextChangeTarget(
 						modelMatrix[i, j].CurrentColor,
 						modelMatrix[i, j].CurrentTextAlignment,
 						modelMatrix[i, j].CurrentTextSize,
+						modelMatrix[i, j].CurrentTextRotation,
 						modelMatrix[i, j].CurrentTextColor,
 						modelMatrix[i, j].CurrentText,
+						modelMatrix[i, j].CurrentTextureChangeDuration
+					);
+					viewMatrix[i, j].setTextureChangeTarget(
+						modelMatrix[i, j].CurrentColor,
+						modelMatrix[i, j].CurrentPlaneTexture,
+						modelMatrix[i, j].CurrentPlaneRotation,
 						modelMatrix[i, j].CurrentTextureChangeDuration
 					);
 				}
 			}
 			textureChanging = false;
 		}	
+		/*
 		// SCAN EVENTS FROM VIEW
 		if((currEventTimeCheck += Time.deltaTime) - prevEventTimeCheck > EVENT_INTERVAL){
+			DateTime t = DateTime.Now;
 			for (int i = 0; i < nbRows; i++)
 			{
 				for(int j = 0; j < nbColumns; j++)
@@ -843,48 +950,52 @@ public class ExpanDialSticks : MonoBehaviour
 					float[] events = modelMatrix[i, j].readAndEraseShapeDiffs();
 
 					// !!! CAN HANDLE THE SAME EVENT ONLY ONE TIME
-					if(events.Length > 6)
+					if(events.Length > 7)
 					{
 						if (events[0] != 0f) //  X Axis events
 						{	// Trigger event
-							OnXAxisChanged(this,  new ExpanDialStickEventArgs(i, j, events[0]));
+							OnXAxisChanged(this,  new ExpanDialStickEventArgs(t, i, j, modelMatrix[i, j].CurrentAxisX -  events[0], modelMatrix[i, j].CurrentAxisX, events[0]));
 							//Debug.Log("(" + i + ", " + j + ") X Axis Event.");
 						}
 
 						if (events[1] != 0f) //  Y Axis events
 						{
-							OnYAxisChanged(this,  new ExpanDialStickEventArgs(i, j, events[1]));
+							OnYAxisChanged(this,  new ExpanDialStickEventArgs(t, i, j, modelMatrix[i, j].CurrentAxisY -  events[1], modelMatrix[i, j].CurrentAxisY, events[1]));
 							//Debug.Log("(" + i + ", " + j + ") Y Axis Event.");
 						}
 						if (events[3] != 0f) // Rotation events
 						{
-							OnRotationChanged(this,  new ExpanDialStickEventArgs(i, j, events[3]));
+							OnRotationChanged(this,  new ExpanDialStickEventArgs(t, i, j,  modelMatrix[i, j].CurrentRotation -  events[3], modelMatrix[i, j].CurrentRotation, events[3]));
 							//Debug.Log("(" + i + ", " + j + ") Dial Event.");
 						}
 
 						if (events[4] != 0f && !modelMatrix[i, j].CurrentHolding && !modelMatrix[i, j].CurrentReaching) // Push/Pull events
 						{
-							OnPositionChanged(this,  new ExpanDialStickEventArgs(i, j, events[4]));
+							OnPositionChanged(this,  new ExpanDialStickEventArgs(t, i, j,  modelMatrix[i, j].CurrentPosition -  events[4], modelMatrix[i, j].CurrentPosition, events[4]));
 							//Debug.Log("(" + i + ", " + j + ") Encoder Event.");
 						}
 
 						if (events[2] != 0f && (events[4] == 0f || (events[4] != 0f && modelMatrix[i, j].CurrentHolding) )) // Click events
 						{
-							OnClickChanged(this,  new ExpanDialStickEventArgs(i, j, events[2]));
+							OnClickChanged(this,  new ExpanDialStickEventArgs(t, i, j,  modelMatrix[i, j].CurrentSelectCount -  events[2],  modelMatrix[i, j].CurrentSelectCount, events[2]));
 							//Debug.Log("(" + i + ", " + j + ") Select Event.");
 						}
 
-
-
 						if (events[5] != 0f) // Reaching events
 						{
-							onReachingChanged(this,  new ExpanDialStickEventArgs(i, j, events[5]));
+							onReachingChanged(this,  new ExpanDialStickEventArgs(t, i, j, Convert.ToSingle(modelMatrix[i, j].CurrentReaching) -  events[5], Convert.ToSingle(modelMatrix[i, j].CurrentReaching) , events[5]));
 							//Debug.Log("(" + i + ", " + j + ") Reaching Event.");
 						}
 
 						if (events[6] != 0f) // Holding events
 						{
-							onHoldingChanged(this,  new ExpanDialStickEventArgs(i, j, events[6]));
+							onHoldingChanged(this, new ExpanDialStickEventArgs(t, i, j, Convert.ToSingle(modelMatrix[i, j].CurrentHolding) - events[6], Convert.ToSingle(modelMatrix[i, j].CurrentHolding), events[6]));
+							//Debug.Log("(" + i + ", " + j + ") Holding Event.");
+						}
+
+						if (events[7] != 0f) // Colliding events
+						{
+							onCollidingChanged(this,  new ExpanDialStickEventArgs(t, i, j, Convert.ToSingle(modelMatrix[i, j].CurrentColliding) -  events[7],  Convert.ToSingle(modelMatrix[i, j].CurrentColliding), events[7]));
 							//Debug.Log("(" + i + ", " + j + ") Holding Event.");
 						}
 					}
@@ -892,17 +1003,18 @@ public class ExpanDialSticks : MonoBehaviour
 			}
 			prevEventTimeCheck = currEventTimeCheck;
 		}
+		*/
 
 		// PROCESS
 
 		// RENDER
 		
 
-		textMeshTop.alignment  = textAlignmentTop;
+		/*textMeshTop.alignment  = textAlignmentTop;
 		textMeshTop.fontSize = textSizeTop;
 		textMeshTop.color = textColorTop;
-		textMeshTop.text = textTop;
-		topBorderText.transform.eulerAngles = textRotationTop; 
+		textMeshTop.text = textTop;*/
+		// topBorderText.transform.eulerAngles = textRotationTop; 
 
 		textMeshBottom.alignment  = textAlignmentBottom;
 		textMeshBottom.fontSize = textSizeBottom;
