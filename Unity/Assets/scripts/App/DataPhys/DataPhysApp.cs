@@ -13,18 +13,6 @@ using TMPro;
 using System;
 using System.Globalization;
 
-public class BarEvent
-{
-	public DateTime time;
-	public Vector2 direction;
-
-	public BarEvent(DateTime time, Vector2 direction)
-	{
-		this.time = time;
-		this.direction = direction;
-	}
-}
-
 public class DataPhysApp : MonoBehaviour
 {
 
@@ -32,36 +20,8 @@ public class DataPhysApp : MonoBehaviour
 	public GUISkin guiSkin;
 	private ExpanDialSticks expanDialSticks;
 	private bool connected = false;
-
-	private CultureInfo en = CultureInfo.CreateSpecificCulture("en-US");
-
-	private IEnumerator coroutine;
-
 	public float EVENT_INTERVAL = 0.5f; // 0.2f;
-	//private float prevEventTimeCheck = 0f;
-	//private float currEventTimeCheck = 0f;
-
-	private const string LEFT_BENDING = "LEFT_BENDING";
-	private const string RIGHT_BENDING = "RIGHT_BENDING";
-	private const string TOP_BENDING = "TOP_BENDING";
-	private const string BOTTOM_BENDING = "BOTTOM_BENDING";
-	private const string LEFT_ROTATION = "LEFT_ROTATION";
-	private const string RIGHT_ROTATION = "RIGHT_ROTATION";
-	private const string PULL = "PULL";
-	private const string PUSH = "PUSH";
-	private const string CLICK = "CLICK";
-	private const string NONE = "NONE";
-
 	private float lastRising = 0f;
-	private const int IDLE = 0x0000;
-	private const int RIGHT_RISING = 0x0001;
-	private const int RIGHT_FALLING = 0x1110;
-	private const int LEFT_RISING = 0x0010;
-	private const int LEFT_FALLING = 0x1101;
-	private const int TOP_RISING = 0x0100;
-	private const int TOP_FALLING = 0x1011;
-	private const int BOTTOM_RISING = 0x1000;
-	private const int BOTTOM_FALLING = 0x0111;
 
 	private const float JOYSTICK_THRESHOLD = 10f;
 
@@ -70,7 +30,7 @@ public class DataPhysApp : MonoBehaviour
 	private bool DataPhysIsUpdated = false;
 	private Vector2[,] directions;
 	private int rotation = 0;
-	List<BarEvent> inputs;
+	private Queue<Vector3> errors;
 
 
 	void Start()
@@ -94,8 +54,8 @@ public class DataPhysApp : MonoBehaviour
 		for (int i = 0; i < directions.GetLength(0); i++)
 			for (int j = 0; j < directions.GetLength(1); j++)
 				directions[i, j] = Vector2.zero;
-		inputs = new List<BarEvent>();
 		dataPhysModel = new DataPhysModel(expanDialSticks.NbRows, expanDialSticks.NbColumns);
+		errors = new Queue<Vector3>();
 		// Connection to MQTT Broker
 		expanDialSticks.client_MqttConnect();
 	}
@@ -125,8 +85,6 @@ public class DataPhysApp : MonoBehaviour
 				expanDialSticks[j, i].TargetShapeChangeDuration = 1f;
 			}
 		}
-		expanDialSticks.triggerTextureChange();
-		expanDialSticks.triggerShapeChange();
 
 		string xLegendFirst = "<line-height=6><size=4>";
 		string xLegendSecond = "<line-height=8><size=6>";
@@ -287,10 +245,6 @@ public class DataPhysApp : MonoBehaviour
 
 	private void HandlePositionChanged(object sender, ExpanDialStickEventArgs e)
 	{
-		//Debug.Log("HandlePositionChanged -> (" + e.i + '|' + e.j + '|' + e.diff + ")");
-		/*if (e.diff > 0) users.Enqueue(e.i + '|' + e.j + '|' + PULL);
-		else users.Enqueue(e.i + '|' + e.j + '|' + PUSH);*/
-
 	}
 
 	private void HandleReachingChanged(object sender, ExpanDialStickEventArgs e)
@@ -303,307 +257,337 @@ public class DataPhysApp : MonoBehaviour
 
 	}
 
-	
 
-	void PanUp(int yStep)
+
+	int PanUp(int yStep)
 	{
 		Debug.Log("PAN UP " + yStep + "TIMES");
+		int ans = DataPhysModel.PAN_ERROR_NOT_FOUND;
 		switch (dataSet.orientation)
 		{
 			case DataPhysModel.Z_AXIS_0:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_IDLE, 0, DataPhysModel.Y_AXIS_UP, yStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_IDLE, 0, DataPhysModel.Y_AXIS_UP, yStep);
 				break;
 			case DataPhysModel.Z_AXIS_90:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, yStep, DataPhysModel.Y_AXIS_IDLE, 0);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, yStep, DataPhysModel.Y_AXIS_IDLE, 0);
 				break;
 			case DataPhysModel.Z_AXIS_180:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_IDLE, 0, DataPhysModel.Y_AXIS_DOWN, yStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_IDLE, 0, DataPhysModel.Y_AXIS_DOWN, yStep);
 				break;
 			case DataPhysModel.Z_AXIS_270:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, yStep, DataPhysModel.Y_AXIS_IDLE, 0);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, yStep, DataPhysModel.Y_AXIS_IDLE, 0);
 				break;
 		}
 		DataPhysIsUpdated = false;
+		return ans;
 	}
-	void PanDown(int yStep)
+	int PanDown(int yStep)
 	{
 		Debug.Log("PAN DOWN" + yStep + "TIMES");
+		int ans = DataPhysModel.PAN_ERROR_NOT_FOUND;
 		switch (dataSet.orientation)
 		{
 			case DataPhysModel.Z_AXIS_0:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_IDLE, 0, DataPhysModel.Y_AXIS_DOWN, yStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_IDLE, 0, DataPhysModel.Y_AXIS_DOWN, yStep);
 				break;
 			case DataPhysModel.Z_AXIS_90:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, yStep, DataPhysModel.Y_AXIS_IDLE, 0);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, yStep, DataPhysModel.Y_AXIS_IDLE, 0);
 				break;
 			case DataPhysModel.Z_AXIS_180:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_IDLE, 0, DataPhysModel.Y_AXIS_UP, yStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_IDLE, 0, DataPhysModel.Y_AXIS_UP, yStep);
 				break;
 			case DataPhysModel.Z_AXIS_270:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, yStep, DataPhysModel.Y_AXIS_IDLE, 0);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, yStep, DataPhysModel.Y_AXIS_IDLE, 0);
 				break;
 		}
 		DataPhysIsUpdated = false;
+		return ans;
 	}
-	void PanLeft(int xStep)
+	int PanLeft(int xStep)
 	{
 		Debug.Log("PAN LEFT" + xStep + "TIMES");
+		int ans = DataPhysModel.PAN_ERROR_NOT_FOUND;
 		switch (dataSet.orientation)
 		{
 			case DataPhysModel.Z_AXIS_0:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, xStep, DataPhysModel.Y_AXIS_IDLE, 0);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, xStep, DataPhysModel.Y_AXIS_IDLE, 0);
 				break;
 			case DataPhysModel.Z_AXIS_90:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_IDLE, 0, DataPhysModel.Y_AXIS_DOWN, xStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_IDLE, 0, DataPhysModel.Y_AXIS_DOWN, xStep);
 				break;
 			case DataPhysModel.Z_AXIS_180:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, xStep, DataPhysModel.Y_AXIS_IDLE, 0);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, xStep, DataPhysModel.Y_AXIS_IDLE, 0);
 				break;
 			case DataPhysModel.Z_AXIS_270:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_IDLE, 0, DataPhysModel.Y_AXIS_UP, xStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_IDLE, 0, DataPhysModel.Y_AXIS_UP, xStep);
 				break;
 		}
 		DataPhysIsUpdated = false;
+		return ans;
 	}
-	void PanRight(int xStep)
+	int PanRight(int xStep)
 	{
 		Debug.Log("PAN RIGHT" + xStep + "TIMES");
+		int ans = DataPhysModel.PAN_ERROR_NOT_FOUND;
 		switch (dataSet.orientation)
 		{
 			case DataPhysModel.Z_AXIS_0:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, xStep, DataPhysModel.Y_AXIS_IDLE, 0);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, xStep, DataPhysModel.Y_AXIS_IDLE, 0);
 				break;
 			case DataPhysModel.Z_AXIS_90:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_IDLE, 0, DataPhysModel.Y_AXIS_UP, xStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_IDLE, 0, DataPhysModel.Y_AXIS_UP, xStep);
 				break;
 			case DataPhysModel.Z_AXIS_180:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, xStep, DataPhysModel.Y_AXIS_IDLE, 0);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, xStep, DataPhysModel.Y_AXIS_IDLE, 0);
 				break;
 			case DataPhysModel.Z_AXIS_270:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_IDLE, 0, DataPhysModel.Y_AXIS_DOWN, xStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_IDLE, 0, DataPhysModel.Y_AXIS_DOWN, xStep);
 				break;
 		}
 		DataPhysIsUpdated = false;
+		return ans;
 	}
 
-	void PanUpLeft(int xStep, int yStep)
+	int PanUpLeft(int xStep, int yStep)
 	{
 		Debug.Log("PAN UP LEFT" + xStep + ", " + yStep + " TIMES");
+		int ans = DataPhysModel.PAN_ERROR_NOT_FOUND;
 		switch (dataSet.orientation)
 		{
 			case DataPhysModel.Z_AXIS_0:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, xStep, DataPhysModel.Y_AXIS_UP, yStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, xStep, DataPhysModel.Y_AXIS_UP, yStep);
 				break;
 			case DataPhysModel.Z_AXIS_90:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, yStep, DataPhysModel.Y_AXIS_DOWN, xStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, yStep, DataPhysModel.Y_AXIS_DOWN, xStep);
 				break;
 			case DataPhysModel.Z_AXIS_180:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, xStep, DataPhysModel.Y_AXIS_DOWN, yStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, xStep, DataPhysModel.Y_AXIS_DOWN, yStep);
 				break;
 			case DataPhysModel.Z_AXIS_270:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, yStep, DataPhysModel.Y_AXIS_UP, yStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, yStep, DataPhysModel.Y_AXIS_UP, yStep);
 				break;
 		}
 		DataPhysIsUpdated = false;
+		return ans;
 	}
 
-	void PanUpRight(int xStep, int yStep)
+	int PanUpRight(int xStep, int yStep)
 	{
 		Debug.Log("PAN UP RIGHT" + xStep + ", " + yStep + " TIMES");
+		int ans = DataPhysModel.PAN_ERROR_NOT_FOUND;
 		switch (dataSet.orientation)
 		{
 			case DataPhysModel.Z_AXIS_0:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, xStep, DataPhysModel.Y_AXIS_UP, yStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, xStep, DataPhysModel.Y_AXIS_UP, yStep);
 				break;
 			case DataPhysModel.Z_AXIS_90:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, yStep, DataPhysModel.Y_AXIS_UP, xStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, yStep, DataPhysModel.Y_AXIS_UP, xStep);
 				break;
 			case DataPhysModel.Z_AXIS_180:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, xStep,  DataPhysModel.Y_AXIS_DOWN, yStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, xStep,  DataPhysModel.Y_AXIS_DOWN, yStep);
 				break;
 			case DataPhysModel.Z_AXIS_270:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, yStep, DataPhysModel.Y_AXIS_DOWN, xStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, yStep, DataPhysModel.Y_AXIS_DOWN, xStep);
 				break;
 		}
 		DataPhysIsUpdated = false;
+		return ans;
 	}
-	void PanDownLeft(int xStep, int yStep)
+	int PanDownLeft(int xStep, int yStep)
 	{
 		Debug.Log("PAN DOWN LEFT" + xStep + ", " + yStep + " TIMES");
+		int ans = DataPhysModel.PAN_ERROR_NOT_FOUND;
 		switch (dataSet.orientation)
 		{
 			case DataPhysModel.Z_AXIS_0:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, xStep, DataPhysModel.Y_AXIS_DOWN, yStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, xStep, DataPhysModel.Y_AXIS_DOWN, yStep);
 				break;
 			case DataPhysModel.Z_AXIS_90:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, yStep, DataPhysModel.Y_AXIS_DOWN, xStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, yStep, DataPhysModel.Y_AXIS_DOWN, xStep);
 				break;
 			case DataPhysModel.Z_AXIS_180:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, xStep, DataPhysModel.Y_AXIS_UP, yStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, xStep, DataPhysModel.Y_AXIS_UP, yStep);
 				break;
 			case DataPhysModel.Z_AXIS_270:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, yStep, DataPhysModel.Y_AXIS_UP, xStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, yStep, DataPhysModel.Y_AXIS_UP, xStep);
 				break;
 		}
 		DataPhysIsUpdated = false;
+		return ans;
 	}
 
-	void PanDownRight(int xStep, int yStep)
+	int PanDownRight(int xStep, int yStep)
 	{
 		Debug.Log("PAN UP RIGHT" + xStep + ", " + yStep + " TIMES");
+		int ans = DataPhysModel.PAN_ERROR_NOT_FOUND;
 		switch (dataSet.orientation)
 		{
 			case DataPhysModel.Z_AXIS_0:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, xStep, DataPhysModel.Y_AXIS_DOWN, yStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, xStep, DataPhysModel.Y_AXIS_DOWN, yStep);
 				break;
 			case DataPhysModel.Z_AXIS_90:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, yStep, DataPhysModel.Y_AXIS_UP, xStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_RIGHT, yStep, DataPhysModel.Y_AXIS_UP, xStep);
 				break;
 			case DataPhysModel.Z_AXIS_180:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, xStep, DataPhysModel.Y_AXIS_UP, yStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, xStep, DataPhysModel.Y_AXIS_UP, yStep);
 				break;
 			case DataPhysModel.Z_AXIS_270:
-				dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, yStep, DataPhysModel.Y_AXIS_DOWN, xStep);
+				ans = dataPhysModel.Pan(DataPhysModel.X_AXIS_LEFT, yStep, DataPhysModel.Y_AXIS_DOWN, xStep);
 				break;
 		}
 		DataPhysIsUpdated = false;
+		return ans;
 	}
-	void ZoomVerticalAxisIn(float xCenter, float yCenter)
+	int ZoomVerticalAxisIn(float xCenter, float yCenter)
 	{
 		Debug.Log("ZOOM VERTICAL AXIS IN");
+		int ans = DataPhysModel.ZOOM_ERROR_NOT_FOUND;
 		switch (dataSet.orientation)
 		{
 			case DataPhysModel.Z_AXIS_0:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_IDLE, xCenter, DataPhysModel.Y_AXIS_IN, yCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_IDLE, xCenter, DataPhysModel.Y_AXIS_IN, yCenter);
 				break;
 			case DataPhysModel.Z_AXIS_90:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_IN, yCenter, DataPhysModel.Y_AXIS_IDLE, xCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_IN, yCenter, DataPhysModel.Y_AXIS_IDLE, xCenter);
 				break;
 			case DataPhysModel.Z_AXIS_180:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_IDLE, xCenter, DataPhysModel.Y_AXIS_IN, yCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_IDLE, xCenter, DataPhysModel.Y_AXIS_IN, yCenter);
 				break;
 			case DataPhysModel.Z_AXIS_270:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_IN, yCenter, DataPhysModel.Y_AXIS_IDLE, xCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_IN, yCenter, DataPhysModel.Y_AXIS_IDLE, xCenter);
 				break;
 		}
 		DataPhysIsUpdated = false;
+		return ans;
 	}
-	void ZoomVerticalAxisOut(float xCenter, float yCenter)
+	int ZoomVerticalAxisOut(float xCenter, float yCenter)
 	{
 		Debug.Log("ZOOM VERTICAL AXIS OUT");
+		int ans = DataPhysModel.ZOOM_ERROR_NOT_FOUND;
 		switch (dataSet.orientation)
 		{
 			case DataPhysModel.Z_AXIS_0:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_IDLE, xCenter, DataPhysModel.Y_AXIS_OUT, yCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_IDLE, xCenter, DataPhysModel.Y_AXIS_OUT, yCenter);
 				break;
 			case DataPhysModel.Z_AXIS_90:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_OUT, yCenter, DataPhysModel.Y_AXIS_IDLE, xCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_OUT, yCenter, DataPhysModel.Y_AXIS_IDLE, xCenter);
 				break;
 			case DataPhysModel.Z_AXIS_180:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_IDLE, xCenter, DataPhysModel.Y_AXIS_OUT, yCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_IDLE, xCenter, DataPhysModel.Y_AXIS_OUT, yCenter);
 				break;
 			case DataPhysModel.Z_AXIS_270:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_OUT, yCenter, DataPhysModel.Y_AXIS_IDLE, xCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_OUT, yCenter, DataPhysModel.Y_AXIS_IDLE, xCenter);
 				break;
 		}
 		DataPhysIsUpdated = false;
+		return ans;
 	}
 
-	void ZoomHorizontalAxisIn(float xCenter, float yCenter)
+	int ZoomHorizontalAxisIn(float xCenter, float yCenter)
 	{
 		Debug.Log("ZOOM HORIZONTAL AXIS IN");
+		int ans = DataPhysModel.ZOOM_ERROR_NOT_FOUND;
 		switch (dataSet.orientation)
 		{
 			case DataPhysModel.Z_AXIS_0:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_IN, xCenter, DataPhysModel.Y_AXIS_IDLE, yCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_IN, xCenter, DataPhysModel.Y_AXIS_IDLE, yCenter);
 				break;
 			case DataPhysModel.Z_AXIS_90:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_IDLE, yCenter, DataPhysModel.Y_AXIS_IN, xCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_IDLE, yCenter, DataPhysModel.Y_AXIS_IN, xCenter);
 				break;
 			case DataPhysModel.Z_AXIS_180:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_IN, xCenter, DataPhysModel.Y_AXIS_IDLE, yCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_IN, xCenter, DataPhysModel.Y_AXIS_IDLE, yCenter);
 				break;
 			case DataPhysModel.Z_AXIS_270:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_IDLE, yCenter, DataPhysModel.Y_AXIS_IN, xCenter);
-				break;
+				ans = DataPhysModel.ZOOM_ERROR_NOT_FOUND;dataPhysModel.Zoom(DataPhysModel.X_AXIS_IDLE, yCenter, DataPhysModel.Y_AXIS_IN, xCenter);
+			break;
 		}
 		DataPhysIsUpdated = false;
+		return ans;
 	}
-	void ZoomHorizontalAxisOut(float xCenter, float yCenter)
+	int ZoomHorizontalAxisOut(float xCenter, float yCenter)
 	{
 		Debug.Log("ZOOM HORIZONTAL AXIS OUT");
+		int ans = DataPhysModel.ZOOM_ERROR_NOT_FOUND;
 		switch (dataSet.orientation)
 		{
 			case DataPhysModel.Z_AXIS_0:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_OUT, xCenter, DataPhysModel.Y_AXIS_IDLE, yCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_OUT, xCenter, DataPhysModel.Y_AXIS_IDLE, yCenter);
 				break;
 			case DataPhysModel.Z_AXIS_90:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_IDLE, yCenter, DataPhysModel.Y_AXIS_OUT, xCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_IDLE, yCenter, DataPhysModel.Y_AXIS_OUT, xCenter);
 				break;
 			case DataPhysModel.Z_AXIS_180:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_OUT, xCenter, DataPhysModel.Y_AXIS_IDLE, yCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_OUT, xCenter, DataPhysModel.Y_AXIS_IDLE, yCenter);
 				break;
 			case DataPhysModel.Z_AXIS_270:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_IDLE, yCenter, DataPhysModel.Y_AXIS_OUT, xCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_IDLE, yCenter, DataPhysModel.Y_AXIS_OUT, xCenter);
 				break;
 		}
 		DataPhysIsUpdated = false;
+		return ans;
 	}
-	void ZoomBothIn(float xCenter, float yCenter)
+	int ZoomBothIn(float xCenter, float yCenter)
 	{
 		Debug.Log("ZOOM IN");
 		Debug.Log("xCenter: " + xCenter);
 		Debug.Log("yCenter: " + yCenter);
+		int ans = DataPhysModel.ZOOM_ERROR_NOT_FOUND;
 		switch (dataSet.orientation)
 		{
 			case DataPhysModel.Z_AXIS_0:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_IN, xCenter, DataPhysModel.Y_AXIS_IN, yCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_IN, xCenter, DataPhysModel.Y_AXIS_IN, yCenter);
 				break;
 			case DataPhysModel.Z_AXIS_90:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_IN, yCenter, DataPhysModel.Y_AXIS_IN, expanDialSticks.NbRows - xCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_IN, yCenter, DataPhysModel.Y_AXIS_IN, expanDialSticks.NbRows - xCenter);
 				break;
 			case DataPhysModel.Z_AXIS_180:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_IN, expanDialSticks.NbColumns - xCenter, DataPhysModel.Y_AXIS_IN, expanDialSticks.NbRows - yCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_IN, expanDialSticks.NbColumns - xCenter, DataPhysModel.Y_AXIS_IN, expanDialSticks.NbRows - yCenter);
 				break;
 			case DataPhysModel.Z_AXIS_270:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_IN, expanDialSticks.NbRows -  yCenter, DataPhysModel.Y_AXIS_IN, xCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_IN, expanDialSticks.NbRows -  yCenter, DataPhysModel.Y_AXIS_IN, xCenter);
 				break;
 		}
 		DataPhysIsUpdated = false;
+		return ans;
 	}
-	void ZoomBothOut(float xCenter, float yCenter)
+	int ZoomBothOut(float xCenter, float yCenter)
 	{
 		Debug.Log("ZOOM OUT");
 		Debug.Log("xCenter: " + xCenter);
 		Debug.Log("yCenter: " + yCenter);
+		int ans = DataPhysModel.ZOOM_ERROR_NOT_FOUND;
 		switch (dataSet.orientation)
 		{
 			case DataPhysModel.Z_AXIS_0:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_OUT, xCenter, DataPhysModel.Y_AXIS_OUT, yCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_OUT, xCenter, DataPhysModel.Y_AXIS_OUT, yCenter);
 				break;
 			case DataPhysModel.Z_AXIS_90:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_OUT, yCenter, DataPhysModel.Y_AXIS_OUT, expanDialSticks.NbRows - xCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_OUT, yCenter, DataPhysModel.Y_AXIS_OUT, expanDialSticks.NbRows - xCenter);
 				break;
 			case DataPhysModel.Z_AXIS_180:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_OUT, expanDialSticks.NbColumns - xCenter, DataPhysModel.Y_AXIS_OUT, expanDialSticks.NbRows - yCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_OUT, expanDialSticks.NbColumns - xCenter, DataPhysModel.Y_AXIS_OUT, expanDialSticks.NbRows - yCenter);
 				break;
 			case DataPhysModel.Z_AXIS_270:
-				dataPhysModel.Zoom(DataPhysModel.X_AXIS_OUT, expanDialSticks.NbRows - yCenter, DataPhysModel.Y_AXIS_OUT,  xCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_OUT, expanDialSticks.NbRows - yCenter, DataPhysModel.Y_AXIS_OUT,  xCenter);
 				break;
 		}
 		DataPhysIsUpdated = false;
+		return ans;
 	}
-	void RotateClockWise()
+	int RotateClockWise()
 	{
 		Debug.Log("ROTATE CW");
-		dataPhysModel.Rotate(DataPhysModel.Z_AXIS_CW);
+		int ans = dataPhysModel.Rotate(DataPhysModel.Z_AXIS_CW);
 		DataPhysIsUpdated = false;
+		return ans;
 	}
-	void RotateCounterClockWise()
+	int RotateCounterClockWise()
 	{
 		Debug.Log("ROTATE CCW");
-		dataPhysModel.Rotate(DataPhysModel.Z_AXIS_CCW);
+		int ans = dataPhysModel.Rotate(DataPhysModel.Z_AXIS_CCW);
 		DataPhysIsUpdated = false;
+		return ans;
 	}
 
 void Update()
@@ -650,25 +634,45 @@ void Update()
 					{
 						float xCenter = i;
 						float yCenter = lastLeft + (firstRight - lastLeft) / 2f;
-						ZoomHorizontalAxisOut(yCenter, xCenter);
+						int ans = ZoomHorizontalAxisOut(yCenter, xCenter);
+						if(ans == DataPhysModel.ZOOM_ERROR_NOT_FOUND || ans == DataPhysModel.ZOOM_ERROR_OUT_OF_BOUNDS)
+						{
+							errors.Enqueue(new Vector3(i, lastLeft, ct));
+							errors.Enqueue(new Vector3(i, firstRight, ct));
+						}
 						goto LoopEnd;
 					}
 					if (lastRight < firstLeft) // ZOOM IN HORIZONTAL
 					{
 						float xCenter = i;
 						float yCenter = lastRight + (firstLeft - lastRight) / 2f;
-						ZoomHorizontalAxisIn(yCenter, xCenter);
+						int ans = ZoomHorizontalAxisIn(yCenter, xCenter);
+						if (ans == DataPhysModel.ZOOM_ERROR_NOT_FOUND || ans == DataPhysModel.ZOOM_ERROR_OUT_OF_BOUNDS)
+						{
+							errors.Enqueue(new Vector3(i, lastRight, ct));
+							errors.Enqueue(new Vector3(i, firstLeft, ct));
+						}
 						goto LoopEnd;
 					}
 				}
 				if(firstRight > -1 && lastRight > -1) // MULTI PAN RIGHT
 				{
-					PanRight(Math.Abs(lastRight - firstRight) + 1);
+					int ans = PanRight(Math.Abs(lastRight - firstRight) + 1);
+					if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
+					{
+						errors.Enqueue(new Vector3(i, firstRight, ct));
+						errors.Enqueue(new Vector3(i, lastRight, ct));
+					}
 					goto LoopEnd;
 				}
 				if (firstLeft > -1 && lastLeft > -1) // MULTI PAN LEFT
 				{
-					PanLeft(Math.Abs(lastLeft - firstLeft) + 1);
+					int ans = PanLeft(Math.Abs(lastLeft - firstLeft) + 1);
+					if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
+					{
+						errors.Enqueue(new Vector3(i, firstLeft, ct));
+						errors.Enqueue(new Vector3(i, lastLeft, ct));
+					}
 					goto LoopEnd;
 				}
 			}
@@ -699,26 +703,46 @@ void Update()
 					{
 						float xCenter = lastUp + (firstDown - lastUp) / 2f;
 						float yCenter = j;
-						ZoomVerticalAxisOut(yCenter, xCenter);
+						int ans = ZoomVerticalAxisOut(yCenter, xCenter);
+						if (ans == DataPhysModel.ZOOM_ERROR_NOT_FOUND || ans == DataPhysModel.ZOOM_ERROR_OUT_OF_BOUNDS)
+						{
+							errors.Enqueue(new Vector3(lastUp, j, ct));
+							errors.Enqueue(new Vector3(firstDown, j, ct));
+						}
 						goto LoopEnd;
 					}
 					if (lastDown < firstUp) // ZOOM IN HORIZONTAL
 					{
 						float xCenter = lastDown + (firstUp - lastDown) / 2f;
 						float yCenter = j;
-						ZoomVerticalAxisIn(yCenter, xCenter);
+						int ans = ZoomVerticalAxisIn(yCenter, xCenter);
+						if (ans == DataPhysModel.ZOOM_ERROR_NOT_FOUND || ans == DataPhysModel.ZOOM_ERROR_OUT_OF_BOUNDS)
+						{
+							errors.Enqueue(new Vector3(lastDown, j, ct));
+							errors.Enqueue(new Vector3(firstUp, j, ct));
+						}
 						goto LoopEnd;
 					}
 				}
 
 				if (firstUp > -1 && lastUp > -1) // MULTI PAN UP
 				{
-					PanUp(Math.Abs(lastUp - firstUp) + 1);
+					int ans = PanUp(Math.Abs(lastUp - firstUp) + 1);
+					if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
+					{
+						errors.Enqueue(new Vector3(lastUp, j, ct));
+						errors.Enqueue(new Vector3( firstUp, j, ct));
+					}
 					goto LoopEnd;
 				}
 				if (firstDown > -1 && lastDown > -1) // MULTI PAN DOWN
 				{
-					PanLeft(Math.Abs(lastDown - firstDown) + 1);
+					int ans = PanLeft(Math.Abs(lastDown - firstDown) + 1);
+					if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
+					{
+						errors.Enqueue(new Vector3(lastDown, j, ct));
+						errors.Enqueue(new Vector3(firstDown, j, ct));
+					}
 					goto LoopEnd;
 				}
 			}
@@ -769,37 +793,67 @@ void Update()
 					{
 						float xCenter = lastDown + (firstUp - lastDown) / 2f;
 						float yCenter = lastRight + (firstLeft - lastRight) / 2f;
-						ZoomBothOut(yCenter, xCenter);
+						int ans = ZoomBothOut(yCenter, xCenter);
+						if (ans == DataPhysModel.ZOOM_ERROR_NOT_FOUND || ans == DataPhysModel.ZOOM_ERROR_OUT_OF_BOUNDS)
+						{
+							errors.Enqueue(new Vector3(lastDown, lastRight, ct));
+							errors.Enqueue(new Vector3(firstUp, firstLeft, ct));
+						}
 						goto LoopEnd;
 					}
 					if (lastUp < firstDown && lastLeft < firstRight) // ZOOM IN 
 					{
 						float xCenter = lastUp + (firstDown - lastUp) / 2f;
 						float yCenter = lastLeft + (firstRight - lastLeft) / 2f;
-						ZoomBothIn(yCenter, xCenter);
+						int ans = ZoomBothIn(yCenter, xCenter);
+						if (ans == DataPhysModel.ZOOM_ERROR_NOT_FOUND || ans == DataPhysModel.ZOOM_ERROR_OUT_OF_BOUNDS)
+						{
+							errors.Enqueue(new Vector3(lastUp, lastLeft, ct));
+							errors.Enqueue(new Vector3(firstDown, firstRight, ct));
+						}
 						goto LoopEnd;
 					}
 				}
 
 				if (firstUp > -1 && lastUp > -1 && firstRight > -1 && lastRight > -1) // MULTI PAN UP RIGHT
 				{
-					PanUpRight(Math.Abs(lastRight - firstRight) + 1, Math.Abs(lastUp - firstUp) + 1);
+					int ans = PanUpRight(Math.Abs(lastRight - firstRight) + 1, Math.Abs(lastUp - firstUp) + 1);
+					if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
+					{
+						errors.Enqueue(new Vector3(firstUp, firstRight, ct));
+						errors.Enqueue(new Vector3(lastUp, lastRight, ct));
+					}
 					goto LoopEnd;
 				}
 				if (firstUp > -1 && lastUp > -1 && firstLeft > -1 && lastLeft > -1) // MULTI PAN UP LEFT
 				{
-					PanUpLeft(Math.Abs(lastLeft - firstLeft) + 1, Math.Abs(lastUp - firstUp) + 1);
+					int ans = PanUpLeft(Math.Abs(lastLeft - firstLeft) + 1, Math.Abs(lastUp - firstUp) + 1);
+					if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
+					{
+						errors.Enqueue(new Vector3(firstUp, firstLeft, ct));
+						errors.Enqueue(new Vector3(lastUp, lastLeft, ct));
+					}
 					goto LoopEnd;
 				}
 
 				if (firstDown > -1 && lastDown > -1 && firstRight > -1 && lastRight > -1) // MULTI PAN DOWN RIGHT
 				{
-					PanDownRight(Math.Abs(lastRight - firstRight) + 1, Math.Abs(lastDown - firstDown) + 1);
+					int ans = PanDownRight(Math.Abs(lastRight - firstRight) + 1, Math.Abs(lastDown - firstDown) + 1);
+					if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
+					{
+						errors.Enqueue(new Vector3(firstDown, firstRight, ct));
+						errors.Enqueue(new Vector3(lastDown, lastRight, ct));
+					}
 					goto LoopEnd;
 				}
 				if (firstDown > -1 && lastUp > -1 && firstLeft > -1 && lastLeft > -1) // MULTI PAN DOWN LEFT
 				{
-					PanDownLeft(Math.Abs(lastLeft - firstLeft) + 1, Math.Abs(lastDown - firstDown) + 1);
+					int ans = PanDownLeft(Math.Abs(lastLeft - firstLeft) + 1, Math.Abs(lastDown - firstDown) + 1);
+					if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
+					{
+						errors.Enqueue(new Vector3(firstDown, firstLeft, ct));
+						errors.Enqueue(new Vector3(lastDown, lastLeft, ct));
+					}
 					goto LoopEnd;
 				}
 
@@ -845,37 +899,67 @@ void Update()
 					{
 						float xCenter = lastUp + (firstDown - lastUp) / 2f;
 						float yCenter = lastLeft + (firstRight - lastLeft) / 2f;
-						ZoomBothOut(yCenter, xCenter);
+						int ans = ZoomBothOut(yCenter, xCenter);
+						if (ans == DataPhysModel.ZOOM_ERROR_NOT_FOUND || ans == DataPhysModel.ZOOM_ERROR_OUT_OF_BOUNDS)
+						{
+							errors.Enqueue(new Vector3(lastUp, lastLeft, ct));
+							errors.Enqueue(new Vector3(firstDown, firstRight, ct));
+						}
 						goto LoopEnd;
 					}
 					if (lastDown < firstUp && lastRight < firstLeft) // ZOOM IN 
 					{
 						float xCenter = lastDown + (firstUp - lastDown) / 2f;
 						float yCenter = lastRight + (firstLeft - lastRight) / 2f;
-						ZoomBothIn(yCenter, xCenter);
+						int ans = ZoomBothIn(yCenter, xCenter);
+						if (ans == DataPhysModel.ZOOM_ERROR_NOT_FOUND || ans == DataPhysModel.ZOOM_ERROR_OUT_OF_BOUNDS)
+						{
+							errors.Enqueue(new Vector3(lastDown, lastRight, ct));
+							errors.Enqueue(new Vector3(firstUp, firstLeft, ct));
+						}
 						goto LoopEnd;
 					}
 				}
 
 				if (firstUp > -1 && lastUp > -1 && firstRight > -1 && lastRight > -1) // MULTI PAN UP RIGHT
 				{
-					PanUpRight(Math.Abs(lastRight - firstRight) + 1, Math.Abs(lastUp - firstUp) + 1);
+					int ans = PanUpRight(Math.Abs(lastRight - firstRight) + 1, Math.Abs(lastUp - firstUp) + 1);
+					if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
+					{
+						errors.Enqueue(new Vector3(firstRight, firstUp, ct));
+						errors.Enqueue(new Vector3(lastRight, lastUp, ct));
+					}
 					goto LoopEnd;
 				}
 				if (firstUp > -1 && lastUp > -1 && firstLeft > -1 && lastLeft > -1) // MULTI PAN UP LEFT
 				{
-					PanUpLeft(Math.Abs(lastLeft - firstLeft) + 1, Math.Abs(lastUp - firstUp) + 1);
+					int ans = PanUpLeft(Math.Abs(lastLeft - firstLeft) + 1, Math.Abs(lastUp - firstUp) + 1);
+					if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
+					{
+						errors.Enqueue(new Vector3(firstLeft, firstUp, ct));
+						errors.Enqueue(new Vector3(lastLeft, lastUp, ct));
+					}
 					goto LoopEnd;
 				}
 
 				if (firstDown > -1 && lastDown > -1 && firstRight > -1 && lastRight > -1) // MULTI PAN DOWN RIGHT
 				{
-					PanDownRight(Math.Abs(lastRight - firstRight) + 1, Math.Abs(lastDown - firstDown) + 1);
+					int ans = PanDownRight(Math.Abs(lastRight - firstRight) + 1, Math.Abs(lastDown - firstDown) + 1);
+					if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
+					{
+						errors.Enqueue(new Vector3(firstRight, firstDown, ct));
+						errors.Enqueue(new Vector3(lastRight, lastDown, ct));
+					}
 					goto LoopEnd;
 				}
 				if (firstDown > -1 && lastUp > -1 && firstLeft > -1 && lastLeft > -1) // MULTI PAN DOWN LEFT
 				{
-					PanDownLeft(Math.Abs(lastLeft - firstLeft) + 1, Math.Abs(lastDown - firstDown) + 1);
+					int ans = PanDownLeft(Math.Abs(lastLeft - firstLeft) + 1, Math.Abs(lastDown - firstDown) + 1);
+					if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
+					{
+						errors.Enqueue(new Vector3(firstLeft, firstDown, ct));
+						errors.Enqueue(new Vector3(lastLeft, lastDown, ct));
+					}
 					goto LoopEnd;
 				}
 			}
@@ -889,44 +973,76 @@ void Update()
 					{
 						if (direction.x >= JOYSTICK_THRESHOLD && direction.y >= JOYSTICK_THRESHOLD)
 						{
-							PanUpRight(1,1);
+							int ans = PanUpRight(1,1);
+							if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
+							{
+								errors.Enqueue(new Vector3(i, j, ct));
+							}
 							goto LoopEnd;
 						}
 						else if (direction.x >= JOYSTICK_THRESHOLD && direction.y <= -JOYSTICK_THRESHOLD)
 						{
-							PanUpLeft(1, 1);
+							int ans = PanUpLeft(1, 1);
+							if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
+							{
+								errors.Enqueue(new Vector3(i, j, ct));
+							}
 							goto LoopEnd;
 						}
 						else if (direction.x <= -JOYSTICK_THRESHOLD && direction.y >= JOYSTICK_THRESHOLD)
 						{
 
-							PanDownRight(1, 1);
+							int ans = PanDownRight(1, 1);
+							if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
+							{
+								errors.Enqueue(new Vector3(i, j, ct));
+							}
 							goto LoopEnd;
 						}
 						else if (direction.x <= -JOYSTICK_THRESHOLD && direction.y <= -JOYSTICK_THRESHOLD)
 						{
 
-							PanDownLeft(1, 1);
+							int ans = PanDownLeft(1, 1);
+							if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
+							{
+								errors.Enqueue(new Vector3(i, j, ct));
+							}
 							goto LoopEnd;
 						}
 						else if (direction.x >= JOYSTICK_THRESHOLD)
 						{
-							PanUp(1);
+							int ans = PanUp(1);
+							if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
+							{
+								errors.Enqueue(new Vector3(i, j, ct));
+							}
 							goto LoopEnd;
 						}
 						else if (direction.x <= -JOYSTICK_THRESHOLD)
 						{
-							PanDown(1);
+							int ans = PanDown(1);
+							if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
+							{
+								errors.Enqueue(new Vector3(i, j, ct));
+							}
 							goto LoopEnd;
 						}
 						else if (direction.y >= JOYSTICK_THRESHOLD)
 						{
-							PanRight(1);
+							int ans = PanRight(1);
+							if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
+							{
+								errors.Enqueue(new Vector3(i, j, ct));
+							}
 							goto LoopEnd;
 						}
 						else if (direction.y <= -JOYSTICK_THRESHOLD)
 						{
-							PanLeft(1);
+							int ans = PanLeft(1);
+							if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
+							{
+								errors.Enqueue(new Vector3(i, j, ct));
+							}
 							goto LoopEnd;
 						}
 
@@ -953,11 +1069,54 @@ void Update()
 			{
 				Application.Quit();
 			}
+
 			if (!DataPhysIsUpdated)
 			{
 				ViewFromDataSet();
+				if (errors.Count > 0)
+				{
+					for (int i = 0; i < errors.Count; i++)
+					{
+						Vector3 err = errors.Dequeue();
+						if (ct - err.z < 1f)
+						{
+							expanDialSticks[(int)err.x, (int)err.y].TargetColor = Color.red;
+							expanDialSticks[(int)err.x, (int)err.y].TargetTextureChangeDuration = 0.1f;
+							errors.Enqueue(err);
+						}
+					}
+				}
+				expanDialSticks.triggerTextureChange();
+				expanDialSticks.triggerShapeChange();
 				DataPhysIsUpdated = true;
+			} else
+			{
+				if (errors.Count > 0)
+				{
+					for (int i = 0; i < errors.Count; i++)
+					{
+						Vector3 err = errors.Dequeue();
+						int x = (int)err.x;
+						int y = (int)err.y;
+						if (ct - err.z < 1f)
+						{
+							expanDialSticks[x, y].TargetColor = Color.black;
+							expanDialSticks[x, y].TargetTextureChangeDuration = 0.1f;
+							errors.Enqueue(err);
+						} else
+						{
+
+							float coeff = Mathf.InverseLerp(dataSet.minValue, dataSet.maxValue, dataSet.data[x, y]);
+							expanDialSticks[x, y].TargetColor = new Color(1f - coeff, 1f - coeff, 1f);
+							expanDialSticks[x, y].TargetTextureChangeDuration = 0.1f;
+							errors.Enqueue(err);
+
+						}
+					}
+					expanDialSticks.triggerTextureChange();
+				}
 			}
+			
 
 			// ZOOM IN TOP LEFT TO BOTTOM RIGHT
 			if (Input.GetKeyDown(KeyCode.KeypadPlus))

@@ -205,6 +205,17 @@ public class DataPhysModel
     public const int Z_AXIS_IDLE = 0;
     public const int Z_AXIS_CCW = -1;
 
+    public const int PAN_ERROR_NOT_FOUND = -2;
+    public const int PAN_ERROR_OUT_OF_BOUNDS = -1;
+    public const int PAN_SUCCESS = 0;
+
+    public const int ROTATE_ERROR_NOT_FOUND = -2;
+    public const int ROTATE_SUCCESS = 0;
+
+    public const int ZOOM_ERROR_NOT_FOUND = -2;
+    public const int ZOOM_ERROR_OUT_OF_BOUNDS = -1;
+    public const int ZOOM_SUCCESS = 0;
+
     public const string DATETIME_FORMAT_MONTH = "MMM yyyy";
     public const string DATETIME_FORMAT_DAY = "MMM yyyy\nddd d";
     public const string DATETIME_FORMAT_HOUR = "MMM yyyy\nddd d\nHH:mm";
@@ -1068,60 +1079,65 @@ public class DataPhysModel
     }
 
 
-    public void Pan(int xAxisDirection, int xAxisStep,  int yAxisDirection, int yAxisStep)
+    public int Pan(int xAxisDirection, int xAxisStep,  int yAxisDirection, int yAxisStep)
 	{
-
-       /* Debug.Log("IN currentSpacePos: " + currentSpacePos);
-        Debug.Log("IN currentTimePos: " + currentTimePos);
-        Debug.Log("IN xAxisStep: " + xAxisStep);
-        Debug.Log("IN yAxisStep: " + yAxisStep);*/
+        int ansCode = PAN_SUCCESS;
         if (xAxisDirection == X_AXIS_RIGHT && yAxisDirection == Y_AXIS_DOWN)
         {
-            //Debug.Log(">PAN LEFT BOTTOM");
-            // PAN LEFT BOTTOM
-            currentTimePos = (currentTimePos - xAxisStep >= 0) ? currentTimePos - xAxisStep : 0;
-            currentSpacePos = (currentSpacePos - yAxisStep >= 0) ? currentSpacePos - yAxisStep : 0;
+            // PAN RIGHT DOWN
+            bool aboveLowerTimeBound = (currentTimePos - xAxisStep >= 0);
+            bool aboveLowerSpaceBound = (currentSpacePos - yAxisStep >= 0);
+            if (!aboveLowerTimeBound || !aboveLowerSpaceBound) ansCode = PAN_ERROR_OUT_OF_BOUNDS;
+            currentTimePos = aboveLowerTimeBound ? currentTimePos - xAxisStep : 0;
+            currentSpacePos = aboveLowerSpaceBound ? currentSpacePos - yAxisStep : 0;
         }
-        if (xAxisDirection == X_AXIS_LEFT && yAxisDirection == Y_AXIS_UP)
+        else if (xAxisDirection == X_AXIS_LEFT && yAxisDirection == Y_AXIS_UP)
         {
-            //Debug.Log(">PAN RIGHT TOP");
             // PAN RIGHT TOP
-            currentTimePos = (currentTimePos + xAxisStep + currentTimeLength < currentTimeSize) ? currentTimePos + xAxisStep : currentTimeSize - currentTimeLength - 1;
-            currentSpacePos = (currentSpacePos + yAxisStep + currentSpaceLength < currentSpaceSize) ? currentSpacePos + yAxisStep : currentSpaceSize - currentSpaceLength - 1;
+            bool underHigherTimeBound = (currentTimePos + xAxisStep + currentTimeLength < currentTimeSize);
+            bool underHigherSpaceBound = (currentSpacePos + yAxisStep + currentSpaceLength < currentSpaceSize);
+            if (!underHigherTimeBound || !underHigherSpaceBound) ansCode = PAN_ERROR_OUT_OF_BOUNDS;
+            currentTimePos = underHigherTimeBound ? currentTimePos + xAxisStep : currentTimeSize - currentTimeLength - 1;
+            currentSpacePos = underHigherSpaceBound ? currentSpacePos + yAxisStep : currentSpaceSize - currentSpaceLength - 1;
         }
-        if (xAxisDirection == X_AXIS_LEFT && yAxisDirection == Y_AXIS_IDLE)
+        else if (xAxisDirection == X_AXIS_LEFT && yAxisDirection == Y_AXIS_IDLE)
         {
-            //Debug.Log(">PAN RIGHT");
             // PAN RIGHT
-            currentTimePos = (currentTimePos + xAxisStep + currentTimeLength < currentTimeSize) ? currentTimePos + xAxisStep : currentTimeSize - currentTimeLength - 1;
+            bool underHigherTimeBound = (currentTimePos + xAxisStep + currentTimeLength < currentTimeSize);
+            if (!underHigherTimeBound) ansCode = PAN_ERROR_OUT_OF_BOUNDS;
+            currentTimePos = underHigherTimeBound ? currentTimePos + xAxisStep : currentTimeSize - currentTimeLength - 1;
         }
-        if (xAxisDirection == X_AXIS_RIGHT && yAxisDirection == Y_AXIS_IDLE)
+        else if (xAxisDirection == X_AXIS_RIGHT && yAxisDirection == Y_AXIS_IDLE)
         {
             // PAN LEFT 
-            //Debug.Log(">PAN LEFT");
-            currentTimePos = (currentTimePos - xAxisStep >= 0) ? currentTimePos - xAxisStep : 0;
+            bool aboveLowerTimeBound = (currentTimePos - xAxisStep >= 0);
+            if (!aboveLowerTimeBound) ansCode = PAN_ERROR_OUT_OF_BOUNDS;
+            currentTimePos = aboveLowerTimeBound ? currentTimePos - xAxisStep : 0;
         }
-        if (xAxisDirection == X_AXIS_IDLE && yAxisDirection == Y_AXIS_UP)
+        else if (xAxisDirection == X_AXIS_IDLE && yAxisDirection == Y_AXIS_UP)
         {
             // PAN TOP
-            /*Debug.Log(">PAN TOP");
-            Debug.Log("yAxisStep: " + yAxisStep);
-            Debug.Log("currentSpaceLength: " + currentSpaceLength);
-            Debug.Log("currentSpaceSize: " + currentSpaceSize);*/
-            currentSpacePos = (currentSpacePos + yAxisStep + currentSpaceLength < currentSpaceSize) ? currentSpacePos + yAxisStep : currentSpaceSize - currentSpaceLength - 1;
+            bool underHigherSpaceBound = (currentSpacePos + yAxisStep + currentSpaceLength < currentSpaceSize);
+            if (!underHigherSpaceBound) ansCode = PAN_ERROR_OUT_OF_BOUNDS;
+            currentSpacePos = underHigherSpaceBound ? currentSpacePos + yAxisStep : currentSpaceSize - currentSpaceLength - 1;
         }
-        if (xAxisDirection == X_AXIS_IDLE && yAxisDirection == Y_AXIS_DOWN)
+        else if (xAxisDirection == X_AXIS_IDLE && yAxisDirection == Y_AXIS_DOWN)
         {
             // PAN BOTTOM 
-            //Debug.Log(">PAN BOTTOM");
-            currentSpacePos = (currentSpacePos - yAxisStep >= 0) ? currentSpacePos - yAxisStep : 0;
+            bool aboveLowerSpaceBound = (currentSpacePos - yAxisStep >= 0);
+            if (!aboveLowerSpaceBound) ansCode = PAN_ERROR_OUT_OF_BOUNDS;
+            currentSpacePos = aboveLowerSpaceBound ? currentSpacePos - yAxisStep : 0;
         }
-        /*Debug.Log("OUT currentSpacePos: " + currentSpacePos);
-        Debug.Log("OUT currentTimePos: " + currentTimePos);*/
+        else
+		{
+            ansCode = PAN_ERROR_NOT_FOUND;
+		}
+        return ansCode;
     }
 
-    public void Zoom(int xAxisDirection, float ftimeOffset, int yAxisDirection, float fspaceOffset)
+    public int Zoom(int xAxisDirection, float ftimeOffset, int yAxisDirection, float fspaceOffset)
     {
+        int ansCode = ZOOM_SUCCESS;
         bool halfTime = (ftimeOffset % 1f != 0f);
         bool halfSpace = (fspaceOffset % 1f != 0f);
         int timeOffset = (int)ftimeOffset;
@@ -1132,7 +1148,7 @@ public class DataPhysModel
 
         int timeLength = currentTimeLength;
         int spaceLength = currentSpaceLength;
-		/*switch (currentTimeSpaceOrientation)
+		switch (currentTimeSpaceOrientation)
 		{
             case Z_AXIS_0:
                 timeLength = currentTimeLength;
@@ -1152,7 +1168,7 @@ public class DataPhysModel
             break;
             default:
             break;
-		}*/
+		}
         if (xAxisDirection == X_AXIS_IN && yAxisDirection == Y_AXIS_IN)
         {
 
@@ -1173,8 +1189,8 @@ public class DataPhysModel
                     //Debug.Log("zoom in -> next currentTimePos : " + currentTimePos);
                     break;
                 default:
-                    localTimePos = localTimePos + timeOffset;
-                return;
+                    ansCode = ZOOM_ERROR_OUT_OF_BOUNDS;
+                break;
             }
             switch (currentSpaceScale)
             {
@@ -1195,8 +1211,8 @@ public class DataPhysModel
                     //Debug.Log("zoom in -> next currentTimePos : " + currentTimePos);
                     break;
                 default:
-                    localSpacePos = localSpacePos + spaceOffset;
-                return;
+                    ansCode = ZOOM_ERROR_OUT_OF_BOUNDS;
+                break;
             }
 
 
@@ -1204,19 +1220,11 @@ public class DataPhysModel
             currentTimeScale = Math.Min(currentTimeScale + 1, TIME_SCALE_HOUR);
             currentSpaceScale = Math.Min(currentSpaceScale + 1, SPACE_SCALE_DEVICE);
             setCurrentScale(currentTimeScale, currentSpaceScale);
-           /* Debug.Log("ZOOM IN > localTimePos : " + localTimePos);
-            Debug.Log("ZOOM IN > timeOffset : " + timeOffset);
-            Debug.Log("ZOOM IN > currentTimeLength : " + currentTimeLength);
-            Debug.Log("ZOOM IN > currentTimeSize : " + currentTimeSize);
-            Debug.Log("ZOOM IN > localSpacePos : " + localSpacePos);
-            Debug.Log("ZOOM IN > spaceOffset : " + spaceOffset);
-            Debug.Log("ZOOM IN > currentSpaceLength : " + currentSpaceLength);
-            Debug.Log("ZOOM IN > currentSpaceSize : " + currentSpaceSize);*/
             currentTimePos = (localTimePos - timeOffset < 0) ? 0 : ((localTimePos - timeOffset + timeLength > currentTimeSize) ? currentTimeSize - timeLength : localTimePos - timeOffset);
             currentSpacePos = (localSpacePos - spaceOffset < 0) ? 0 : ((localSpacePos - spaceOffset + spaceLength > currentSpaceSize) ? currentSpaceSize - spaceLength : localSpacePos - spaceOffset);
             
         }
-        if (xAxisDirection == X_AXIS_OUT && yAxisDirection == Y_AXIS_OUT)
+        else if (xAxisDirection == X_AXIS_OUT && yAxisDirection == Y_AXIS_OUT)
         {
             // compute new zoomed-out pos
             switch (currentTimeScale)
@@ -1228,8 +1236,8 @@ public class DataPhysModel
                     localTimePos = (int)(localTimePos / 24f);
                     break;
                 default:
-                    localTimePos = localTimePos + timeOffset;
-                return;
+                    ansCode = ZOOM_ERROR_OUT_OF_BOUNDS;
+                break;
             }
             switch (currentSpaceScale)
             {
@@ -1244,27 +1252,19 @@ public class DataPhysModel
                     localSpacePos = nextCurrentPos;
                     break;
                 default:
-                    localSpacePos = localSpacePos + spaceOffset;
-                    return;
+                    ansCode = ZOOM_ERROR_OUT_OF_BOUNDS;
+                break;
             }
 
             // ZOOM BOTH AXIS OUT
             currentTimeScale = Math.Max(currentTimeScale - 1, TIME_SCALE_MONTH);
             currentSpaceScale = Math.Max(currentSpaceScale - 1, SPACE_SCALE_BUILDING);
             setCurrentScale(currentTimeScale, currentSpaceScale);
-            /*Debug.Log("ZOOM OUT > localTimePos : " + localTimePos);
-            Debug.Log("ZOOM OUT > timeOffset : " + timeOffset);
-            Debug.Log("ZOOM OUT > currentTimeLength : " + currentTimeLength);
-            Debug.Log("ZOOM OUT > currentTimeSize : " + currentTimeSize);
-            Debug.Log("ZOOM OUT > localSpacePos : " + localSpacePos);
-            Debug.Log("ZOOM OUT > spaceOffset : " + spaceOffset);
-            Debug.Log("ZOOM OUT > currentSpaceLength : " + currentSpaceLength);
-            Debug.Log("ZOOM OUT > currentSpaceSize : " + currentSpaceSize);*/
             currentTimePos = (localTimePos - timeOffset < 0) ? 0 : ((localTimePos - timeOffset + timeLength > currentTimeSize) ? currentTimeSize - timeLength : localTimePos - timeOffset);
             currentSpacePos = (localSpacePos - spaceOffset < 0) ? 0 : ((localSpacePos - spaceOffset + spaceLength > currentSpaceSize) ? currentSpaceSize - spaceLength : localSpacePos - spaceOffset);
 
         }
-        if (xAxisDirection == X_AXIS_IN && yAxisDirection == Y_AXIS_IDLE)
+        else if (xAxisDirection == X_AXIS_IN && yAxisDirection == Y_AXIS_IDLE)
         {
             // compute new zoomed-in pos
             switch (currentTimeScale)
@@ -1283,8 +1283,8 @@ public class DataPhysModel
                     //Debug.Log("zoom in -> next currentTimePos : " + currentTimePos);
                     break;
                 default:
-                    localTimePos = localTimePos + timeOffset;
-                return;
+                    ansCode = ZOOM_ERROR_OUT_OF_BOUNDS;
+                break;
             }
 
             // ZOOM X AXIS IN
@@ -1295,7 +1295,7 @@ public class DataPhysModel
             //currentSpaceScale = currentSpaceScale;
 
         }
-        if (xAxisDirection == X_AXIS_OUT && yAxisDirection == Y_AXIS_IDLE)
+        else if (xAxisDirection == X_AXIS_OUT && yAxisDirection == Y_AXIS_IDLE)
         {
             // compute new zoomed-out pos
             switch (currentTimeScale)
@@ -1307,8 +1307,8 @@ public class DataPhysModel
                     localTimePos = (int)(localTimePos / 24f);
                     break;
                 default:
-                    localTimePos = localTimePos + timeOffset;
-                return;
+                    ansCode = ZOOM_ERROR_OUT_OF_BOUNDS;
+                break;
             }
             // ZOOM X AXIS OUT
             currentTimeScale = Math.Max(currentTimeScale - 1, TIME_SCALE_MONTH);
@@ -1317,7 +1317,7 @@ public class DataPhysModel
             //currentSpaceScale = currentSpaceScale;
 
         }
-        if (xAxisDirection == X_AXIS_IDLE && yAxisDirection == Y_AXIS_IN)
+        else if (xAxisDirection == X_AXIS_IDLE && yAxisDirection == Y_AXIS_IN)
         {
             switch (currentSpaceScale)
             {
@@ -1338,8 +1338,8 @@ public class DataPhysModel
                     //Debug.Log("zoom in -> next currentTimePos : " + currentTimePos);
                     break;
                 default:
-                    localSpacePos = localSpacePos + spaceOffset;
-                return;
+                    ansCode = ZOOM_ERROR_OUT_OF_BOUNDS;
+                break;
             }
             // ZOOM Y AXIS IN
             // currentTimeScale = currentTimeScale
@@ -1347,7 +1347,7 @@ public class DataPhysModel
             setCurrentScale(currentTimeScale, currentSpaceScale);
             currentSpacePos = (localSpacePos - spaceOffset < 0) ? 0 : ((localSpacePos - spaceOffset + spaceLength > currentSpaceSize) ? spaceLength - currentSpaceLength : localSpacePos - spaceOffset);
         }
-        if (xAxisDirection == X_AXIS_IDLE && yAxisDirection == Y_AXIS_OUT)
+        else if (xAxisDirection == X_AXIS_IDLE && yAxisDirection == Y_AXIS_OUT)
         {
             switch (currentSpaceScale)
             {
@@ -1362,8 +1362,8 @@ public class DataPhysModel
                     localSpacePos = nextCurrentPos;
                     break;
                 default:
-                    localSpacePos = localSpacePos + spaceOffset;
-                return;
+                    ansCode = ZOOM_ERROR_OUT_OF_BOUNDS;
+                break;
             }
 
             // ZOOM Y AXIS OUT
@@ -1372,20 +1372,30 @@ public class DataPhysModel
             setCurrentScale(currentTimeScale, currentSpaceScale);
             currentSpacePos = (localSpacePos - spaceOffset < 0) ? 0 : ((localSpacePos - spaceOffset + spaceLength > currentSpaceSize) ? currentSpaceSize - spaceLength : localSpacePos - spaceOffset);
         }
+        else
+		{
+            ansCode = ZOOM_ERROR_NOT_FOUND;
+		}
+        return ansCode;
     }
 
-    public void Rotate(int zAxisDirection)
+    public int Rotate(int zAxisDirection)
     {
+        int ansCode = ROTATE_SUCCESS;
         if(zAxisDirection == Z_AXIS_CW)
         {
             currentTimeSpaceOrientation = (4 + (currentTimeSpaceOrientation + 1)) % 4;
             currentTimeSpaceDirection = Z_AXIS_CW;
         }
-        if (zAxisDirection == Z_AXIS_CCW)
+        else if (zAxisDirection == Z_AXIS_CCW)
         {
             currentTimeSpaceOrientation = (4 + (currentTimeSpaceOrientation - 1)) % 4;
             currentTimeSpaceDirection = Z_AXIS_CCW;
+        } else
+		{
+            ansCode = ROTATE_ERROR_NOT_FOUND;
         }
+        return ansCode;
     }
 
     private void shuffle(float[] array, int repeat)
