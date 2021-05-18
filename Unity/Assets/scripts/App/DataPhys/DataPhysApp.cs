@@ -530,8 +530,6 @@ public class DataPhysApp : MonoBehaviour
 	int ZoomBothIn(float xCenter, float yCenter)
 	{
 		Debug.Log("ZOOM IN");
-		Debug.Log("xCenter: " + xCenter);
-		Debug.Log("yCenter: " + yCenter);
 		int ans = DataPhysModel.ZOOM_ERROR_NOT_FOUND;
 		switch (dataSet.orientation)
 		{
@@ -554,8 +552,6 @@ public class DataPhysApp : MonoBehaviour
 	int ZoomBothOut(float xCenter, float yCenter)
 	{
 		Debug.Log("ZOOM OUT");
-		Debug.Log("xCenter: " + xCenter);
-		Debug.Log("yCenter: " + yCenter);
 		int ans = DataPhysModel.ZOOM_ERROR_NOT_FOUND;
 		switch (dataSet.orientation)
 		{
@@ -1078,11 +1074,20 @@ void Update()
 					for (int i = 0; i < errors.Count; i++)
 					{
 						Vector3 err = errors.Dequeue();
+						int x = (int)err.x;
+						int y = (int)err.y;
 						if (ct - err.z < 1f)
 						{
-							expanDialSticks[(int)err.x, (int)err.y].TargetColor = Color.red;
-							expanDialSticks[(int)err.x, (int)err.y].TargetTextureChangeDuration = 0.1f;
+							expanDialSticks[x, y].TargetColor = Color.black;
+							expanDialSticks[x, y].TargetTextureChangeDuration = 0.1f;
 							errors.Enqueue(err);
+						} else
+						{
+							float coeff = Mathf.InverseLerp(dataSet.minValue, dataSet.maxValue, dataSet.data[y, x]);
+							expanDialSticks[x, y].TargetColor = new Color(1f - coeff, 1f - coeff, 1f);
+							expanDialSticks[x, y].TargetTextureChangeDuration = 0.1f;
+							errors.Enqueue(err);
+
 						}
 					}
 				}
@@ -1105,8 +1110,7 @@ void Update()
 							errors.Enqueue(err);
 						} else
 						{
-
-							float coeff = Mathf.InverseLerp(dataSet.minValue, dataSet.maxValue, dataSet.data[x, y]);
+							float coeff = Mathf.InverseLerp(dataSet.minValue, dataSet.maxValue, dataSet.data[y, x]);
 							expanDialSticks[x, y].TargetColor = new Color(1f - coeff, 1f - coeff, 1f);
 							expanDialSticks[x, y].TargetTextureChangeDuration = 0.1f;
 							errors.Enqueue(err);
@@ -1122,62 +1126,62 @@ void Update()
 			if (Input.GetKeyDown(KeyCode.KeypadPlus))
 			{
 
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, 0, -10, -10);
+				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, 0, -JOYSTICK_THRESHOLD, -JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, 0, 10, 10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, 0, JOYSTICK_THRESHOLD, JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 1, 0, 10, 10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 1, 0, JOYSTICK_THRESHOLD, JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 1, 0, -10, -10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 1, 0, -JOYSTICK_THRESHOLD, -JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);
 
 			}
 			if (Input.GetKeyUp(KeyCode.KeypadPlus))
 			{
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, -10, 0, 10);
+				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, -JOYSTICK_THRESHOLD, 0, JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, 10, 0, -10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, JOYSTICK_THRESHOLD, 0, -JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 1, 10, 0, -10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 1, JOYSTICK_THRESHOLD, 0, -JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 1, -10, 0, 10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 1, -JOYSTICK_THRESHOLD, 0, JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);
 			}
 
 			// ZOOM IN BOTTOM LEFT TO TOP RIGHT
 			/*if (Input.GetKeyDown(KeyCode.KeypadPlus))
 			{
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 0, 4, 0, 10, 10);
+				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 0, 4, 0, JOYSTICK_THRESHOLD, JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 0, 4, 0, 10, 10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 0, 4, 0, JOYSTICK_THRESHOLD, JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 0, 0, -10, -10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 0, 0, -JOYSTICK_THRESHOLD, -JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 0, 0, -10, -10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 0, 0, -JOYSTICK_THRESHOLD, -JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);
 			}
 
 			if (Input.GetKeyUp(KeyCode.KeypadPlus))
 			{
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 0, 4, 10, 0, -10);
+				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 0, 4, JOYSTICK_THRESHOLD, 0, -JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 0, 4, 10, 0, -10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 0, 4, JOYSTICK_THRESHOLD, 0, -JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 0, -10, 0, 10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 0, -JOYSTICK_THRESHOLD, 0, JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 0, -10, 0, 10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 0, -JOYSTICK_THRESHOLD, 0, JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);
 			}*/
 
@@ -1185,31 +1189,31 @@ void Update()
 			if (Input.GetKeyDown(KeyCode.KeypadMinus))
 			{
 
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, 0, 10, 10);
+				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, 0, JOYSTICK_THRESHOLD, JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, 0, -10, -10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, 0, -JOYSTICK_THRESHOLD, -JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 1, 0, -10, -10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 1, 0, -JOYSTICK_THRESHOLD, -JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 1, 0, 10, 10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 1, 0, JOYSTICK_THRESHOLD, JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);
 
 			}
 			if (Input.GetKeyUp(KeyCode.KeypadMinus))
 			{
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, 10, 0, -10);
+				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, JOYSTICK_THRESHOLD, 0, -JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, -10, 0, 10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, -JOYSTICK_THRESHOLD, 0, JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 1, -10, 0, 10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 1, -JOYSTICK_THRESHOLD, 0, JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 1, 10, 0, -10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 1, JOYSTICK_THRESHOLD, 0, -JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);
 			}
 
@@ -1217,32 +1221,32 @@ void Update()
 			/*if (Input.GetKeyDown(KeyCode.KeypadMinus))
 			{
 
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 0, 4, 0, -10, -10);
+				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 0, 4, 0, -JOYSTICK_THRESHOLD, -JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 0, 4, 0, -10, -10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 0, 4, 0, -JOYSTICK_THRESHOLD, -JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 0, 0, 10, 10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 0, 0, JOYSTICK_THRESHOLD, JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 0, 0, 10, 10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 0, 0, JOYSTICK_THRESHOLD, JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);
 
 			}
 			if (Input.GetKeyUp(KeyCode.KeypadMinus))
 			{
 
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 0, 4, -10, 0, 10);
+				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 0, 4, -JOYSTICK_THRESHOLD, 0, JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 0, 4, -10, 0, 10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 0, 4, -JOYSTICK_THRESHOLD, 0, JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 0, 10, 0, -10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 0, JOYSTICK_THRESHOLD, 0, -JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 
-				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 0, 10, 0, -10);
+				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 0, JOYSTICK_THRESHOLD, 0, -JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);
 			}*/
 
@@ -1250,67 +1254,67 @@ void Update()
 			// UP
 			if (Input.GetKeyDown(KeyCode.Z))
 			{
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 0, 2, 0, 10, 10);
+				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 0, 2, 0, JOYSTICK_THRESHOLD, JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 			}
 			if (Input.GetKeyUp(KeyCode.Z))
 			{
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 0, 2, 10, 0, -10);
+				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 0, 2, JOYSTICK_THRESHOLD, 0, -JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 			}
 
 			// DOWN
 			if (Input.GetKeyDown(KeyCode.S))
 			{
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 4, 2, 0, -10, -10);
+				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 4, 2, 0, -JOYSTICK_THRESHOLD, -JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 			}
 			if (Input.GetKeyUp(KeyCode.S))
 			{
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 4, 2, -10, 0, 10);
+				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 4, 2, -JOYSTICK_THRESHOLD, 0, JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 			}
 
 			// LEFT
 			if (Input.GetKeyDown(KeyCode.Q))
 			{
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 2, 0, 0, -10, -10);
+				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 2, 0, 0, -JOYSTICK_THRESHOLD, -JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);
-				/*e = new ExpanDialStickEventArgs(DateTime.Now, 2, 5, 0, -10, -10);
+				/*e = new ExpanDialStickEventArgs(DateTime.Now, 2, 5, 0, -JOYSTICK_THRESHOLD, -JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);*/
 			}
 			if (Input.GetKeyUp(KeyCode.Q))
 			{
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 2, 0, -10, 0, 10);
+				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 2, 0, -JOYSTICK_THRESHOLD, 0, JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);
-				/*e = new ExpanDialStickEventArgs(DateTime.Now, 2, 5, -10, 0, 10);
+				/*e = new ExpanDialStickEventArgs(DateTime.Now, 2, 5, -JOYSTICK_THRESHOLD, 0, JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);*/
 			}
 
 			// RIGHT
 			if (Input.GetKeyDown(KeyCode.D))
 			{
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 2, 5, 0, 10, 10);
+				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 2, 5, 0, JOYSTICK_THRESHOLD, JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);
-				/*e = new ExpanDialStickEventArgs(DateTime.Now, 2, 0, 0, 10, 10);
+				/*e = new ExpanDialStickEventArgs(DateTime.Now, 2, 0, 0, JOYSTICK_THRESHOLD, JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);*/
 			}
 			if (Input.GetKeyUp(KeyCode.D))
 			{
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 2, 5, 10, 0, -10);
+				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 2, 5, JOYSTICK_THRESHOLD, 0, -JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);
-				/*e = new ExpanDialStickEventArgs(DateTime.Now, 2, 0, 10, 0, -10);
+				/*e = new ExpanDialStickEventArgs(DateTime.Now, 2, 0, JOYSTICK_THRESHOLD, 0, -JOYSTICK_THRESHOLD);
 				HandleYAxisChanged(new object(), e);*/
 			}
 
 			if (Input.GetKeyDown(KeyCode.A))
 			{
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 2, 5, 0, -10, -10);
+				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 2, 5, 0, -JOYSTICK_THRESHOLD, -JOYSTICK_THRESHOLD);
 				HandleRotationChanged(new object(), e);
 			}
 			if (Input.GetKeyDown(KeyCode.E))
 			{
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 2, 5, 0, 10, 10);
+				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 2, 5, 0, JOYSTICK_THRESHOLD, JOYSTICK_THRESHOLD);
 				HandleRotationChanged(new object(), e);
 			}
 		}
