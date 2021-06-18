@@ -120,9 +120,9 @@ public class ExpanDialSticks : MonoBehaviour
 {
 	public Texture buttonTexture;
 	public bool SIMULATION = true;
-	public float diameter = 4.0f;
+	public float diameter = 6.0f;
 	public float height = 10.0f;
-	public float offset = 0.5f;
+	public float offset = 0.1f;
 
 
 	public const float JOYSTICK_THRESHOLD = 10f;
@@ -138,9 +138,9 @@ public class ExpanDialSticks : MonoBehaviour
 	public int BROKER_PORT = 1883; // 8080; 
 	public string MQTT_TOPIC = "ExpanDialSticks";
 	public float MQTT_DELAY_RECONNECT = 5f; // 0.2f;
-	public float MQTT_DELAY_AT_START = 5f; // 0.2f;
-	public float MQTT_INTERVAL = 0.2f; // 0.2f;
-	public float EVENT_INTERVAL = 0.5f; // 0.2f;
+	public float MQTT_DELAY_AT_START = 2f; // 0.2f;
+	public float MQTT_INTERVAL = 0.25f; // 0.2f;
+	public float EVENT_INTERVAL = 0.25f; // 0.2f;
 	public const int nbColumns = 6;
 	public const int nbRows = 5;
 	float cameraDistanceFromMatrix = 70f;
