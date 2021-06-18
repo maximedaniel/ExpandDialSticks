@@ -48,9 +48,9 @@ public class ExpanDialStickModel
 	private float holdingDiff = 0f;
 	private float holdingTarget = 0f;
 
-	private float collidingCurrent = 0f;
-	private float collidingDiff = 0f;
-	private float collidingTarget = 0f;
+	private float proximityCurrent = 0f;
+	private float proximityDiff = 0f;
+	private float proximityTarget = 0f;
 
 	private float shapeChangeDurationCurrent = 0f;
 	private float shapeChangeDurationDiff = 0f;
@@ -224,19 +224,19 @@ public class ExpanDialStickModel
 			this.holdingCurrent = value ? 1f : 0f;
 		}
 	}
-	public bool TargetColliding
+	public float TargetProximity
 	{
-		get => this.collidingTarget > 0f ? true : false;
-		set => this.collidingTarget = value ? 1f : 0f;
+		get => this.proximityTarget;
+		set => this.proximityTarget = value;
 	}
 
-	public bool CurrentColliding
+	public float CurrentProximity
 	{
-		get => this.collidingCurrent > 0f ? true : false;
+		get => this.proximityCurrent;
 		set
 		{
-			this.collidingDiff += (value ? 1f : 0f) - this.collidingCurrent;
-			this.collidingCurrent = value ? 1f : 0f;
+			this.proximityDiff += value - this.proximityCurrent;
+			this.proximityCurrent = value;
 		}
 	}
 
@@ -362,7 +362,7 @@ public class ExpanDialStickModel
 		}
 	}
 	
-	public void setShapeChangeTarget(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, bool colliding, float shapeChangeDuration)
+	public void setShapeChangeTarget(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, float proximity, float shapeChangeDuration)
 	{
 		TargetAxisX = xAxis;
 		TargetAxisY = yAxis;
@@ -371,11 +371,11 @@ public class ExpanDialStickModel
 		TargetReaching = reaching;
 		TargetHolding = holding;
 		TargetPosition = position;
-		TargetColliding = colliding;
+		TargetProximity = proximity;
 		TargetShapeChangeDuration = shapeChangeDuration;
 	}
 	
-	public void setShapeChangeCurrent(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, bool colliding, float shapeChangeDuration)
+	public void setShapeChangeCurrent(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, float proximity, float shapeChangeDuration)
 	{
 		
 		CurrentAxisX = xAxis;
@@ -383,7 +383,7 @@ public class ExpanDialStickModel
 		CurrentSelectCount = selectCount;
 		CurrentRotation = rotation;
 		CurrentHolding = holding;
-		TargetColliding = colliding;
+		CurrentProximity = proximity;
 
 		if (this.reachingCurrent > 0f  && reaching == false){
 			CurrentPosition = position;
@@ -449,7 +449,7 @@ public class ExpanDialStickModel
 			this.positionDiff,
 			this.reachingDiff,
 			this.holdingDiff,
-			this.collidingDiff,
+			this.proximityDiff,
 			this.shapeChangeDurationDiff
 		};
 	}
@@ -472,7 +472,7 @@ public class ExpanDialStickModel
 			= this.positionDiff
 			= this.reachingDiff
 			= this.holdingDiff
-			= this.collidingDiff
+			= this.proximityDiff
 			= this.shapeChangeDurationDiff
 			= 0f;
 	}

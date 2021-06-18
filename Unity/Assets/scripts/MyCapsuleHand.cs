@@ -186,13 +186,12 @@ namespace Leap.Unity {
     private Vector3[] _spherePositions;
     private Matrix4x4[] _sphereMatrices   = new Matrix4x4[32], 
                         _cylinderMatrices = new Matrix4x4[32];
+    private const int SEPARATION_LEVEL = 3;
+    private const int SEPARATION_LAYER = 10; // Safety Level 0
     private GameObject _handObject;
-    private GameObject _handCollider;
-    private GameObject[] _sphereColliders;
+    private GameObject[] _handColliders;
+    private GameObject [] _forearmColliders;
 
-    private GameObject _forearmCollider;
-    private GameObject[] _spheres;
-    private GameObject[] _cylinders;
     private int _curSphereIndex = 0, _curCylinderIndex = 0;
 
     public override ModelType HandModelType {
@@ -233,42 +232,51 @@ namespace Leap.Unity {
 
         }
         _handObject = handObjectFound;
-        /*if (_sphereColliders == null || _sphereColliders.Length == 0) _sphereColliders = new GameObject[TOTAL_JOINT_COUNT + 2];
-        for (int i = 0; i < TOTAL_JOINT_COUNT + 2; i++) {
-            var sphereColliderName = Handedness + "SphereCollider" + i;
-            GameObject sphereColliderFound = GameObject.Find(sphereColliderName);
-            if (sphereColliderFound == null)
+            /*if (_sphereColliders == null || _sphereColliders.Length == 0) _sphereColliders = new GameObject[TOTAL_JOINT_COUNT + 2];
+            for (int i = 0; i < TOTAL_JOINT_COUNT + 2; i++) {
+                var sphereColliderName = Handedness + "SphereCollider" + i;
+                GameObject sphereColliderFound = GameObject.Find(sphereColliderName);
+                if (sphereColliderFound == null)
+                {
+                    sphereColliderFound = new GameObject(sphereColliderName);
+                    sphereColliderFound.AddComponent<SphereCollider>();
+                    sphereColliderFound.GetComponent<SphereCollider>().radius = _jointRadius * 2.0f * transform.lossyScale.x;
+                    sphereColliderFound.transform.parent = _handObject.transform;
+                    sphereColliderFound.gameObject.tag = "Player";
+                }
+                _sphereColliders[i] = sphereColliderFound;
+            }*/
+        _handColliders = new GameObject[SEPARATION_LEVEL];
+        for(var i = 0; i < SEPARATION_LEVEL; i++)
             {
-                sphereColliderFound = new GameObject(sphereColliderName);
-                sphereColliderFound.AddComponent<SphereCollider>();
-                sphereColliderFound.GetComponent<SphereCollider>().radius = _jointRadius * 2.0f * transform.lossyScale.x;
-                sphereColliderFound.transform.parent = _handObject.transform;
-                sphereColliderFound.gameObject.tag = "Player";
+                var handColliderName = Handedness + "HandCollider" + i;
+                _handColliders[i] = GameObject.Find(handColliderName);
+                if (_handColliders[i] == null)
+                {
+                    _handColliders[i] = new GameObject(handColliderName);
+                    _handColliders[i].AddComponent<SphereCollider>();
+                    _handColliders[i].transform.parent = _handObject.transform;
+                    _handColliders[i].gameObject.tag = "Player";
+                    _handColliders[i].gameObject.layer = SEPARATION_LAYER + i;
+                }
             }
-            _sphereColliders[i] = sphereColliderFound;
-        }*/
-        var handColliderName = Handedness + "HandCollider";
-        GameObject handColliderFound = GameObject.Find(handColliderName);
-        if (handColliderFound == null)
-        {
-            handColliderFound = new GameObject(handColliderName);
-            handColliderFound.AddComponent<SphereCollider>();
-            handColliderFound.transform.parent = _handObject.transform;
-            handColliderFound.gameObject.tag = "Player";
-        }
-        _handCollider = handColliderFound;
 
-
-        var forearmColliderName = Handedness + "ForearmCollider";
-        GameObject forearmColliderFound = GameObject.Find(forearmColliderName);
-        if (forearmColliderFound == null)
+        _forearmColliders = new GameObject[SEPARATION_LEVEL];
+        for (var i = 0; i < SEPARATION_LEVEL; i++)
         {
-            forearmColliderFound = new GameObject(forearmColliderName);
-            forearmColliderFound.AddComponent<CapsuleCollider>();
-            forearmColliderFound.transform.parent = _handObject.transform;
-            forearmColliderFound.gameObject.tag = "Player";
+            var forearmColliderName = Handedness + "ForearmCollider" + i;
+            _forearmColliders[i] = GameObject.Find(forearmColliderName);
+            if (_forearmColliders[i] == null)
+            {
+                _forearmColliders[i] = new GameObject(forearmColliderName);
+                _forearmColliders[i].AddComponent<CapsuleCollider>();
+                _forearmColliders[i].transform.parent = _handObject.transform;
+                _forearmColliders[i].gameObject.tag = "Player";
+                _forearmColliders[i].gameObject.layer = SEPARATION_LAYER + i;
+                }
         }
-        _forearmCollider = forearmColliderFound;
+
+            
 
        /* int _nbSphere = _showArm ? 26 : 22;
         int _nbCylinder = _showArm ? 25 : 21;
@@ -369,7 +377,7 @@ namespace Leap.Unity {
     }
 
   public override void UpdateHand() {
-      if (_handCollider == null  || _forearmCollider == null) InstantiateGameObjects();
+      if (_handColliders == null  || _forearmColliders == null) InstantiateGameObjects();
 
       _curSphereIndex = 0;
       _curCylinderIndex = 0;
@@ -432,60 +440,68 @@ namespace Leap.Unity {
         maxDistPoint = Math.Max(maxDistPoint, Vector3.Distance(centerPoint, palmPosition));
         maxDistPoint = Math.Max(maxDistPoint, Vector3.Distance(centerPoint, mockThumbJointPos)); 
 
-        _handCollider.transform.position = centerPoint;
-        SphereCollider sc = _handCollider.GetComponent<SphereCollider>();
-        sc.radius = maxDistPoint;
-       /* Bounds b = new Bounds(new Vector3(0, 0, 0), extends);
-        BoxCollider bc = _handCollider.GetComponent<BoxCollider>();
-        bc.size = b.size;*/
+        for(var i = 0; i < SEPARATION_LEVEL; i++)
+		{
+            _handColliders[i].transform.position = centerPoint;
+            SphereCollider sc = _handColliders[i].GetComponent<SphereCollider>();
+            sc.radius = maxDistPoint;
+            sc.radius += sc.radius * (i * 0.5f);
+            }
+            /* Bounds b = new Bounds(new Vector3(0, 0, 0), extends);
+             BoxCollider bc = _handCollider.GetComponent<BoxCollider>();
+             bc.size = b.size;*/
 
 
 
-            //If we want to show the arm, do the calculations and display the meshes
-            if (_showArm) {
-        var arm = _hand.Arm;
+        //If we want to show the arm, do the calculations and display the meshes
+        if (_showArm)
+        {
+            var arm = _hand.Arm;
 
-        Vector3 right = arm.Basis.xBasis.ToVector3() * arm.Width * 0.7f * 0.5f;
-        Vector3 wrist = arm.WristPosition.ToVector3();
-        Vector3 elbow = arm.ElbowPosition.ToVector3();
+            Vector3 right = arm.Basis.xBasis.ToVector3() * arm.Width * 0.7f * 0.5f;
+            Vector3 wrist = arm.WristPosition.ToVector3();
+            Vector3 elbow = arm.ElbowPosition.ToVector3();
 
-        float armLength = Vector3.Distance(wrist, elbow);
-        wrist -= arm.Direction.ToVector3() * armLength * 0.05f;
+            float armLength = Vector3.Distance(wrist, elbow);
+            wrist -= arm.Direction.ToVector3() * armLength * 0.05f;
 
-        Vector3 armFrontRight = wrist + right;
-        Vector3 armFrontLeft = wrist - right;
-        Vector3 armBackRight = elbow + right;
-        Vector3 armBackLeft = elbow - right;
+            Vector3 armFrontRight = wrist + right;
+            Vector3 armFrontLeft = wrist - right;
+            Vector3 armBackRight = elbow + right;
+            Vector3 armBackLeft = elbow - right;
 
-        drawSphere(armFrontRight);
-        drawSphere(armFrontLeft);
-        drawSphere(armBackLeft);
-        drawSphere(armBackRight);
+            drawSphere(armFrontRight);
+            drawSphere(armFrontLeft);
+            drawSphere(armBackLeft);
+            drawSphere(armBackRight);
 
-        drawCylinder(armFrontLeft, armFrontRight);
-        drawCylinder(armBackLeft, armBackRight);
-        drawCylinder(armFrontLeft, armBackLeft);
-        drawCylinder(armFrontRight, armBackRight);
+            drawCylinder(armFrontLeft, armFrontRight);
+            drawCylinder(armBackLeft, armBackRight);
+            drawCylinder(armFrontLeft, armBackLeft);
+            drawCylinder(armFrontRight, armBackRight);
 
-        Vector3 centered = (armFrontLeft + armFrontRight + armBackLeft + armBackRight) /4f;
-        _forearmCollider.transform.position = centered;
-        Vector3 dirForward = Vector3.Normalize(armFrontLeft - armBackLeft);
-        Vector3 dirUpward = Vector3.Normalize(armFrontRight - armFrontLeft);
-        Quaternion rotationForearm = Quaternion.LookRotation(dirForward, dirUpward);
-        _forearmCollider.transform.rotation = rotationForearm;
-        var offsetExtends = ExtractScaleFromMatrix(ref _sphereMatrices[0]);
-        Vector3 extended = new Vector3(offsetExtends.x*2.0f, Vector3.Distance(armBackLeft, armBackRight) +
-            offsetExtends.x * 2.0f, Vector3.Distance(armBackLeft, armFrontLeft) +
-            offsetExtends.x * 2.0f);
-        Bounds bounds = new Bounds(new Vector3(0, 0, 0), extended);
-        float offset = 6.0f;
-        CapsuleCollider capsuleCollider = _forearmCollider.GetComponent<CapsuleCollider>();
-        capsuleCollider.radius = (Vector3.Distance(armFrontRight, armFrontLeft) + offsetExtends.x)/2.0f + offset/2.0f;
-        capsuleCollider.height = Vector3.Distance(armBackLeft, armFrontLeft)  + offsetExtends.x + offset;
-        capsuleCollider.direction = 2;
+            Vector3 centered = (armFrontLeft + armFrontRight + armBackLeft + armBackRight) / 4f;
+            Vector3 dirForward = Vector3.Normalize(armFrontLeft - armBackLeft);
+            Vector3 dirUpward = Vector3.Normalize(armFrontRight - armFrontLeft);
+            Quaternion rotationForearm = Quaternion.LookRotation(dirForward, dirUpward);
+            var offsetExtends = ExtractScaleFromMatrix(ref _sphereMatrices[0]);
+            Vector3 extended = new Vector3(offsetExtends.x * 2.0f, Vector3.Distance(armBackLeft, armBackRight) +
+                offsetExtends.x * 2.0f, Vector3.Distance(armBackLeft, armFrontLeft) +
+                offsetExtends.x * 2.0f);
+            Bounds bounds = new Bounds(new Vector3(0, 0, 0), extended);
+            float offset = 6.0f;
 
-      }
-
+            for (var i = 0; i < SEPARATION_LEVEL; i++)
+            {
+                _forearmColliders[i].transform.position = centered;
+                _forearmColliders[i].transform.rotation = rotationForearm;
+                CapsuleCollider capsuleCollider = _forearmColliders[i].GetComponent<CapsuleCollider>();
+                capsuleCollider.radius = (Vector3.Distance(armFrontRight, armFrontLeft) + offsetExtends.x) / 2.0f + offset / 2.0f;
+                capsuleCollider.radius += capsuleCollider.radius * (i * 0.5f);
+                capsuleCollider.height = Vector3.Distance(armBackLeft, armFrontLeft) + offsetExtends.x + offset;
+                capsuleCollider.direction = 2;
+            }
+        }
       //Draw cylinders between finger joints
       for (int i = 0; i < 5; i++) {
         for (int j = 0; j < 3; j++) {

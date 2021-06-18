@@ -19,7 +19,12 @@ public class ExpanDialStickCollision: MonoBehaviour
 	private int j = 0;
 
 	//private List<GameObject> goList = new List<GameObject>();
-	private bool isColliding = false;
+
+	private const int SEPARATION_LAYER_0 = 10; // Safety Level 0
+	private const int SEPARATION_LAYER_1 = 11; // Safety Level 1
+	private const int SEPARATION_LAYER_2 = 12; // Safety Level 2
+	private float proximity = 0f;
+	private float minDistanceFromLayer = 3f;
 	//private bool collisionDetected = false;
 
 	// Getters and Setters
@@ -53,9 +58,9 @@ public class ExpanDialStickCollision: MonoBehaviour
 		set => this.offset = value;
 	}
 
-	public bool IsColliding()
+	public float Proximity()
 	{
-		return isColliding;
+		return proximity;
 	}
 	public void EnableCollision()
 	{
@@ -72,63 +77,85 @@ public class ExpanDialStickCollision: MonoBehaviour
 	}
 	void FixedUpdate()
 	{
-		// Bit shift the index of the layer (8) to get a bit mask
-		int layerMask = 1 << 8;
-
-		// This would cast rays only against colliders in layer 8.
-		// But instead we want to collide against everything except layer 8. The ~ operator does this, it inverts a bitmask.
-		layerMask = ~layerMask;
 
 
-		bool touched = false;
-		RaycastHit hit;
 
-		Vector3 center = new Vector3(i * (diameter + offset), 0f, j * (diameter + offset));
+		// Vector3 center = new Vector3(i * (diameter + offset), 0f, j * (diameter + offset)); //unoriented
+		// Vector3 center =transform.position; //oriented
 
-		// dialstick oriented
-		center = transform.position;
+		/* Check user proximy level 1 */
+		RaycastHit hitLevel0;
+		RaycastHit hitLevel1;
+		RaycastHit hitLevel2;
+		bool touchedLevel0 = Physics.Raycast(transform.position - transform.up * 100, transform.up, out hitLevel0, Mathf.Infinity, 1 << SEPARATION_LAYER_0);
+		bool touchedLevel1 = Physics.Raycast(transform.position - transform.up * 100, transform.up, out hitLevel1, Mathf.Infinity, 1 << SEPARATION_LAYER_1);
+		bool touchedLevel2 = Physics.Raycast(transform.position - transform.up * 100, transform.up, out hitLevel2, Mathf.Infinity, 1 << SEPARATION_LAYER_2);
 
-		touched = Physics.Raycast(center + transform.up * 100, -transform.up, out hit, Mathf.Infinity, layerMask);
-		if (touched)
+		Vector3 pinHeadPoint = (transform.position + transform.up * (height / 2f));
+		if (touchedLevel0)
 		{
-			Debug.DrawLine(center, hit.point, Color.yellow);
-			isColliding = true;
-		} else {
-			isColliding = false;
+			Vector3 hitLevel0Point = hitLevel0.point;
+			if ((hitLevel0Point.y - pinHeadPoint.y) <= minDistanceFromLayer)
+			{
+				proximity = 1f;
+				Debug.DrawLine(transform.position - transform.up * 100, hitLevel0.point, Color.red);
+				return;
+			}
 		}
-		/*Vector3 right = transform.position + (Vector3.right * transform.localScale.x) / proximity;
-		touched = Physics.Raycast(right + Vector3.up * 100, -Vector3.up, out hit, Mathf.Infinity, layerMask);
-		if (touched)
+		else if (touchedLevel1)
 		{
-			Debug.DrawLine(right, hit.point, Color.yellow);
-			isColliding = true;
-			return;
+			Vector3 hitLevel1Point = hitLevel1.point;
+			if ((hitLevel1Point.y - pinHeadPoint.y) <= minDistanceFromLayer)
+			{
+				proximity = 0.66f;
+				Debug.DrawLine(transform.position - transform.up * 100, hitLevel1.point, Color.yellow);
+				return;
+			}
 		}
-		else isColliding = false;
+		else if (touchedLevel2)
+		{
+			Vector3 hitLevel2Point = hitLevel2.point;
+			if ((hitLevel2Point.y - pinHeadPoint.y) <= minDistanceFromLayer)
+			{
+				proximity = 0.33f;
+				Debug.DrawLine(transform.position - transform.up * 100, hitLevel2.point, Color.white);
+				return;
+			}
+		} else
+		{
+			proximity = 0f;
+		}
+		/*if (touchedLevel0)
+		{
+			Vector3 hitLevel0Point = hitLevel0.point;
+			Vector3 pinHeadPoint = (transform.position + transform.up * (height/2f));
+			float distanceBetweenPoints = Vector3.Distance(hitLevel0Point, pinHeadPoint);
 
-		Vector3 left = transform.position - (Vector3.right * transform.localScale.x) / proximity;
-		touched = Physics.Raycast(left + Vector3.up * 100, -Vector3.up, out hit, Mathf.Infinity, layerMask);
-		if (touched)
-		{
-			Debug.DrawLine(left, hit.point, Color.yellow);
-			isColliding = true;
-			return;
+			Color color = new Color(1f, 0f, 0f, isColliding);
+			if (hitLevel0Point.y > pinHeadPoint.y) // pin under collider
+			{
+				if(distanceBetweenPoints >= minDistanceFromUserBody)
+				{
+					color.a = isColliding = 1f - (distanceBetweenPoints - minDistanceFromUserBody) / height;
+					color.a = isColliding;
+					Debug.DrawLine(transform.position - transform.up * 100, hitLevel0.point, color);
+				} else
+				{
+					isColliding = 1f;
+					color.a = isColliding;
+					Debug.DrawLine(transform.position - transform.up * 100, hitLevel0.point, color);
+				}
+
+			} else // pin  inside collider
+			{
+				isColliding = 1f;
+				color.a = isColliding;
+				Debug.DrawLine(transform.position - transform.up * 100, hitStop.point, color);
+			}
 		}
-		Vector3 front = transform.position + (Vector3.forward * transform.localScale.z) / proximity;
-		touched = Physics.Raycast(front + Vector3.up * 100, -Vector3.up, out hit, Mathf.Infinity, layerMask);
-		if (touched)
+		else
 		{
-			Debug.DrawLine(front, hit.point, Color.yellow);
-			isColliding = true;
-			return;
-		}
-		Vector3 back = transform.position - (Vector3.forward * transform.localScale.z) / proximity;
-		touched = Physics.Raycast(back + Vector3.up * 100, -Vector3.up, out hit, Mathf.Infinity, layerMask);
-		if (touched)
-		{
-			Debug.DrawLine(back, hit.point, Color.yellow);
-			isColliding = true;
-			return;
+			isColliding = 0f;
 		}*/
 	}
 

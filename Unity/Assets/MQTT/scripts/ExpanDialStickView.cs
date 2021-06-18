@@ -46,9 +46,9 @@ public class ExpanDialStickView : MonoBehaviour
 	private float holdingDiff = 0f;
 	private float holdingTarget = 0f;
 
-	private float collidingCurrent = 0f;
-	private float collidingDiff = 0f;
-	private float collidingTarget = 0f;
+	private float proximityCurrent = 0f;
+	private float proximityDiff = 0f;
+	private float proximityTarget = 0f;
 
 	private float shapeChangeDurationCurrent = 0f;
 	private float shapeChangeDurationDiff = 0f;
@@ -215,19 +215,19 @@ public class ExpanDialStickView : MonoBehaviour
 			this.holdingCurrent = value ? 1f : 0f;
 		}
 	}
-	public bool TargetColliding
+	public float TargetProximity
 	{
-		get => this.collidingTarget > 0f ? true : false;
-		set => this.collidingTarget = value ? 1f : 0f;
+		get => this.proximityTarget;
+		set => this.proximityTarget = value;
 	}
 
-	public bool CurrentColliding
+	public float CurrentProximity
 	{
-		get => this.collidingCurrent > 0f ? true : false;
+		get => this.proximityCurrent;
 		set
 		{
-			this.collidingDiff += (value ? 1f : 0f) - this.collidingCurrent;
-			this.collidingCurrent = value ? 1f : 0f;
+			this.proximityDiff += value - this.proximityCurrent;
+			this.proximityCurrent = value;
 		}
 	}
 
@@ -354,7 +354,7 @@ public class ExpanDialStickView : MonoBehaviour
 		}
 	}
 
-	public void setShapeChangeTarget(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, bool colliding, float shapeChangeDuration)
+	public void setShapeChangeTarget(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, float proximity, float shapeChangeDuration)
 	{
 		TargetAxisX = xAxis;
 		TargetAxisY = yAxis;
@@ -362,19 +362,19 @@ public class ExpanDialStickView : MonoBehaviour
 		TargetRotation = rotation;
 		TargetReaching = reaching;
 		TargetHolding = holding;
-		TargetColliding = colliding;
+		TargetProximity = proximity;
 		TargetPosition = position;
 		TargetShapeChangeDuration = shapeChangeDuration;
 	}
 	
-	public void setShapeChangeCurrent(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, bool colliding, float shapeChangeDuration)
+	public void setShapeChangeCurrent(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, float proximity, float shapeChangeDuration)
 	{
 		CurrentAxisX = xAxis;
 		CurrentAxisY = yAxis;
 		CurrentSelectCount = selectCount;
 		CurrentRotation = rotation;
 		CurrentHolding = holding;
-		CurrentColliding = colliding;
+		CurrentProximity = proximity;
 
 		if (this.reachingCurrent > 0f  && reaching == false){
 			CurrentPosition = position;
@@ -436,7 +436,7 @@ public class ExpanDialStickView : MonoBehaviour
 			this.positionDiff,
 			this.reachingDiff,
 			this.holdingDiff,
-			this.collidingDiff,
+			this.proximityDiff,
 			this.shapeChangeDurationDiff
 		};
 	}
@@ -450,7 +450,7 @@ public class ExpanDialStickView : MonoBehaviour
 			= this.positionDiff
 			= this.reachingDiff
 			= this.holdingDiff
-			= this.collidingDiff
+			= this.proximityDiff
 			= this.shapeChangeDurationDiff
 			= 0f;
 	}
@@ -513,9 +513,9 @@ public class ExpanDialStickView : MonoBehaviour
 		float xAxisCurrentInverseLerp = Mathf.InverseLerp(-127f, 127f, this.xAxisCurrent);
 		float xAxisCurrentLerp = Mathf.Lerp(-30f, 30f, xAxisCurrentInverseLerp);
 		this.transform.RotateAround(this.transform.position - new Vector3(0f, height / 2, 0f), Vector3.back, xAxisCurrentLerp);
-		
+
 		// SAFETY CUE
-		meshRenderer.material.color = (this.collidingCurrent > 0f)? Color.red : this.colorCurrent;
+		meshRenderer.material.color = (this.proximityCurrent > 0f) ? new Color(this.proximityCurrent, 0f, 0f) : this.colorCurrent;
 
 		this.textMesh.alignment = this.textAlignmentTarget;
 		this.textMesh.fontSize =  this.textSizeCurrent;
@@ -555,7 +555,7 @@ public class ExpanDialStickView : MonoBehaviour
 			this.positionCurrent += (this.positionTarget - this.positionCurrent) / this.shapeChangeDurationTarget * Time.deltaTime;
 			this.reachingCurrent += (this.reachingTarget - this.reachingCurrent) / this.shapeChangeDurationTarget * Time.deltaTime;
 			this.holdingCurrent += (this.holdingTarget - this.holdingCurrent) / this.shapeChangeDurationTarget * Time.deltaTime;
-			this.collidingCurrent += (this.collidingTarget - this.collidingCurrent) / this.shapeChangeDurationTarget * Time.deltaTime;
+			this.proximityCurrent += (this.proximityTarget - this.proximityCurrent) / this.shapeChangeDurationTarget * Time.deltaTime;
 			this.shapeChangeDurationTarget -= Time.deltaTime;
 		}
 		

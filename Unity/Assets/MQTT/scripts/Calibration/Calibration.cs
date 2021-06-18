@@ -38,6 +38,7 @@ public class Calibration : MonoBehaviour
 	private const string NONE = "NONE";
 
 	private const float JOYSTICK_THRESHOLD = 10f;
+	private bool areAllUp = false;
 
 	private ConcurrentQueue<string> users;
 	private ConcurrentQueue<string> inputs;
@@ -90,6 +91,34 @@ public class Calibration : MonoBehaviour
 
         
     }
+	void allUp()
+	{
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+        {
+            for (int j = 0; j < expanDialSticks.NbColumns; j++)
+            {
+                expanDialSticks[i, j].TargetPosition = 40;
+                expanDialSticks[i, j].TargetShapeChangeDuration = 1f;
+		
+            }
+		}
+		expanDialSticks.triggerTextureChange();
+		expanDialSticks.triggerShapeChange();
+	}
+	void allDown()
+	{
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+		{
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+			{
+				expanDialSticks[i, j].TargetPosition = 0;
+				expanDialSticks[i, j].TargetShapeChangeDuration = 1f;
+
+			}
+		}
+		expanDialSticks.triggerTextureChange();
+		expanDialSticks.triggerShapeChange();
+	}
     void calibrate2(){
 		/*for (int i = 0; i < expanDialSticks.NbRows; i++)
         {
@@ -248,12 +277,23 @@ public class Calibration : MonoBehaviour
 
             if (Input.GetKeyDown("n")) 
             {
-                if(inputs.Count > 0){
+				if (areAllUp)
+				{
+					allDown();
+					areAllUp = false;
+				}
+				else
+				{
+					allUp();
+					areAllUp = true;
+
+				}
+                /*if(inputs.Count > 0){
                     string input;
                     while(!inputs.TryPeek (out input));
                     Debug.Log("input > " + input);
                     users.Enqueue(input);
-                }
+                }*/
             }
 
 			if(inputs.Count > 0){
