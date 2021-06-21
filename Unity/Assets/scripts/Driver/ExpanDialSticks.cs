@@ -123,6 +123,7 @@ public class ExpanDialSticks : MonoBehaviour
 	public float diameter = 6.0f;
 	public float height = 10.0f;
 	public float offset = 0.1f;
+	public int nbSeparationLevels = 3;
 
 
 	public const float JOYSTICK_THRESHOLD = 10f;
@@ -145,6 +146,7 @@ public class ExpanDialSticks : MonoBehaviour
 	public const int nbRows = 5;
 	float cameraDistanceFromMatrix = 70f;
 	private const float maxSpeed = 40f; // pos/seconds
+
 
 	float borderOffset = 2.0f;
 
@@ -290,6 +292,7 @@ public class ExpanDialSticks : MonoBehaviour
 				collisionMatrix[i, j].Diameter = diameter;
 				collisionMatrix[i, j].Height = height;
 				collisionMatrix[i, j].Offset = offset;
+				collisionMatrix[i, j].NbSeparationLevels = nbSeparationLevels;
 				//collisionMatrix[i, j].EnableCollision();
 			}
 
@@ -787,18 +790,18 @@ public class ExpanDialSticks : MonoBehaviour
 
 				float prevProximity = modelMatrix[i, j].CurrentProximity;
 				float nextProximity = collisionMatrix[i, j].Proximity();
-
 				viewMatrix[i, j].CurrentProximity = modelMatrix[i, j].CurrentProximity = nextProximity;
+				modelMatrix[i, j].CurrentReaching = (modelMatrix[i, j].CurrentPosition != viewMatrix[i, j].CurrentPosition);
 
-				if (prevProximity != nextProximity)
+				/*if (prevProximity != nextProximity)
 				{
 					if (i == 4 && j == 5) Debug.Log("modelMatrix[" + i + "," + j + "] nextProximity: " + nextProximity);
-				}
+				}*/
 				if (nextProximity >= 1f)
 				{
 					if (!modelMatrix[i, j].Paused)
 					{
-						if(i == 4 && j == 5) Debug.Log("modelMatrix[" + i + "," + j + "] pause!");
+						//if(i == 4 && j == 5) Debug.Log("modelMatrix[" + i + "," + j + "] pause!");
 						modelMatrix[i, j].Paused = true;
 
 						modelMatrix[i, j].setShapeChangeCurrent(
@@ -807,8 +810,8 @@ public class ExpanDialSticks : MonoBehaviour
 							modelMatrix[i, j].CurrentSelectCount,
 							modelMatrix[i, j].CurrentRotation,
 							viewMatrix[i, j].CurrentPosition, // set to view current pos
-							modelMatrix[i, j].CurrentHolding,
 							modelMatrix[i, j].CurrentReaching,
+							modelMatrix[i, j].CurrentHolding,
 							modelMatrix[i, j].CurrentProximity,
 							0.1f // very fast
 						);
@@ -819,28 +822,28 @@ public class ExpanDialSticks : MonoBehaviour
 				{
 						if (modelMatrix[i, j].Paused)
 						{
-							if(i == 4 && j == 5) Debug.Log("modelMatrix[" + i + "," + j + "] unpause!");
-							Debug.Log("modelMatrix[" + i + "," + j + "] unpause!");
+							//if(i == 4 && j == 5) Debug.Log("modelMatrix[" + i + "," + j + "] unpause!");
+							//Debug.Log("modelMatrix[" + i + "," + j + "] unpause!");
 							modelMatrix[i, j].Paused = false;
-						float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
-						float distance = Math.Abs(modelMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition);
-						float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
+							float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
+							float distance = Math.Abs(modelMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition);
+							float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
 							modelMatrix[i, j].setShapeChangeCurrent(
-								modelMatrix[i, j].CurrentAxisX,
-								modelMatrix[i, j].CurrentAxisY,
-								modelMatrix[i, j].CurrentSelectCount,
-								modelMatrix[i, j].CurrentRotation,
-								modelMatrix[i, j].TargetPosition, // set to model target pos
-								modelMatrix[i, j].TargetHolding,
-								modelMatrix[i, j].CurrentReaching,
-								modelMatrix[i, j].CurrentProximity,
-								safetyDuration //  fast
-							);
+									modelMatrix[i, j].CurrentAxisX,
+									modelMatrix[i, j].CurrentAxisY,
+									modelMatrix[i, j].CurrentSelectCount,
+									modelMatrix[i, j].CurrentRotation,
+									modelMatrix[i, j].TargetPosition, // set to model target pos
+									modelMatrix[i, j].CurrentReaching,
+									modelMatrix[i, j].TargetHolding,
+									modelMatrix[i, j].CurrentProximity,
+									safetyDuration //  fast
+								);
 							shapeChanging = true;
 						}
 						else if (prevProximity != nextProximity)
 						{
-							if(i == 4 && j == 5) Debug.Log("modelMatrix[" + i + "," + j + "] change speed!");
+							//if(i == 4 && j == 5) Debug.Log("modelMatrix[" + i + "," + j + "] change speed!");
 							float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
 							float distance = Math.Abs(modelMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition);
 							float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
@@ -850,8 +853,8 @@ public class ExpanDialSticks : MonoBehaviour
 								modelMatrix[i, j].CurrentSelectCount,
 								modelMatrix[i, j].CurrentRotation,
 								modelMatrix[i, j].TargetPosition, // set to view current pos
-								modelMatrix[i, j].TargetHolding,
 								modelMatrix[i, j].CurrentReaching,
+								modelMatrix[i, j].TargetHolding,
 								modelMatrix[i, j].CurrentProximity,
 								safetyDuration //  fast
 							);

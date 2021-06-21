@@ -17,12 +17,11 @@ public class ExpanDialStickCollision: MonoBehaviour
 
 	private int i = 0;
 	private int j = 0;
+	private int nbSeparationLevels = 3;
 
 	//private List<GameObject> goList = new List<GameObject>();
 
-	private const int SEPARATION_LAYER_0 = 10; // Safety Level 0
-	private const int SEPARATION_LAYER_1 = 11; // Safety Level 1
-	private const int SEPARATION_LAYER_2 = 12; // Safety Level 2
+	private const int SEPARATION_LAYER = 10; // Safety Level 0
 	private float proximity = 0f;
 	private float minDistanceFromLayer = 3f;
 	//private bool collisionDetected = false;
@@ -57,6 +56,11 @@ public class ExpanDialStickCollision: MonoBehaviour
 		get => this.offset;
 		set => this.offset = value;
 	}
+	public int NbSeparationLevels
+	{
+		get => this.nbSeparationLevels;
+		set => this.nbSeparationLevels = value;
+	}
 
 	public float Proximity()
 	{
@@ -77,13 +81,26 @@ public class ExpanDialStickCollision: MonoBehaviour
 	}
 	void FixedUpdate()
 	{
-
-
-
-		// Vector3 center = new Vector3(i * (diameter + offset), 0f, j * (diameter + offset)); //unoriented
-		// Vector3 center =transform.position; //oriented
-
+		Vector3 pinHeadPoint = (transform.position + transform.up * (height / 2f));
 		/* Check user proximy level 1 */
+		for (int level = 0; level < nbSeparationLevels; level++)
+		{
+			RaycastHit hit;
+			bool touched = Physics.Raycast(transform.position - transform.up * 100, transform.up, out hit, Mathf.Infinity, 1 << (SEPARATION_LAYER + level));
+			if (touched)
+			{
+				Vector3 hitPoint = hit.point;
+				if ((hitPoint.y - pinHeadPoint.y) <= minDistanceFromLayer)
+				{
+					float coeff = level / (float)nbSeparationLevels;
+					proximity = 1f - coeff;
+					Debug.DrawLine(transform.position - transform.up * 100, hitPoint, Color.HSVToRGB(coeff, 1f, 1f));
+					return;
+				}
+			}
+		}
+		proximity = 0f;
+		/*
 		RaycastHit hitLevel0;
 		RaycastHit hitLevel1;
 		RaycastHit hitLevel2;
@@ -124,7 +141,7 @@ public class ExpanDialStickCollision: MonoBehaviour
 		} else
 		{
 			proximity = 0f;
-		}
+		}*/
 		/*if (touchedLevel0)
 		{
 			Vector3 hitLevel0Point = hitLevel0.point;

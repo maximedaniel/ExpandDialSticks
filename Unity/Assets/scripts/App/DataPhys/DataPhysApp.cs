@@ -76,7 +76,6 @@ public class DataPhysApp : MonoBehaviour
 	private const int LEFT = 0x0010;
 	private const int UP = 0x0100;
 	private const int DOWN = 0x1000;
-	private Coroutine DataTransitionHandler = null;
 
 	void Start()
 	{
