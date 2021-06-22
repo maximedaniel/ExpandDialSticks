@@ -157,10 +157,10 @@ public class ExpanDialSticks : MonoBehaviour
 
 	private MqttClient client;
 
-	private GameObject[,] gameObjectMatrix = new GameObject[nbRows, nbColumns];
-	private ExpanDialStickCollision[,] collisionMatrix = new ExpanDialStickCollision [nbRows, nbColumns];
-	private ExpanDialStickView[,] viewMatrix = new ExpanDialStickView[nbRows, nbColumns];
-	private ExpanDialStickModel[,] modelMatrix = new ExpanDialStickModel[nbRows, nbColumns];
+	public GameObject[,] gameObjectMatrix = new GameObject[nbRows, nbColumns];
+	public ExpanDialStickCollision[,] collisionMatrix = new ExpanDialStickCollision [nbRows, nbColumns];
+	public ExpanDialStickView[,] viewMatrix = new ExpanDialStickView[nbRows, nbColumns];
+	public ExpanDialStickModel[,] modelMatrix = new ExpanDialStickModel[nbRows, nbColumns];
 	
     private GameObject topBorderText;
 	private Vector3 textRotationTop;

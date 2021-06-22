@@ -1,0 +1,2 @@
+2021-06-22 08:44:54Z|ExpanDialSticks connecting to MQTT Broker @192.168.0.10:1883
+2021-06-22 08:44:54Z|ExpanDialSticks connected.

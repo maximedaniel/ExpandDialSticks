@@ -46,35 +46,58 @@ public class Study1 : MonoBehaviour
 	private  Vector2 [] molePositions;
 
 	private int moleIndex;
-	private bool moleDone;
+	private const int MOLE_TO_APPEAR = 0;
+	private const int MOLE_APPEARING = 1;
+	private const int MOLE_APPEARED = 2;
+	private const int LANDSCAPE_IS_CHANGING = 3;
+
+	private int moleState = MOLE_TO_APPEAR;
+	private bool nextMole;
+
+	private FileLogger fileLogger;
+	public float LOG_INTERVAL = 0.25f; // 0.2f;
+	public float currTime = 0f;
+	public float prevTime = 0f;
 
 	IEnumerator NextMole()
 	{
-		moleDone = false;
-
-		moleIndex++;
 		// trigger most unsafe SC
+		fileLogger.Log("SYSTEM_LANDSCAPE_UP");
 		AllUp(1f);
-		yield return new WaitForSeconds(2f);
+		yield return new WaitForSeconds(3f);
+		fileLogger.Log("SYSTEM_LANDSCAPE_DOWN");
 		AllDown(1f);
-		yield return new WaitForSeconds(2f);
+		yield return new WaitForSeconds(3f);
+		fileLogger.Log("SYSTEM_LANDSCAPE_BLACK");
+		AllBlack(0.5f);
+		yield return new WaitForSeconds(0.5f);
 		// wait until all pins are down
 		while (!IsAllDown())
 		{
 			yield return new WaitForSeconds(0.1f);
 		}
-		// ask user to get back
-		//resetLandscape(1f);
-		//yield return new WaitForSeconds(2f);
-		// wait no proximity from user
-		/*while (!noProximity())
+		/*fileLogger.Log("SYSTEM_LANDSCAPE_WHITE");
+		AllWhite(0.5f);
+		yield return new WaitForSeconds(0.5f);*/
+		moleIndex++;
+		moleState = MOLE_TO_APPEAR;
+	}
+
+	void AllReset(float duration)
+	{
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
 		{
-			yield return new WaitForSeconds(0.1f);
-		}*/
-		// show next mole
-		ShowMole(1f);
-		yield return new WaitForSeconds(2f);
-		moleDone = true;
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+			{
+				expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
+				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
+				expanDialSticks.modelMatrix[i, j].TargetPosition = -1;
+				expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = duration;
+
+			}
+		}
+		expanDialSticks.triggerTextureChange();
+		expanDialSticks.triggerShapeChange();
 	}
 
 	void AllUp(float duration)
@@ -83,10 +106,10 @@ public class Study1 : MonoBehaviour
         {
             for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
-				expanDialSticks[i, j].TargetColor = Color.white;
-				expanDialSticks[i, j].TargetTextureChangeDuration = duration;
-				expanDialSticks[i, j].TargetPosition = 40;
-                expanDialSticks[i, j].TargetShapeChangeDuration = duration;
+				expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
+				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
+				expanDialSticks.modelMatrix[i, j].TargetPosition = 40;
+                expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = duration;
 		
             }
 		}
@@ -100,10 +123,10 @@ public class Study1 : MonoBehaviour
 		{
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
-				expanDialSticks[i, j].TargetColor = Color.white;
-				expanDialSticks[i, j].TargetPosition = 0;
-				expanDialSticks[i, j].TargetTextureChangeDuration = duration;
-				expanDialSticks[i, j].TargetShapeChangeDuration = duration;
+				expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
+				expanDialSticks.modelMatrix[i, j].TargetPosition = 0;
+				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
+				expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = duration;
 			}
 		}
 		expanDialSticks.triggerTextureChange();
@@ -115,51 +138,93 @@ public class Study1 : MonoBehaviour
 		{
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
-				if (expanDialSticks[i, j].CurrentPosition != 0 || expanDialSticks[i, j].CurrentReaching) return false;
+				if (expanDialSticks.viewMatrix[i, j].CurrentPosition > 0) return false;
 			}
 		}
 		return true;
 	}
 
-	void resetLandscape(float duration)
+	void AllBlack(float duration)
 	{
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
 		{
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
-				expanDialSticks[i, j].TargetColor = Color.black;
-				expanDialSticks[i, j].TargetTextureChangeDuration = duration;
+				expanDialSticks.modelMatrix[i, j].TargetColor = Color.black;
+				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
+			}
+		}
+		expanDialSticks.triggerTextureChange();
+	}
+	void AllWhite(float duration)
+	{
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+		{
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+			{
+				expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
+				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
 			}
 		}
 		expanDialSticks.triggerTextureChange();
 	}
 
-	void ShowMole(float duration)
+	IEnumerator ShowMole()
+	{
+		fileLogger.Log("SYSTEM_MOLE_UP");
+		MoleUp(1f);
+		yield return new WaitForSeconds(1f);
+		// wait until all pins are down
+		while (!IsMoleUp())
+		{
+			yield return new WaitForSeconds(0.1f);
+		}
+		fileLogger.Log("SYSTEM_MOLE_GREEN");
+		MoleGreen(0.5f);
+		yield return new WaitForSeconds(0.5f);
+		moleState = MOLE_APPEARED;
+	}
+	bool IsMoleUp()
+	{
+		Vector2 molePosition = molePositions[moleIndex];
+		return expanDialSticks[(int)molePosition.x, (int)molePosition.y].TargetPosition == 20;
+	}
+
+	void MoleUp(float duration)
 	{
 		Vector2 molePosition = molePositions[moleIndex];
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
 		{
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
-				if (i == (int)molePosition.x && j == (int)molePosition.y)
-				{
-
-					expanDialSticks[i, j].TargetColor = Color.green;
-					expanDialSticks[i, j].TargetPosition = 20;
-				} else
-				{
-					expanDialSticks[i, j].TargetColor = Color.white;
-					expanDialSticks[i, j].TargetPosition = 0;
-				}
-				expanDialSticks[i, j].TargetTextureChangeDuration = duration;
-				expanDialSticks[i, j].TargetShapeChangeDuration = duration;
+				if (i == (int)molePosition.x && j == (int)molePosition.y) 
+					expanDialSticks.modelMatrix[i, j].TargetPosition = 20;
+				else 
+					expanDialSticks.modelMatrix[i, j].TargetPosition = 0;
+				expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = duration;
 			}
 		}
-		expanDialSticks.triggerTextureChange();
 		expanDialSticks.triggerShapeChange();
 	}
 
-	private bool noProximity()
+	void MoleGreen(float duration)
+	{
+		Vector2 molePosition = molePositions[moleIndex];
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+		{
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+			{
+				if (i == (int)molePosition.x && j == (int)molePosition.y) 
+					expanDialSticks.modelMatrix[i, j].TargetColor = Color.green;
+				else 
+					expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
+				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
+			}
+		}
+		expanDialSticks.triggerTextureChange();
+	}
+
+	/*private bool noProximity()
 	{
 		float sumProximity = 0f;
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
@@ -170,9 +235,8 @@ public class Study1 : MonoBehaviour
 
 			}
 		}
-
 		return (Mathf.Approximately(sumProximity, 0f));
-	}
+	}*/
 
 	void Start () {
 		expanDialSticks = expanDialSticksPrefab.GetComponent<ExpanDialSticks>();
@@ -192,8 +256,11 @@ public class Study1 : MonoBehaviour
 
 		// init trials
 		InitTrials();
-		moleIndex = -1;
-		moleDone = true;
+		moleIndex = 0;
+		moleState = MOLE_TO_APPEAR;
+		fileLogger = new FileLogger();
+		prevTime = currTime = 0f;
+		fileLogger.Log("APPLICATION_STARTED");
 		// Connection to MQTT Broker
 		expanDialSticks.client_MqttConnect();
 	}
@@ -228,6 +295,10 @@ public class Study1 : MonoBehaviour
 
 	}
 
+	private void OnDestroy()
+	{
+		fileLogger.Close();
+	}
 
 	private void HandleConnecting(object sender, MqttConnectionEventArgs e)
 	{
@@ -237,6 +308,7 @@ public class Study1 : MonoBehaviour
 
 	private void HandleConnected(object sender, MqttConnectionEventArgs e)
 	{
+		fileLogger.Log("APPLICATION_CONNECTED");
 		Debug.Log("ExpanDialSticks connected.");
 		connected = true;
 
@@ -244,6 +316,7 @@ public class Study1 : MonoBehaviour
 
 	private void HandleDisconnected(object sender, MqttConnectionEventArgs e)
 	{
+		fileLogger.Log("APPLICATION_DISCONNECTED");
 		Debug.Log("ExpanDialSticks disconnected.");
 		connected = false;
 	}
@@ -268,8 +341,10 @@ public class Study1 : MonoBehaviour
 		Vector2 molePosition = molePositions[moleIndex];
 		if (e.i == (int)molePosition.x && e.j == (int)molePosition.y)
 		{
-			if (moleDone && moleIndex < molePositions.Length)
+			fileLogger.Log("USER_MOLE_ROTATION");
+			if (moleState == MOLE_APPEARED && moleIndex < molePositions.Length)
 			{
+				moleState = LANDSCAPE_IS_CHANGING;
 				StartCoroutine(NextMole());
 			}
 		}
@@ -291,34 +366,61 @@ public class Study1 : MonoBehaviour
 
 	}
 
+	void Quit()
+	{
+		fileLogger.Log("APPLICATION_ENDED");
+		#if UNITY_EDITOR
+		// Application.Quit() does not work in the editor so
+		// UnityEditor.EditorApplication.isPlaying need to be set to false to end the game
+			UnityEditor.EditorApplication.isPlaying = false;
+		#else
+				Application.Quit();
+		#endif
+	}
+
 
 	void Update () {
 		// check if ExpanDialSticks is connected
 		if(connected){
-			 if (Input.GetKey("escape"))
+			 if (Input.GetKey("escape") || (moleState == MOLE_APPEARED && moleIndex >= molePositions.Length))
             {
-                Application.Quit();
+				Quit();
             }
 
             if (Input.GetKeyDown("n")) 
             {
-
-				if (moleDone && moleIndex < molePositions.Length)
+				if (moleState == MOLE_APPEARED && moleIndex < molePositions.Length)
 				{
+					fileLogger.Log("USER_MOLE_ROTATION");
+					moleState = LANDSCAPE_IS_CHANGING;
 					StartCoroutine(NextMole());
 				}
-
-				/*if (areAllUp)
-				{
-					allDown(1f);
-					areAllUp = false;
-				}
-				else
-				{
-					allUp(1f);
-					areAllUp = true;
-				}*/
             }
+			if(moleState == MOLE_TO_APPEAR && moleIndex < molePositions.Length)
+			{
+				moleState = MOLE_APPEARING;
+				StartCoroutine(ShowMole());
+			}
+			if (moleState == LANDSCAPE_IS_CHANGING)
+			{
+				if ((currTime += Time.deltaTime) - prevTime > LOG_INTERVAL)
+				{
+					string proximityString = "USER_PROXIMITY ";
+					string positionString = "SYSTEM_POSITION ";
+					for (int i = 0; i < expanDialSticks.NbRows; i++)
+					{
+						for (int j = 0; j < expanDialSticks.NbColumns; j++)
+						{
+							proximityString += expanDialSticks.viewMatrix[i, j].CurrentProximity + " ";
+							positionString += expanDialSticks.viewMatrix[i, j].CurrentPosition + " ";
+
+						}
+					}
+					fileLogger.Log(proximityString);
+					fileLogger.Log(positionString);
+					prevTime = currTime;
+				}
+			}
         }
     }
 }
