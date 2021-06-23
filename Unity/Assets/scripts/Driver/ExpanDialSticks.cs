@@ -135,7 +135,10 @@ public class ExpanDialSticks : MonoBehaviour
 	public const string MQTT_VALUE_ERROR = "json value error";
 	public const string MQTT_SUCCESS = "success";
 
-	public IPAddress BROKER_ADDRESS = IPAddress.Parse("192.168.0.10"); // "test.mosquitto.org";
+	public IPAddress EXPANDIALSTICKS_BROKER_ADDRESS = IPAddress.Parse("192.168.0.10"); // "test.mosquitto.org";
+	public IPAddress LOCALHOST_BROKER_ADDRESS = IPAddress.Parse("127.0.0.1"); // "test.mosquitto.org";
+	private IPAddress BROKER_ADDRESS; // "test.mosquitto.org";
+
 	public int BROKER_PORT = 1883; // 8080; 
 	public string MQTT_TOPIC = "ExpanDialSticks";
 	public float MQTT_DELAY_RECONNECT = 5f; // 0.2f;
@@ -155,7 +158,7 @@ public class ExpanDialSticks : MonoBehaviour
 
 	private Camera mainCamera;
 
-	private MqttClient client;
+	public MqttClient client;
 
 	public GameObject[,] gameObjectMatrix = new GameObject[nbRows, nbColumns];
 	public ExpanDialStickCollision[,] collisionMatrix = new ExpanDialStickCollision [nbRows, nbColumns];
@@ -404,48 +407,69 @@ public class ExpanDialSticks : MonoBehaviour
 
 		//client_MqttConnect();
 	}
+	void Quit()
+	{
+		#if UNITY_EDITOR
+				// Application.Quit() does not work in the editor so
+				// UnityEditor.EditorApplication.isPlaying need to be set to false to end the game
+				UnityEditor.EditorApplication.isPlaying = false;
+		#else
+						Application.Quit();
+		#endif
+	}
 
 	public void client_MqttConnect()
 	{
-		
+
 		try
 		{
-			// create client instance 
-			//client = new MqttClient(IPAddress.Parse("192.168.0.10"), 8080, false , null );
+			// Connecting to ExpanDialSticks MQTT Broker
+			BROKER_ADDRESS = EXPANDIALSTICKS_BROKER_ADDRESS;
 			client = new MqttClient(BROKER_ADDRESS, BROKER_PORT, false, null);
-
-			// handle disconnect event
 			client.MqttMsgDisconnected += client_MqttMsgDisconnected;
-
-			// register to message received 
 			client.MqttMsgPublishReceived += client_MqttMsgPublishReceived;
 
 			string clientId = Guid.NewGuid().ToString();
-			
-			OnConnecting(this,  new MqttConnectionEventArgs(BROKER_ADDRESS, BROKER_PORT));
-			//Debug.Log("Connecting to MQTT Broker @" + BROKER_ADDRESS + ":" + BROKER_PORT + " as " + clientId + " ...");
-			if(!SIMULATION){
-				client.Connect(clientId);
-				//Debug.Log("Connected.");
-				
-				// subscribe to the topic "/home/temperature" with QoS 2 
-				client.Subscribe(new string[] { MQTT_TOPIC }, new byte[] { MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE });
-				triggerShapeReset();
-				CancelInvoke("client_MqttConnect");
-				InvokeRepeating("publishGetRequest", MQTT_DELAY_AT_START, MQTT_INTERVAL);
-			}
-			
-			OnConnected(this,  new MqttConnectionEventArgs(BROKER_ADDRESS, BROKER_PORT));
+
+			OnConnecting(this, new MqttConnectionEventArgs(BROKER_ADDRESS, BROKER_PORT));
+			client.Connect(clientId);
+			/*client.Subscribe(new string[] { MQTT_TOPIC }, new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
+			triggerShapeReset();
+			CancelInvoke("client_MqttConnect");
+			InvokeRepeating("publishGetRequest", MQTT_DELAY_AT_START, MQTT_INTERVAL);*/
+			//}
+
+			OnConnected(this, new MqttConnectionEventArgs(BROKER_ADDRESS, BROKER_PORT));
 
 		}
-		catch (Exception e0)
+		catch (Exception)
 		{
-			
-			OnDisconnected(this,  new MqttConnectionEventArgs(BROKER_ADDRESS, BROKER_PORT));
-			Debug.LogException(e0, this);
-			//Debug.Log("Trying to reconnect in  "  + MQTT_DELAY_RECONNECT + " secs...");
-			//Invoke("client_MqttConnect", MQTT_DELAY_RECONNECT);
 
+			BROKER_ADDRESS = LOCALHOST_BROKER_ADDRESS;
+			//Debug.LogException(e0, this);
+			try
+			{
+				// Connecting to localhosy MQTT Broker
+				client = new MqttClient(BROKER_ADDRESS, BROKER_PORT, false, null);
+				client.MqttMsgDisconnected += client_MqttMsgDisconnected;
+				client.MqttMsgPublishReceived += client_MqttMsgPublishReceived;
+
+				string clientId = Guid.NewGuid().ToString();
+
+				OnConnecting(this, new MqttConnectionEventArgs(BROKER_ADDRESS, BROKER_PORT));
+				client.Connect(clientId);
+				/*client.Subscribe(new string[] { MQTT_TOPIC }, new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
+				triggerShapeReset();
+				CancelInvoke("client_MqttConnect");
+				InvokeRepeating("publishGetRequest", MQTT_DELAY_AT_START, MQTT_INTERVAL);*/
+				//}
+
+				OnConnected(this, new MqttConnectionEventArgs(BROKER_ADDRESS, BROKER_PORT));
+			}
+			catch (Exception)
+			{
+				Quit();
+			}
 		}
 	}
 
@@ -590,7 +614,7 @@ public class ExpanDialSticks : MonoBehaviour
 						Debug.Log("Sending...");
 			#endif*/
 
-			client.Publish(MQTT_TOPIC, System.Text.Encoding.UTF8.GetBytes(getJson), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
+			client.Publish(MQTT_TOPIC, System.Text.Encoding.UTF8.GetBytes(getJson), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true); // ! MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE
 
 			/*#if DEBUG
 						Debug.Log("Sended: " + getJson);
@@ -622,7 +646,7 @@ public class ExpanDialSticks : MonoBehaviour
 			#endif*/
 
 			// Publish it
-			client.Publish(MQTT_TOPIC, System.Text.Encoding.UTF8.GetBytes(setJson), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
+			client.Publish(MQTT_TOPIC, System.Text.Encoding.UTF8.GetBytes(setJson), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true); // ! MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE
 
 			/*#if DEBUG
 						Debug.Log("Sended: " + setJson);

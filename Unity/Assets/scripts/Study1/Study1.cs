@@ -20,12 +20,13 @@ public class Study1 : MonoBehaviour
 
     public GameObject expanDialSticksPrefab;
     public GameObject capsuleHandLeftPrefab;
-	private MyCapsuleHand leftHand;
     public GameObject capsuleHandRightPrefab;
+	private MyCapsuleHand leftHand;
 	private MyCapsuleHand rightHand;
 	public GUISkin guiSkin;
 	public int[] engagementRows;
 	public int[] engagementColumns;
+	public bool logEnabled = true;
 	private ExpanDialSticks expanDialSticks;
 	private bool connected = false;
 
@@ -60,9 +61,17 @@ public class Study1 : MonoBehaviour
 	private bool nextMole;
 
 	private FileLogger fileLogger;
-	public float LOG_INTERVAL = 0.25f; // 0.2f;
-	public float currTime = 0f;
-	public float prevTime = 0f;
+	public const float LOG_INTERVAL = 0.25f; // 0.2f;
+	private float currTime;
+	private float prevTime;
+
+	public const string MQTT_CAMERA_RECORDER_TOPIC = "CAMERA_RECORDER";
+	public const string MQTT_EMPATICA_RECORDER_TOPIC = "EMPATICA_RECORDER";
+
+
+
+	private MqttClient client;
+
 
 	IEnumerator NextMole()
 	{
@@ -86,7 +95,6 @@ public class Study1 : MonoBehaviour
 		/*fileLogger.Log("SYSTEM_LANDSCAPE_WHITE");
 		AllWhite(0.5f);
 		yield return new WaitForSeconds(0.5f);*/
-		moleIndex++;
 		moleState = MOLE_TO_APPEAR;
 	}
 
@@ -249,7 +257,7 @@ public class Study1 : MonoBehaviour
 
 	void Start () {
 		leftHand = capsuleHandLeftPrefab.GetComponent<MyCapsuleHand>();
-		rightHand = capsuleHandLeftPrefab.GetComponent<MyCapsuleHand>();
+		rightHand = capsuleHandRightPrefab.GetComponent<MyCapsuleHand>();
 		expanDialSticks = expanDialSticksPrefab.GetComponent<ExpanDialSticks>();
 		// Listen to events
 		expanDialSticks.OnConnecting += HandleConnecting;
@@ -267,10 +275,12 @@ public class Study1 : MonoBehaviour
 
 		// init trials
 		InitTrials();
-		moleIndex = 0;
+		moleIndex = -1;
 		moleState = MOLE_TO_APPEAR;
-		fileLogger = new FileLogger();
-		prevTime = currTime = 0f;
+		fileLogger = new FileLogger(logEnabled);
+		currTime = LOG_INTERVAL;
+		prevTime = 0f;
+		fileLogger.Log("LOG_INTERVAL " + LOG_INTERVAL);
 		fileLogger.Log("START_APPLICATION");
 		// Connection to MQTT Broker
 		expanDialSticks.client_MqttConnect();
@@ -308,25 +318,34 @@ public class Study1 : MonoBehaviour
 
 	private void OnDestroy()
 	{
+
+
+		expanDialSticks.client.Publish(MQTT_CAMERA_RECORDER_TOPIC, System.Text.Encoding.UTF8.GetBytes("END"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER_TOPIC, System.Text.Encoding.UTF8.GetBytes("END"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+
+		fileLogger.Log("END_APPLICATION");
+
 		fileLogger.Close();
 	}
 
 	private void HandleConnecting(object sender, MqttConnectionEventArgs e)
 	{
-		Debug.Log("ExpanDialSticks connecting to MQTT Broker @" + e.address + ":" + e.port);
+		Debug.Log("Application connecting to MQTT Broker @" + e.address + ":" + e.port + "...");
 		connected = false;
 	}
 
 	private void HandleConnected(object sender, MqttConnectionEventArgs e)
 	{
-		Debug.Log("ExpanDialSticks connected.");
+		Debug.Log("Application connected.");
+		expanDialSticks.client.Publish(MQTT_CAMERA_RECORDER_TOPIC, System.Text.Encoding.UTF8.GetBytes("START"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER_TOPIC, System.Text.Encoding.UTF8.GetBytes("START"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		connected = true;
 
 	}
 
 	private void HandleDisconnected(object sender, MqttConnectionEventArgs e)
 	{
-		Debug.Log("ExpanDialSticks disconnected.");
+		Debug.Log("Application disconnected.");
 		connected = false;
 	}
 
@@ -350,7 +369,7 @@ public class Study1 : MonoBehaviour
 		Vector2 molePosition = molePositions[moleIndex];
 		if (e.i == (int)molePosition.x && e.j == (int)molePosition.y)
 		{
-			fileLogger.Log("USER_MOLE_ROTATION");
+			fileLogger.Log("USER_MOLE_ROTATION " + e.i + " " + e.j);
 			if (moleState == MOLE_APPEARED && moleIndex < molePositions.Length)
 			{
 				moleState = LANDSCAPE_IS_CHANGING;
@@ -377,16 +396,47 @@ public class Study1 : MonoBehaviour
 
 	void Quit()
 	{
-		fileLogger.Log("END_APPLICATION");
 		#if UNITY_EDITOR
 		// Application.Quit() does not work in the editor so
 		// UnityEditor.EditorApplication.isPlaying need to be set to false to end the game
-			UnityEditor.EditorApplication.isPlaying = false;
+		UnityEditor.EditorApplication.isPlaying = false;
 		#else
 				Application.Quit();
 		#endif
 	}
 
+	void LogAllSystemData()
+	{
+		Vector2 molePosition = molePositions[moleIndex];
+		int moleX = (int)molePosition.x;
+		int moleY = (int)molePosition.y;
+
+		string colorString = "SYSTEM_COLOR ";
+		string proximityString = "SYSTEM_PROXIMITY ";
+		string positionString = "SYSTEM_POSITION ";
+		string leftHandString = "USER_LEFT_HAND " + leftHand.ToString();
+		string rightHandString = "USER_RIGHT_HAND " + rightHand.ToString();
+
+		string pinOrientationString = "USER_PIN_ORIENTATION " + expanDialSticks.viewMatrix[moleX, moleY].CurrentAxisX + " " + expanDialSticks.viewMatrix[moleX, moleY].CurrentAxisY;
+		//string pinRotationString = "USER_PIN_ROTATION " + expanDialSticks.viewMatrix[moleX, moleY].CurrentRotation;
+
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+		{
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+			{
+				colorString += "0x" + ColorUtility.ToHtmlStringRGB(expanDialSticks.viewMatrix[i, j].CurrentColor) + " ";
+				proximityString += expanDialSticks.viewMatrix[i, j].CurrentProximity + " ";
+				positionString += expanDialSticks.viewMatrix[i, j].CurrentPosition + " ";
+			}
+		}
+		fileLogger.Log(colorString);
+		fileLogger.Log(proximityString);
+		fileLogger.Log(positionString);
+		fileLogger.Log(leftHandString);
+		fileLogger.Log(rightHandString);
+		fileLogger.Log(pinOrientationString);
+		//fileLogger.Log(pinRotationString);
+	}
 
 	void Update () {
 		// check if ExpanDialSticks is connected
@@ -400,12 +450,13 @@ public class Study1 : MonoBehaviour
             {
 				if (moleState == MOLE_APPEARED && moleIndex < molePositions.Length)
 				{
-					fileLogger.Log("USER_MOLE_ROTATION");
+					Vector2 molePosition = molePositions[moleIndex];
+					fileLogger.Log("USER_MOLE_ROTATION " + molePosition.x + " " + molePosition.y);
 					moleState = LANDSCAPE_IS_CHANGING;
 					StartCoroutine(NextMole());
 				}
             }
-			if(moleState == MOLE_TO_APPEAR && moleIndex < molePositions.Length)
+			if(moleState == MOLE_TO_APPEAR && ++moleIndex < molePositions.Length)
 			{
 				moleState = MOLE_APPEARING;
 				StartCoroutine(ShowMole());
@@ -414,26 +465,7 @@ public class Study1 : MonoBehaviour
 			{
 				if ((currTime += Time.deltaTime) - prevTime > LOG_INTERVAL)
 				{
-					string colorString = "SYSTEM_COLOR ";
-					string proximityString = "SYSTEM_PROXIMITY ";
-					string positionString = "SYSTEM_POSITION ";
-					string leftHandString = "USER_LEFT_HAND " + leftHand.ToString();
-					string rightHandString = "USER_RIGHT_HAND " + rightHand.ToString();
-
-					for (int i = 0; i < expanDialSticks.NbRows; i++)
-					{
-						for (int j = 0; j < expanDialSticks.NbColumns; j++)
-						{
-							colorString += "0x"+ColorUtility.ToHtmlStringRGB(expanDialSticks.viewMatrix[i, j].CurrentColor) + " ";
-							proximityString += expanDialSticks.viewMatrix[i, j].CurrentProximity + " ";
-							positionString += expanDialSticks.viewMatrix[i, j].CurrentPosition + " ";
-						}
-					}
-					fileLogger.Log(colorString);
-					fileLogger.Log(proximityString);
-					fileLogger.Log(positionString);
-					fileLogger.Log(leftHandString);
-					fileLogger.Log(rightHandString);
+					LogAllSystemData();
 					prevTime = currTime;
 				}
 			}

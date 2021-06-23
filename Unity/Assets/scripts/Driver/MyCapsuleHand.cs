@@ -265,45 +265,36 @@ namespace Leap.Unity {
              }
         }
     }
-    private void HideGameObjects()
+    private void setCollisionMode(bool enabled)
 	{
-            if (_handObject != null)
-                _handObject.SetActive(false);
-
-            if (_handColliders != null && _forearmColliders != null)
-            {
-                for (var i = 0; i < SEPARATION_LEVEL; i++)
-                {
-                    if (_handColliders[i] != null)
-                    {
-                        _handColliders[i].GetComponent<SphereCollider>().enabled = false;
-                    }
-                    if (_forearmColliders[i] != null)
-                    {
-                        _forearmColliders[i].GetComponent<CapsuleCollider>().enabled = false;
-                    }
-                }
-            }
-        }
-
-    private void ShowGameObjects()
-    {
-        if (_handObject != null)
-            _handObject.SetActive(true);
-        if(_handColliders != null && _forearmColliders != null)
-		{
+        if (_handColliders != null && _forearmColliders != null)
+        {
             for (var i = 0; i < SEPARATION_LEVEL; i++)
             {
                 if (_handColliders[i] != null)
                 {
-                    _handColliders[i].GetComponent<SphereCollider>().enabled = true;
+                    _handColliders[i].GetComponent<SphereCollider>().enabled = enabled;
                 }
                 if (_forearmColliders[i] != null)
                 {
-                    _forearmColliders[i].GetComponent<CapsuleCollider>().enabled = true;
+                    _forearmColliders[i].GetComponent<CapsuleCollider>().enabled = enabled;
                 }
             }
         }
+    }
+    private void HideGameObjects()
+	{
+            if (_handObject != null)
+                _handObject.SetActive(false);
+           
+            setCollisionMode(false);
+    }
+    private void ShowGameObjects()
+    {
+        if (_handObject != null)
+            _handObject.SetActive(true);
+
+        setCollisionMode(true);
     }
 
      public override void InitHand() {
@@ -347,16 +338,19 @@ namespace Leap.Unity {
         _sphereMat.color = _rightColorList[_rightColorIndex];
         _rightColorIndex = (_rightColorIndex + 1) % _rightColorList.Length;
       }
+      setCollisionMode(true);
     }
     public override void FinishHand()
     {
       //Debug.Log(handedness + "FinishHand()");
       //HideGameObjects();
+      setCollisionMode(false);
       base.FinishHand();
 
     }
   public override string ToString(){
-    if(_hand == null) return "NULL";
+
+    if(_hand == null || (_hand.IsLeft && handedness != Chirality.Left) || (!_hand.IsLeft && handedness != Chirality.Right)) return "NULL";
     string s = "";
     //Get finger position
     for(int f = 0; f < _hand.Fingers.Count; f++) {
