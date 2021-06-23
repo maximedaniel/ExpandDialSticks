@@ -12,12 +12,17 @@ using uPLibrary.Networking.M2Mqtt.Exceptions;
 using TMPro;
 using System;
 using System.Globalization;
+using Leap.Unity;
 using Random = UnityEngine.Random;
 
 public class Study1 : MonoBehaviour
 {
 
     public GameObject expanDialSticksPrefab;
+    public GameObject capsuleHandLeftPrefab;
+	private MyCapsuleHand leftHand;
+    public GameObject capsuleHandRightPrefab;
+	private MyCapsuleHand rightHand;
 	public GUISkin guiSkin;
 	public int[] engagementRows;
 	public int[] engagementColumns;
@@ -62,13 +67,14 @@ public class Study1 : MonoBehaviour
 	IEnumerator NextMole()
 	{
 		// trigger most unsafe SC
-		fileLogger.Log("SYSTEM_LANDSCAPE_UP");
+		fileLogger.Log("START_LANDSCAPE_CHANGING");
+		fileLogger.Log("TRIGGER_LANDSCAPE_ASCENDING");
 		AllUp(1f);
 		yield return new WaitForSeconds(3f);
-		fileLogger.Log("SYSTEM_LANDSCAPE_DOWN");
+		fileLogger.Log("TRIGGER_LANDSCAPE_DESCENDING");
 		AllDown(1f);
 		yield return new WaitForSeconds(3f);
-		fileLogger.Log("SYSTEM_LANDSCAPE_BLACK");
+		fileLogger.Log("TRIGGER_LANDSCAPE_BLACKING");
 		AllBlack(0.5f);
 		yield return new WaitForSeconds(0.5f);
 		// wait until all pins are down
@@ -76,6 +82,7 @@ public class Study1 : MonoBehaviour
 		{
 			yield return new WaitForSeconds(0.1f);
 		}
+		fileLogger.Log("END_LANDSCAPE_CHANGING");
 		/*fileLogger.Log("SYSTEM_LANDSCAPE_WHITE");
 		AllWhite(0.5f);
 		yield return new WaitForSeconds(0.5f);*/
@@ -171,7 +178,8 @@ public class Study1 : MonoBehaviour
 
 	IEnumerator ShowMole()
 	{
-		fileLogger.Log("SYSTEM_MOLE_UP");
+		fileLogger.Log("START_MOLE_APPEARING");
+		fileLogger.Log("TRIGGER_MOLE_APPEARING");
 		MoleUp(1f);
 		yield return new WaitForSeconds(1f);
 		// wait until all pins are down
@@ -179,9 +187,10 @@ public class Study1 : MonoBehaviour
 		{
 			yield return new WaitForSeconds(0.1f);
 		}
-		fileLogger.Log("SYSTEM_MOLE_GREEN");
+		fileLogger.Log("TRIGGER_MOLE_GREENING");
 		MoleGreen(0.5f);
 		yield return new WaitForSeconds(0.5f);
+		fileLogger.Log("END_MOLE_APPEARING");
 		moleState = MOLE_APPEARED;
 	}
 	bool IsMoleUp()
@@ -239,6 +248,8 @@ public class Study1 : MonoBehaviour
 	}*/
 
 	void Start () {
+		leftHand = capsuleHandLeftPrefab.GetComponent<MyCapsuleHand>();
+		rightHand = capsuleHandLeftPrefab.GetComponent<MyCapsuleHand>();
 		expanDialSticks = expanDialSticksPrefab.GetComponent<ExpanDialSticks>();
 		// Listen to events
 		expanDialSticks.OnConnecting += HandleConnecting;
@@ -260,7 +271,7 @@ public class Study1 : MonoBehaviour
 		moleState = MOLE_TO_APPEAR;
 		fileLogger = new FileLogger();
 		prevTime = currTime = 0f;
-		fileLogger.Log("APPLICATION_STARTED");
+		fileLogger.Log("START_APPLICATION");
 		// Connection to MQTT Broker
 		expanDialSticks.client_MqttConnect();
 	}
@@ -308,7 +319,6 @@ public class Study1 : MonoBehaviour
 
 	private void HandleConnected(object sender, MqttConnectionEventArgs e)
 	{
-		fileLogger.Log("APPLICATION_CONNECTED");
 		Debug.Log("ExpanDialSticks connected.");
 		connected = true;
 
@@ -316,7 +326,6 @@ public class Study1 : MonoBehaviour
 
 	private void HandleDisconnected(object sender, MqttConnectionEventArgs e)
 	{
-		fileLogger.Log("APPLICATION_DISCONNECTED");
 		Debug.Log("ExpanDialSticks disconnected.");
 		connected = false;
 	}
@@ -368,7 +377,7 @@ public class Study1 : MonoBehaviour
 
 	void Quit()
 	{
-		fileLogger.Log("APPLICATION_ENDED");
+		fileLogger.Log("END_APPLICATION");
 		#if UNITY_EDITOR
 		// Application.Quit() does not work in the editor so
 		// UnityEditor.EditorApplication.isPlaying need to be set to false to end the game
@@ -382,7 +391,7 @@ public class Study1 : MonoBehaviour
 	void Update () {
 		// check if ExpanDialSticks is connected
 		if(connected){
-			 if (Input.GetKey("escape") || (moleState == MOLE_APPEARED && moleIndex >= molePositions.Length))
+			 if (Input.GetKey("escape") || (moleState == MOLE_TO_APPEAR && moleIndex >= molePositions.Length))
             {
 				Quit();
             }
@@ -405,19 +414,26 @@ public class Study1 : MonoBehaviour
 			{
 				if ((currTime += Time.deltaTime) - prevTime > LOG_INTERVAL)
 				{
-					string proximityString = "USER_PROXIMITY ";
+					string colorString = "SYSTEM_COLOR ";
+					string proximityString = "SYSTEM_PROXIMITY ";
 					string positionString = "SYSTEM_POSITION ";
+					string leftHandString = "USER_LEFT_HAND " + leftHand.ToString();
+					string rightHandString = "USER_RIGHT_HAND " + rightHand.ToString();
+
 					for (int i = 0; i < expanDialSticks.NbRows; i++)
 					{
 						for (int j = 0; j < expanDialSticks.NbColumns; j++)
 						{
+							colorString += "0x"+ColorUtility.ToHtmlStringRGB(expanDialSticks.viewMatrix[i, j].CurrentColor) + " ";
 							proximityString += expanDialSticks.viewMatrix[i, j].CurrentProximity + " ";
 							positionString += expanDialSticks.viewMatrix[i, j].CurrentPosition + " ";
-
 						}
 					}
+					fileLogger.Log(colorString);
 					fileLogger.Log(proximityString);
 					fileLogger.Log(positionString);
+					fileLogger.Log(leftHandString);
+					fileLogger.Log(rightHandString);
 					prevTime = currTime;
 				}
 			}
