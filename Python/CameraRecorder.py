@@ -63,36 +63,42 @@ class CameraRecorder(threading.Thread):
     #finally:
     #  pythoncom.CoUninitialize()
 
+  def run1(self):
+    try:
+      cap = None
+      highestResCameraPort = 0
+      highestRes = 0
+      cameraPortFound = False
+      for cameraPort in range(2):
+        cap = cv2.VideoCapture(cameraPort, cv2.CAP_DSHOW)
+        if cap.isOpened():
+          width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))   # float `width`
+          height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))  # float `height`
+          res = width * height
+          if res >= highestRes:
+              highestResCameraPort = cameraPort
+              cameraPortFound = True
+          cap.release()
 
-# def on_connect(client, userdata, flags, rc):
-#     print("Connected with result code "+str(rc))
-#     client.subscribe("VideoRecorder")
-
-# def on_message(client, userdata, msg):
-#     try:
-#       command = str(msg.payload.decode("utf-8"))
-#       if command == 'start':
-#         videoRecorder.start()
-#         print("["+ videoRecorder.name +"] Start.")
-#       elif command == 'stop':
-#         videoRecorder.stop()
-#         print("["+ videoRecorder.name +"] Stop.")
-#       elif command == 'exit':
-#         client.disconnect()
-#         print("["+ videoRecorder.name +"] Exit.")
-#       else :
-#         print("["+ videoRecorder.name +"] Unknown payload.")
-#     except Exception as e:
-#         print(e)
-
-# videoRecorder = VideoRecorder()
-# client = mqtt.Client()
-# client.on_connect = on_connect
-# client.on_message = on_message
-
-# client.connect("127.0.0.1", 1883, 60)
-
-# # mosquitto
-# # python34 .\VideoRecorder.py
-# # mosquitto_pub -h 127.0.0.1 -p 1883 -m "exit" -t videoRecorder
-# client.loop_forever()
+      if cameraPortFound:
+        cap = cv2.VideoCapture(highestResCameraPort, cv2.CAP_DSHOW)
+        if cap.isOpened():
+          width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))   # float `width`
+          height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))  # float `height`
+          # Define the codec and create VideoWriter object
+          fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+          timestamp = datetime.datetime.utcnow().isoformat().replace(':','.')
+          videoPath = os.path.join(self.path, timestamp+'_video.mp4')
+          print("Starting recording camera" + str(cameraPort) + "(" + str(width) + ", "+ str(height) + ") at " + videoPath)
+          out = cv2.VideoWriter(videoPath, fourcc, 20.0, (width,height))
+          while(cap.isOpened() and not self.isStopped):
+              ret, frame = cap.read()
+              if ret == True:
+                  out.write(frame)
+          cap.release()
+          out.release()
+          print("End recording camera" + str(cameraPort) + "(" + str(width) + ", "+ str(height) + ") at " + videoPath)
+      else :
+        print("["+ self.name +"] Could not open any camera.")
+    except Exception as e:
+      print("["+ self.name +"] " + str(e))
