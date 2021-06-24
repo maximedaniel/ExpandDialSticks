@@ -60,14 +60,16 @@ public class Study1 : MonoBehaviour
 	private int moleState = MOLE_TO_APPEAR;
 	private bool nextMole;
 
-	private FileLogger fileLogger;
+	//private FileLogger fileLogger;
 	public const float LOG_INTERVAL = 0.25f; // 0.2f;
 	private float currTime;
 	private float prevTime;
 
-	public const string MQTT_CAMERA_RECORDER_TOPIC = "CAMERA_RECORDER";
-	public const string MQTT_EMPATICA_RECORDER_TOPIC = "EMPATICA_RECORDER";
-
+	public const string MQTT_CAMERA_RECORDER = "CAMERA_RECORDER";
+	public const string MQTT_EMPATICA_RECORDER = "EMPATICA_RECORDER";
+	public const string MQTT_SYSTEM_RECORDER = "SYSTEM_RECORDER";
+	public const string CMD_START = "START";
+	public const string CMD_STOP = "STOP";
 
 
 	private MqttClient client;
@@ -76,14 +78,14 @@ public class Study1 : MonoBehaviour
 	IEnumerator NextMole()
 	{
 		// trigger most unsafe SC
-		fileLogger.Log("START_LANDSCAPE_CHANGING");
-		fileLogger.Log("TRIGGER_LANDSCAPE_ASCENDING");
+
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("TRIGGER_LANDSCAPE_ASCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		AllUp(1f);
 		yield return new WaitForSeconds(3f);
-		fileLogger.Log("TRIGGER_LANDSCAPE_DESCENDING");
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("TRIGGER_LANDSCAPE_DESCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		AllDown(1f);
-		yield return new WaitForSeconds(3f);
-		fileLogger.Log("TRIGGER_LANDSCAPE_BLACKING");
+		yield return new WaitForSeconds(3f); 
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("TRIGGER_LANDSCAPE_BLACKING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		AllBlack(0.5f);
 		yield return new WaitForSeconds(0.5f);
 		// wait until all pins are down
@@ -91,7 +93,9 @@ public class Study1 : MonoBehaviour
 		{
 			yield return new WaitForSeconds(0.1f);
 		}
-		fileLogger.Log("END_LANDSCAPE_CHANGING");
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("END_LANDSCAPE_CHANGING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+
+		//fileLogger.Log("END_LANDSCAPE_CHANGING");
 		/*fileLogger.Log("SYSTEM_LANDSCAPE_WHITE");
 		AllWhite(0.5f);
 		yield return new WaitForSeconds(0.5f);*/
@@ -186,8 +190,8 @@ public class Study1 : MonoBehaviour
 
 	IEnumerator ShowMole()
 	{
-		fileLogger.Log("START_MOLE_APPEARING");
-		fileLogger.Log("TRIGGER_MOLE_APPEARING");
+
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("TRIGGER_MOLE_APPEARING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		MoleUp(1f);
 		yield return new WaitForSeconds(1f);
 		// wait until all pins are down
@@ -195,10 +199,10 @@ public class Study1 : MonoBehaviour
 		{
 			yield return new WaitForSeconds(0.1f);
 		}
-		fileLogger.Log("TRIGGER_MOLE_GREENING");
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("TRIGGER_MOLE_GREENING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		MoleGreen(0.5f);
 		yield return new WaitForSeconds(0.5f);
-		fileLogger.Log("END_MOLE_APPEARING");
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("END_MOLE_APPEARING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		moleState = MOLE_APPEARED;
 	}
 	bool IsMoleUp()
@@ -277,11 +281,9 @@ public class Study1 : MonoBehaviour
 		InitTrials();
 		moleIndex = -1;
 		moleState = MOLE_TO_APPEAR;
-		fileLogger = new FileLogger(logEnabled);
+		//fileLogger = new FileLogger(logEnabled);
 		currTime = LOG_INTERVAL;
 		prevTime = 0f;
-		fileLogger.Log("LOG_INTERVAL " + LOG_INTERVAL);
-		fileLogger.Log("START_APPLICATION");
 		// Connection to MQTT Broker
 		expanDialSticks.client_MqttConnect();
 	}
@@ -320,12 +322,13 @@ public class Study1 : MonoBehaviour
 	{
 
 
-		expanDialSticks.client.Publish(MQTT_CAMERA_RECORDER_TOPIC, System.Text.Encoding.UTF8.GetBytes("END"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER_TOPIC, System.Text.Encoding.UTF8.GetBytes("END"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_CAMERA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 
-		fileLogger.Log("END_APPLICATION");
+		//fileLogger.Log("END_APPLICATION");
 
-		fileLogger.Close();
+		//fileLogger.Close();
 	}
 
 	private void HandleConnecting(object sender, MqttConnectionEventArgs e)
@@ -337,8 +340,10 @@ public class Study1 : MonoBehaviour
 	private void HandleConnected(object sender, MqttConnectionEventArgs e)
 	{
 		Debug.Log("Application connected.");
-		expanDialSticks.client.Publish(MQTT_CAMERA_RECORDER_TOPIC, System.Text.Encoding.UTF8.GetBytes("START"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER_TOPIC, System.Text.Encoding.UTF8.GetBytes("START"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+
+		expanDialSticks.client.Publish(MQTT_CAMERA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		connected = true;
 
 	}
@@ -369,7 +374,8 @@ public class Study1 : MonoBehaviour
 		Vector2 molePosition = molePositions[moleIndex];
 		if (e.i == (int)molePosition.x && e.j == (int)molePosition.y)
 		{
-			fileLogger.Log("USER_MOLE_ROTATION " + e.i + " " + e.j);
+			string msg = "USER_MOLE_ROTATION " + e.i + " " + e.j;
+			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 			if (moleState == MOLE_APPEARED && moleIndex < molePositions.Length)
 			{
 				moleState = LANDSCAPE_IS_CHANGING;
@@ -429,12 +435,19 @@ public class Study1 : MonoBehaviour
 				positionString += expanDialSticks.viewMatrix[i, j].CurrentPosition + " ";
 			}
 		}
-		fileLogger.Log(colorString);
+
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(colorString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(proximityString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(positionString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(leftHandString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(rightHandString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(pinOrientationString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		/*fileLogger.Log(colorString);
 		fileLogger.Log(proximityString);
 		fileLogger.Log(positionString);
 		fileLogger.Log(leftHandString);
 		fileLogger.Log(rightHandString);
-		fileLogger.Log(pinOrientationString);
+		fileLogger.Log(pinOrientationString);*/
 		//fileLogger.Log(pinRotationString);
 	}
 
@@ -451,7 +464,9 @@ public class Study1 : MonoBehaviour
 				if (moleState == MOLE_APPEARED && moleIndex < molePositions.Length)
 				{
 					Vector2 molePosition = molePositions[moleIndex];
-					fileLogger.Log("USER_MOLE_ROTATION " + molePosition.x + " " + molePosition.y);
+					string msg = "USER_MOLE_ROTATION " + molePosition.x + " " + molePosition.y; 
+					expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+
 					moleState = LANDSCAPE_IS_CHANGING;
 					StartCoroutine(NextMole());
 				}

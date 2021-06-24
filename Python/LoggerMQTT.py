@@ -1,37 +1,65 @@
+from CameraRecorder import CameraRecorder
+from SystemRecorder import SystemRecorder
 import paho.mqtt.client as mqtt
 
-MQTT_VIDEO_RECORDER = "VIDEO_RECORDER"
+MQTT_CAMERA_RECORDER = "CAMERA_RECORDER"
 MQTT_EMPATICA_RECORDER  ="EMPATICA_RECORDER"
 MQTT_SYSTEM_RECORDER  ="SYSTEM_RECORDER"
+MQTT_UNKNOWN_TOPIC  ="UNKNOWN_TOPIC"
+CMD_START  ="START"
+CMD_STOP ="STOP"
+CMD_UNKNOWN  ="UNKNOWN"
 
 def on_connect(client, userdata, flags, rc):
     print("Connected with result code "+str(rc))
-    client.subscribe(MQTT_VIDEO_RECORDER)
+    client.subscribe(MQTT_CAMERA_RECORDER)
     client.subscribe(MQTT_EMPATICA_RECORDER)
     client.subscribe(MQTT_SYSTEM_RECORDER)
 
 def on_message(client, userdata, msg):
-    if msg.topic == MQTT_VIDEO_RECORDER:
-    elif msg.topic == MQTT_VIDEO_RECORDER:
-    elif msg.topic == MQTT_VIDEO_RECORDER:
-    else:
-        print("Unknown topic: " +msg.topic)
-    try:
-      command = str(msg.payload.decode("utf-8"))
-      if command == 'start':
-        videoRecorder.start()
-        print("["+ videoRecorder.name +"] Start.")
-      elif command == 'stop':
-        videoRecorder.stop()
-        print("["+ videoRecorder.name +"] Stop.")
-      elif command == 'exit':
-        client.disconnect()
-        print("["+ videoRecorder.name +"] Exit.")
-      else :
-        print("["+ videoRecorder.name +"] Unknown payload.")
-    except Exception as e:
-        print(e)
+    global cameraRecorder
+    command = str(msg.payload.decode("utf-8"))
+    # VideoRecorder Topic
+    if msg.topic == MQTT_CAMERA_RECORDER:
 
+      if command == CMD_START:
+          print(MQTT_CAMERA_RECORDER + " | " + CMD_START)
+          if cameraRecorder.is_alive():
+              cameraRecorder.stop()
+              cameraRecorder.join()
+          cameraRecorder = CameraRecorder()
+          cameraRecorder.start()
+
+      elif command == CMD_STOP:
+          print(MQTT_CAMERA_RECORDER + " | " + CMD_STOP)
+          cameraRecorder.stop()
+
+      else:
+          print(MQTT_CAMERA_RECORDER + " | " + CMD_UNKNOWN)
+    elif msg.topic == MQTT_EMPATICA_RECORDER:
+
+      if command == CMD_START:
+          print(MQTT_EMPATICA_RECORDER + " | " + CMD_START)
+      elif command == CMD_STOP:
+          print(MQTT_EMPATICA_RECORDER + " | " + CMD_STOP)
+      else:
+          print(MQTT_EMPATICA_RECORDER + " | " + CMD_UNKNOWN)
+
+
+    elif msg.topic == MQTT_SYSTEM_RECORDER:
+      if command == CMD_START:
+          print(MQTT_SYSTEM_RECORDER + " | " + CMD_START)
+          systemRecorder.start()
+      elif command == CMD_STOP:
+          print(MQTT_SYSTEM_RECORDER + " | " + CMD_STOP)
+          systemRecorder.stop()
+      else:
+          systemRecorder.write(command)
+    else:
+      print(MQTT_UNKNOWN_TOPIC)
+
+cameraRecorder = CameraRecorder()
+systemRecorder = SystemRecorder()
 client = mqtt.Client()
 client.on_connect = on_connect
 client.on_message = on_message
