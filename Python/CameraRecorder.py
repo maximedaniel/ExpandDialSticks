@@ -5,6 +5,7 @@ import threading
 import os
 import datetime
 import paho.mqtt.client as mqtt
+import time
 
 class CameraRecorder(threading.Thread):
 
@@ -38,8 +39,11 @@ class CameraRecorder(threading.Thread):
           if cap.isOpened():
             #print("running!")
             cameraPortFound = True
+            #cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280) # 640
+            #cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720) # 480
             width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))   # float `width`
             height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))  # float `height`
+            print("width: %i, height: %i" %(width, height))
             # Define the codec and create VideoWriter object
             fourcc = cv2.VideoWriter_fourcc(*'XVID')
             timestamp = datetime.datetime.utcnow().isoformat().replace(':','.')
@@ -91,7 +95,7 @@ class CameraRecorder(threading.Thread):
           timestamp = datetime.datetime.utcnow().isoformat().replace(':','.')
           videoPath = os.path.join(self.path, timestamp+'_video.avi')
           print("Starting recording camera" + str(cameraPort) + "(" + str(width) + ", "+ str(height) + ") at " + videoPath)
-          out = cv2.VideoWriter(videoPath, fourcc, 20.0, (width,height))
+          out = cv2.VideoWriter(videoPath, fourcc, 20.0, (width, height))
           while(cap.isOpened() and not self.isStopped):
               ret, frame = cap.read()
               if ret == True:
@@ -103,3 +107,8 @@ class CameraRecorder(threading.Thread):
         print("["+ self.name +"] Could not open any camera.")
     except Exception as e:
       print("["+ self.name +"] " + str(e))
+
+cameraRecorder = CameraRecorder()
+cameraRecorder.start()
+time.sleep(15)
+cameraRecorder.stop()
