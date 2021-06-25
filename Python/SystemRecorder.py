@@ -16,9 +16,14 @@ class SystemRecorder():
         os.makedirs(self.path)
     self.name = type(self).__name__
     self.f = None
-    
+    self.isStopped = True
+  
+  def stopped(self):
+        return self.isStopped
+
   def start(self):
     try:
+        self.isStopped = False
         timestamp = datetime.datetime.utcnow().isoformat().replace(':','.')
         logPath = os.path.join(self.path, timestamp+'_log.txt')
         self.f = open(logPath, "w")
@@ -28,6 +33,7 @@ class SystemRecorder():
   def stop(self):
     try: 
       self.f.close()
+      self.isStopped = True
     except Exception as e:
         print("["+ self.name + "] " + str(e))
         

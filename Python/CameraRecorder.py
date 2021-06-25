@@ -17,32 +17,33 @@ class CameraRecorder(threading.Thread):
     if not os.path.isdir(self.path):
         os.makedirs(self.path)
     self.name = type(self).__name__
-    self.isStopped = False
+    self.isStopped = True
 
   def stop(self):
         self._stop_event.set()
         self.isStopped = True
 
   def stopped(self):
-        return self._stop_event.is_set()
+        return self.isStopped
 
   def run(self):
     #pythoncom.CoInitialize()
     try:
+      self.isStopped = False
       cap = None
       cameraPortFound = False
       for cameraPort in range(2):
           #print(cameraPort)
-          cap = cv2.VideoCapture(cameraPort, cv2.CAP_DSHOW)
+          cap = cv2.VideoCapture(cameraPort + cv2.CAP_DSHOW)
           if cap.isOpened():
             #print("running!")
             cameraPortFound = True
             width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))   # float `width`
             height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))  # float `height`
             # Define the codec and create VideoWriter object
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            fourcc = cv2.VideoWriter_fourcc(*'XVID')
             timestamp = datetime.datetime.utcnow().isoformat().replace(':','.')
-            videoPath = os.path.join(self.path, timestamp+'_video.mp4')
+            videoPath = os.path.join(self.path, timestamp+'_video.avi')
             #print("Starting recording camera" + str(cameraPort) + "(" + str(width) + ", "+ str(height) + ") at " + videoPath)
             out = cv2.VideoWriter(videoPath, fourcc, 20.0, (width,height))
             while(cap.isOpened() and not self.isStopped):
@@ -70,7 +71,7 @@ class CameraRecorder(threading.Thread):
       highestRes = 0
       cameraPortFound = False
       for cameraPort in range(2):
-        cap = cv2.VideoCapture(cameraPort, cv2.CAP_DSHOW)
+        cap = cv2.VideoCapture(cameraPort + cv2.CAP_DSHOW)
         if cap.isOpened():
           width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))   # float `width`
           height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))  # float `height`
@@ -81,14 +82,14 @@ class CameraRecorder(threading.Thread):
           cap.release()
 
       if cameraPortFound:
-        cap = cv2.VideoCapture(highestResCameraPort, cv2.CAP_DSHOW)
+        cap = cv2.VideoCapture(highestResCameraPort + cv2.CAP_DSHOW)
         if cap.isOpened():
           width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))   # float `width`
           height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))  # float `height`
           # Define the codec and create VideoWriter object
-          fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+          fourcc = cv2.VideoWriter_fourcc(*'XVID')
           timestamp = datetime.datetime.utcnow().isoformat().replace(':','.')
-          videoPath = os.path.join(self.path, timestamp+'_video.mp4')
+          videoPath = os.path.join(self.path, timestamp+'_video.avi')
           print("Starting recording camera" + str(cameraPort) + "(" + str(width) + ", "+ str(height) + ") at " + videoPath)
           out = cv2.VideoWriter(videoPath, fourcc, 20.0, (width,height))
           while(cap.isOpened() and not self.isStopped):
