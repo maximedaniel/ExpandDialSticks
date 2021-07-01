@@ -50,6 +50,10 @@ public class ExpanDialStickView : MonoBehaviour
 	private float proximityDiff = 0f;
 	private float proximityTarget = 0f;
 
+	private float pauseCurrent = 0f;
+	private float pauseDiff = 0f;
+	private float pauseTarget = 0f;
+
 	private float shapeChangeDurationCurrent = 0f;
 	private float shapeChangeDurationDiff = 0f;
 	private float shapeChangeDurationTarget = 0f;
@@ -58,6 +62,8 @@ public class ExpanDialStickView : MonoBehaviour
 	private Color colorCurrent = Color.white;
 	private Color colorDiff = Color.black;
 	private Color colorTarget = Color.white;
+
+	private Color reverseColorCurrent = Color.black;
 
 	private TextAlignmentOptions textAlignmentCurrent = TextAlignmentOptions.Center;
 	private TextAlignmentOptions textAlignmentTarget = TextAlignmentOptions.Center;
@@ -95,10 +101,22 @@ public class ExpanDialStickView : MonoBehaviour
 	private string planeTextureTarget = "";
 	private float planeRotationTarget= 0f;
 	private float planeRotationCurrent= 0f;
+	private bool paused = false;
 
-	
 	private MeshRenderer meshRenderer;
+	private Projector projector;
 
+	public const int BLINK_FEEDBACK = 0;
+	public const int DOWN_FEEDBACK = 1;
+	public const int UP_FEEDBACK = 2;
+
+	private int feedbackMode = DOWN_FEEDBACK;
+
+	public bool Paused
+	{
+		get => this.paused;
+		set => this.paused = value;
+	}
 	// Getters and Setters
 	public int Row{
 		get => this.i;
@@ -230,7 +248,21 @@ public class ExpanDialStickView : MonoBehaviour
 			this.proximityCurrent = value;
 		}
 	}
+	public bool TargetPaused
+	{
+		get => this.pauseTarget > 0f ? true : false;
+		set => this.pauseTarget = value ? 1f : 0f;
+	}
 
+	public bool CurrentPaused
+	{
+		get => this.pauseCurrent > 0f ? true : false;
+		set
+		{
+			this.pauseDiff += (value ? 1f : 0f) - this.pauseCurrent;
+			this.pauseCurrent = value ? 1f : 0f;
+		}
+	}
 	public float TargetShapeChangeDuration{
 		get => this.shapeChangeDurationTarget;
 		set => this.shapeChangeDurationTarget = value;
@@ -354,7 +386,7 @@ public class ExpanDialStickView : MonoBehaviour
 		}
 	}
 
-	public void setShapeChangeTarget(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, float proximity, float shapeChangeDuration)
+	public void setShapeChangeTarget(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, float proximity, bool paused, float shapeChangeDuration)
 	{
 		TargetAxisX = xAxis;
 		TargetAxisY = yAxis;
@@ -363,11 +395,12 @@ public class ExpanDialStickView : MonoBehaviour
 		TargetReaching = reaching;
 		TargetHolding = holding;
 		TargetProximity = proximity;
+		TargetPaused = paused;
 		TargetPosition = position;
 		TargetShapeChangeDuration = shapeChangeDuration;
 	}
 	
-	public void setShapeChangeCurrent(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, float proximity, float shapeChangeDuration)
+	public void setShapeChangeCurrent(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, float proximity, bool paused, float shapeChangeDuration)
 	{
 		CurrentAxisX = xAxis;
 		CurrentAxisY = yAxis;
@@ -375,6 +408,7 @@ public class ExpanDialStickView : MonoBehaviour
 		CurrentRotation = rotation;
 		CurrentHolding = holding;
 		CurrentProximity = proximity;
+		CurrentPaused = paused;
 
 		if (this.reachingCurrent > 0f  && reaching == false){
 			CurrentPosition = position;
@@ -468,7 +502,9 @@ public class ExpanDialStickView : MonoBehaviour
 		meshRenderer = this.transform.GetComponent<MeshRenderer>();
 		meshRenderer.material = transparentMaterial;
 		this.name = "ExpanDialStick (" + i + ", " + j + ")";
-		
+
+		projector = this.transform.GetChild(0).gameObject.GetComponent<Projector>();
+
 		textGameObject = new GameObject( "Text (" + i + ", " + j + ")");
 		textGameObject.transform.parent = this.transform;
 
@@ -515,7 +551,45 @@ public class ExpanDialStickView : MonoBehaviour
 		this.transform.RotateAround(this.transform.position - new Vector3(0f, height / 2, 0f), Vector3.back, xAxisCurrentLerp);
 
 		// SAFETY CUE
-		meshRenderer.material.color = (this.proximityCurrent > 0f) ? new Color(this.proximityCurrent, 0f, 0f) : this.colorCurrent;
+		if(this.pauseCurrent > 0f)
+		{
+			switch (feedbackMode)
+			{
+				case BLINK_FEEDBACK:
+					reverseColorCurrent = new Color(1.0f - this.colorCurrent.r, 1.0f - this.colorCurrent.g, 1.0f - this.colorCurrent.b);
+					meshRenderer.material.color =  Color.Lerp(this.colorCurrent, reverseColorCurrent, Mathf.PingPong(Time.time, 1.999f));
+					projector.orthographicSize = 0f;
+					break;
+
+				case UP_FEEDBACK:
+					meshRenderer.material.color = this.colorCurrent;
+					reverseColorCurrent = new Color(1.0f - this.colorCurrent.r, 1.0f - this.colorCurrent.g, 1.0f - this.colorCurrent.b);
+					reverseColorCurrent.a = Mathf.Lerp(0f, 1f, Mathf.Repeat(Time.time, 1.999f));
+					projector.material.color = reverseColorCurrent;
+					projector.orthographicSize = Mathf.Lerp(8f, 0f, Mathf.Repeat(Time.time, 1.999f));
+					break;
+				case DOWN_FEEDBACK:
+					meshRenderer.material.color = this.colorCurrent;
+					reverseColorCurrent = new Color(1.0f - this.colorCurrent.r, 1.0f - this.colorCurrent.g, 1.0f - this.colorCurrent.b);
+					reverseColorCurrent.a = Mathf.Lerp(1f, 0f, Mathf.Repeat(Time.time, 1.999f));
+					projector.material.color = reverseColorCurrent;
+					projector.orthographicSize = Mathf.Lerp(0f, 8f, Mathf.Repeat(Time.time, 1.999f));
+					break;
+				default:
+					meshRenderer.material.color = this.colorCurrent;
+					projector.orthographicSize = 0f;
+					break;
+
+			}
+			//this.transform.localScale = Vector3.Lerp(new Vector3(diameter, height / 2, diameter), new Vector3(diameter * 1.1f, height / 2, diameter * 1.1f), Mathf.PingPong(Time.time, 1));
+			//meshRenderer.material.SetColor("_FirstOutlineColor", meshRenderer.material.color);
+			//meshRenderer.material.SetFloat("_FirstOutlineWidth", Mathf.Lerp(0f, 1f, Mathf.PingPong(Time.time, 1)));
+		}
+		else
+		{
+			meshRenderer.material.color = this.colorCurrent;
+			projector.orthographicSize = 0f;
+		}
 
 		this.textMesh.alignment = this.textAlignmentTarget;
 		this.textMesh.fontSize =  this.textSizeCurrent;
@@ -528,7 +602,7 @@ public class ExpanDialStickView : MonoBehaviour
 		//targetPosition = this.transform.position - new Vector3(0f, 1f, 0f);
 		//textRectTransform.LookAt(targetPosition, Vector3.left);
 		//float textRotationEulerAngle = 360f + this.textRotationCurrent % 360f
-		textRectTransform.localEulerAngles = new Vector3(90f, 0f, 90f ); // + this.textRotationCurrent
+		textRectTransform.localEulerAngles = new Vector3(90f, 0f, 90f); // + this.textRotationCurrent
 
 
 		// plane
@@ -553,9 +627,18 @@ public class ExpanDialStickView : MonoBehaviour
 			this.selectCountCurrent += (this.selectCountTarget - this.selectCountCurrent) / this.shapeChangeDurationTarget * Time.deltaTime;
 			this.rotationCurrent += (this.rotationTarget - this.rotationCurrent) / this.shapeChangeDurationTarget * Time.deltaTime;
 			this.positionCurrent += (this.positionTarget - this.positionCurrent) / this.shapeChangeDurationTarget * Time.deltaTime;
-			this.reachingCurrent += (this.reachingTarget - this.reachingCurrent) / this.shapeChangeDurationTarget * Time.deltaTime;
-			this.holdingCurrent += (this.holdingTarget - this.holdingCurrent) / this.shapeChangeDurationTarget * Time.deltaTime;
 			this.proximityCurrent += (this.proximityTarget - this.proximityCurrent) / this.shapeChangeDurationTarget * Time.deltaTime;
+			this.reachingCurrent = this.reachingTarget;
+			this.holdingCurrent = this.holdingTarget;
+			/*if(this.pauseTarget == 0.0f && this.pauseCurrent == 1.0f)
+			{
+				toUnpause = true;
+			}*/
+			this.pauseCurrent = this.pauseTarget;
+
+			//this.reachingCurrent += (this.reachingTarget - this.reachingCurrent) / this.shapeChangeDurationTarget * Time.deltaTime;
+			//this.holdingCurrent += (this.holdingTarget - this.holdingCurrent) / this.shapeChangeDurationTarget * Time.deltaTime;
+			//this.pauseCurrent += (this.pauseTarget - this.pauseCurrent) / this.shapeChangeDurationTarget * Time.deltaTime;
 			this.shapeChangeDurationTarget -= Time.deltaTime;
 		}
 		

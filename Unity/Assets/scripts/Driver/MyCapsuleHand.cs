@@ -547,14 +547,48 @@ namespace Leap.Unity {
       drawCylinder(mockThumbJointPos, THUMB_BASE_INDEX);
       drawCylinder(mockThumbJointPos, PINKY_BASE_INDEX);
 
-      // Draw Spheres
-      Graphics.DrawMeshInstanced(_sphereMesh, 0, _sphereMat, _sphereMatrices, _curSphereIndex, null, 
-        _castShadows?UnityEngine.Rendering.ShadowCastingMode.On: UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
+       MaterialPropertyBlock mpb = new MaterialPropertyBlock();
+       Vector4[] colors = new Vector4[_curSphereIndex];
+       Vector4[] firstOutlineColors = new Vector4[_curSphereIndex];
+       float[] fistOutlineWidths = new float [_curSphereIndex];
+       Vector4[] secondOutlineColors = new Vector4[_curSphereIndex];
+       float[] secondOutlineWidths = new float[_curSphereIndex];
+       float[] angles = new float[_curSphereIndex];
+            for (int i = 0; i < _curSphereIndex; i++) {
+                colors[i] = Color.black;
+                firstOutlineColors[i] = Color.red;
+                fistOutlineWidths[i] = 0.5f;
+                secondOutlineColors[i] = Color.red;
+                secondOutlineWidths[i] = 0.5f;
+                angles[i] = 89.0f;
+            }
+
+       /*mpb.SetVectorArray("_Color", colors);
+       mpb.SetVectorArray("_FirstOutlineColor", firstOutlineColors);
+       mpb.SetFloatArray("_FirstOutlineWidth", fistOutlineWidths);
+       mpb.SetVectorArray("_FirstOutlineColor", secondOutlineColors);
+       mpb.SetFloatArray("_FirstOutlineWidth", secondOutlineWidths);
+       mpb.SetFloatArray("_Angle", angles);*/
+      /* mpb.SetVector("_Color", Color.black);
+       mpb.SetVector("_FirstOutlineColor", Color.red);
+       mpb.SetFloat("_FirstOutlineWidth", 0.5f);*/
+
+       //Debug.Log("_sphereMat.shader.name: " + _sphereMat.shader.name);
+       //if (mpb.isEmpty) Debug.Log("MPB IS EMPTY!");
+
+       // Draw Spheres
+       Graphics.DrawMeshInstanced(_sphereMesh, 0, _sphereMat, _sphereMatrices, _curSphereIndex, null, 
+       _castShadows?UnityEngine.Rendering.ShadowCastingMode.On: UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
 
       // Draw Cylinders
       if(_cylinderMesh == null) { _cylinderMesh = getCylinderMesh(1f); }
       Graphics.DrawMeshInstanced(_cylinderMesh, 0, _backing_material, _cylinderMatrices, _curCylinderIndex, null,
         _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
+       // Draw Quads
+      // Mesh quadMesh = getQuadMesh();
+      //Graphics.DrawMeshInstanced(_cylinderMesh, 0, _backing_material, _cylinderMatrices, _curCylinderIndex, null,
+      //  _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
+
      }
 
     private void drawSphere(Vector3 position) {
@@ -578,6 +612,28 @@ namespace Leap.Unity {
         _cylinderMatrices[_curCylinderIndex++] = Matrix4x4.TRS(a,
           Quaternion.LookRotation(b - a), new Vector3(transform.lossyScale.x, transform.lossyScale.x, length));
       }
+    }
+
+    private Mesh getQuadMesh(Vector3 a, Vector3 b, Vector3 c, Vector3 d) {
+        Mesh mesh = new Mesh();
+        mesh.name = "GeneratedQuad";
+        mesh.hideFlags = HideFlags.DontSave;
+        // Points
+        Vector3[] verts = new Vector3[4]{a,b,c,d};
+        // Triangles
+        int[] tris = new int[6]
+        {
+        // lower left triangle
+        0, 2, 1,
+        // upper right triangle
+        2, 3, 1
+        };
+       mesh.SetVertices(verts);
+       mesh.SetIndices(tris, MeshTopology.Triangles, 0);
+       mesh.RecalculateBounds();
+       mesh.RecalculateNormals();
+       mesh.UploadMeshData(true);
+       return mesh;
     }
 
     private bool isNaN(Vector3 v) {

@@ -52,6 +52,10 @@ public class ExpanDialStickModel
 	private float proximityDiff = 0f;
 	private float proximityTarget = 0f;
 
+	private float pauseCurrent = 0f;
+	private float pauseDiff = 0f;
+	private float pauseTarget = 0f;
+
 	private float shapeChangeDurationCurrent = 0f;
 	private float shapeChangeDurationDiff = 0f;
 	private float shapeChangeDurationTarget = 0f;
@@ -90,8 +94,6 @@ public class ExpanDialStickModel
 
 	private bool init = false;
 
-	private bool paused = false;
-
 
 	public Material transparentMaterial;
 
@@ -100,11 +102,7 @@ public class ExpanDialStickModel
 		get => this.init;
 		set => this.init = value;
 	}
-	public bool Paused
-	{
-		get => this.paused;
-		set => this.paused = value;
-	}
+
 	public int Row{
 		get => this.i;
 		set => this.i = value;
@@ -239,6 +237,21 @@ public class ExpanDialStickModel
 			this.proximityCurrent = value;
 		}
 	}
+	public bool TargetPaused
+	{
+		get => this.pauseTarget > 0f ? true : false;
+		set => this.pauseTarget = value ? 1f : 0f;
+	}
+
+	public bool CurrentPaused
+	{
+		get => this.pauseCurrent > 0f ? true : false;
+		set
+		{
+			this.pauseDiff += (value ? 1f : 0f) - this.pauseCurrent;
+			this.pauseCurrent = value ? 1f : 0f;
+		}
+	}
 
 	public float TargetShapeChangeDuration{
 		get => this.shapeChangeDurationTarget;
@@ -362,7 +375,7 @@ public class ExpanDialStickModel
 		}
 	}
 	
-	public void setShapeChangeTarget(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, float proximity, float shapeChangeDuration)
+	public void setShapeChangeTarget(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, float proximity, bool paused, float shapeChangeDuration)
 	{
 		TargetAxisX = xAxis;
 		TargetAxisY = yAxis;
@@ -372,10 +385,11 @@ public class ExpanDialStickModel
 		TargetHolding = holding;
 		TargetPosition = position;
 		TargetProximity = proximity;
+		TargetPaused = paused;
 		TargetShapeChangeDuration = shapeChangeDuration;
 	}
 	
-	public void setShapeChangeCurrent(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, float proximity, float shapeChangeDuration)
+	public void setShapeChangeCurrent(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, float proximity, bool paused, float shapeChangeDuration)
 	{
 		
 		CurrentAxisX = xAxis;
@@ -384,6 +398,7 @@ public class ExpanDialStickModel
 		CurrentRotation = rotation;
 		CurrentHolding = holding;
 		CurrentProximity = proximity;
+		CurrentPaused = paused;
 
 		if (this.reachingCurrent > 0f  && reaching == false){
 			CurrentPosition = position;

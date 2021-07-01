@@ -520,6 +520,7 @@ public class ExpanDialSticks : MonoBehaviour
 									(bool)(gans.ANS.content.reachingValue[i * nbColumns + j] == 1 ? true : false), // reachingValue (0, 1)
 									(bool)(gans.ANS.content.holdingValue[i * nbColumns + j] == 1 ? true : false), // holdingValue (0, 1)
 									nextProximity,
+									false,
 									MQTT_INTERVAL
 									);
 								// doing nothing for each pin
@@ -532,10 +533,10 @@ public class ExpanDialSticks : MonoBehaviour
 								{
 									if (modelMatrix[i, j].CurrentReaching) // PIN IS INDEED MOVING 
 									{
-										if (!modelMatrix[i, j].Paused) // PIN IS NOT ALREADY BEING PAUSED
+										if (!modelMatrix[i, j].CurrentPaused) // PIN IS NOT ALREADY BEING PAUSED
 										{
 											//Debug.Log("modelMatrix[" + i + "," + j + "] pause!");
-											modelMatrix[i, j].Paused = true;
+											modelMatrix[i, j].CurrentPaused = true;
 											positions[i * nbColumns + j] = modelMatrix[i, j].CurrentPosition;
 											holdings[i * nbColumns + j] = 0;
 											durations[i * nbColumns + j] = 0.1f;
@@ -547,19 +548,19 @@ public class ExpanDialSticks : MonoBehaviour
 									// PIN HAS BEEN PAUSED THEN START IT
 									if (!modelMatrix[i, j].CurrentReaching) 
 									{
-										if (modelMatrix[i, j].Paused) 
+										if (modelMatrix[i, j].CurrentPaused) 
 										{
-											modelMatrix[i, j].Paused = false;
+											modelMatrix[i, j].CurrentPaused = false;
 											positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
 											holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
 
-											/*float safetySpeed = 20f; // 20 pos per sec
-											float distance = Math.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition);
-											float safetyDuration = distance / safetySpeed;
-											durations[i * nbColumns + j] = safetyDuration;*/
+											//float minShapeChangeDuration = 1f; // 20 pos per sec
+											//durations[i * nbColumns + j] = minShapeChangeDuration + (nextProximity * 3f);
 
-											float minShapeChangeDuration = 1f; // 20 pos per sec
-											durations[i * nbColumns + j] = minShapeChangeDuration + (nextProximity * 3f);
+											float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
+											float distance = Math.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition);
+											float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
+											durations[i * nbColumns + j] = safetyDuration;
 											safe = false;
 										}
 									}
@@ -569,8 +570,13 @@ public class ExpanDialSticks : MonoBehaviour
 										{
 											positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
 											holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
-											float minShapeChangeDuration = 1f; // 20 pos per sec
-											durations[i * nbColumns + j] = minShapeChangeDuration + (nextProximity * 3f);
+											float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
+											float distance = Math.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition);
+											float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
+											durations[i * nbColumns + j] = safetyDuration;
+
+											//float minShapeChangeDuration = 1f; // 20 pos per sec
+											//durations[i * nbColumns + j] = minShapeChangeDuration + (nextProximity * 3f);
 											safe = false;
 										}
 									}
@@ -698,9 +704,9 @@ public class ExpanDialSticks : MonoBehaviour
 						reaching,
 						modelMatrix[i, j].TargetHolding,
 						modelMatrix[i, j].TargetProximity,
+						false,
 						modelMatrix[i, j].TargetShapeChangeDuration
 					);
-					modelMatrix[i, j].Paused = false;
 					modelMatrix[i, j].TargetShapeChangeDuration = 0f;
 				}
 			}
@@ -745,7 +751,7 @@ public class ExpanDialSticks : MonoBehaviour
 							durations[i * nbColumns + j] = modelMatrix[i, j].TargetShapeChangeDuration;
 						} else {
 							//Debug.Log("modelMatrix[" + i + "," + j + "] pause at start!");
-							modelMatrix[i, j].Paused = true;
+							modelMatrix[i, j].CurrentPaused = true;
 							durations[i * nbColumns + j] = 0f;
 						}
 					//}
@@ -823,32 +829,35 @@ public class ExpanDialSticks : MonoBehaviour
 				}*/
 				if (nextProximity >= 1f)
 				{
-					if (!modelMatrix[i, j].Paused)
+					if (modelMatrix[i, j].CurrentReaching) // PIN IS INDEED MOVING 
 					{
-						//if(i == 4 && j == 5) Debug.Log("modelMatrix[" + i + "," + j + "] pause!");
-						modelMatrix[i, j].Paused = true;
-
-						modelMatrix[i, j].setShapeChangeCurrent(
-							modelMatrix[i, j].CurrentAxisX,
-							modelMatrix[i, j].CurrentAxisY,
-							modelMatrix[i, j].CurrentSelectCount,
-							modelMatrix[i, j].CurrentRotation,
-							viewMatrix[i, j].CurrentPosition, // set to view current pos
-							modelMatrix[i, j].CurrentReaching,
-							modelMatrix[i, j].CurrentHolding,
-							modelMatrix[i, j].CurrentProximity,
-							0.1f // very fast
-						);
-						shapeChanging = true;
+						if (!modelMatrix[i, j].CurrentPaused)
+						{
+							//if(i == 4 && j == 5) Debug.Log("modelMatrix[" + i + "," + j + "] pause!");
+							modelMatrix[i, j].setShapeChangeCurrent(
+								modelMatrix[i, j].CurrentAxisX,
+								modelMatrix[i, j].CurrentAxisY,
+								modelMatrix[i, j].CurrentSelectCount,
+								modelMatrix[i, j].CurrentRotation,
+								viewMatrix[i, j].CurrentPosition, // set to view current pos
+								false,
+								modelMatrix[i, j].CurrentHolding,
+								modelMatrix[i, j].CurrentProximity,
+								true,
+								0.1f // very fast
+							);
+							shapeChanging = true;
+						}
 					}
 				}
 				else
 				{
-						if (modelMatrix[i, j].Paused)
+					if (!modelMatrix[i, j].CurrentReaching) // PIN IS INDEED MOVING 
+					{
+						if (modelMatrix[i, j].CurrentPaused)
 						{
 							//if(i == 4 && j == 5) Debug.Log("modelMatrix[" + i + "," + j + "] unpause!");
 							//Debug.Log("modelMatrix[" + i + "," + j + "] unpause!");
-							modelMatrix[i, j].Paused = false;
 							float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
 							float distance = Math.Abs(modelMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition);
 							float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
@@ -858,14 +867,18 @@ public class ExpanDialSticks : MonoBehaviour
 									modelMatrix[i, j].CurrentSelectCount,
 									modelMatrix[i, j].CurrentRotation,
 									modelMatrix[i, j].TargetPosition, // set to model target pos
-									modelMatrix[i, j].CurrentReaching,
+									true,
 									modelMatrix[i, j].TargetHolding,
 									modelMatrix[i, j].CurrentProximity,
+									false,
 									safetyDuration //  fast
-								);
+								); ;
 							shapeChanging = true;
 						}
-						else if (prevProximity != nextProximity)
+					}
+					if (modelMatrix[i, j].CurrentReaching) // PIN IS INDEED MOVING 
+					{
+						if (prevProximity != nextProximity)
 						{
 							//if(i == 4 && j == 5) Debug.Log("modelMatrix[" + i + "," + j + "] change speed!");
 							float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
@@ -877,13 +890,15 @@ public class ExpanDialSticks : MonoBehaviour
 								modelMatrix[i, j].CurrentSelectCount,
 								modelMatrix[i, j].CurrentRotation,
 								modelMatrix[i, j].TargetPosition, // set to view current pos
-								modelMatrix[i, j].CurrentReaching,
+								true,
 								modelMatrix[i, j].TargetHolding,
 								modelMatrix[i, j].CurrentProximity,
+								modelMatrix[i, j].CurrentPaused,
 								safetyDuration //  fast
 							);
 							shapeChanging = true;
 						}
+					}
 				}
 			}
 		}
@@ -913,6 +928,7 @@ public class ExpanDialSticks : MonoBehaviour
 						modelMatrix[i, j].CurrentReaching,
 						modelMatrix[i, j].CurrentHolding,
 						modelMatrix[i, j].CurrentProximity,
+						modelMatrix[i, j].CurrentPaused,
 						modelMatrix[i, j].CurrentShapeChangeDuration
 					);
 					// READ EVENT
