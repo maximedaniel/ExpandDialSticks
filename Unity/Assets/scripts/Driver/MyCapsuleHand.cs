@@ -139,6 +139,7 @@ namespace Leap.Unity {
     private const float CYLINDER_MESH_RESOLUTION = 0.1f; //in centimeters, meshes within this resolution will be re-used
     private const int THUMB_BASE_INDEX = (int)Finger.FingerType.TYPE_THUMB * 4;
     private const int PINKY_BASE_INDEX = (int)Finger.FingerType.TYPE_PINKY * 4;
+    private const int INDEX_BASE_INDEX = (int)Finger.FingerType.TYPE_INDEX * 4;
 
     private static int _leftColorIndex = 0;
     private static int _rightColorIndex = 0;
@@ -161,7 +162,6 @@ namespace Leap.Unity {
 
     [SerializeField]
     private Mesh _sphereMesh;
-
     private Mesh _cylinderMesh;
 
     [MinValue(3)]
@@ -176,11 +176,14 @@ namespace Leap.Unity {
     [SerializeField]
     private float _cylinderRadius = 0.006f;
 
-    [MinValue(0)]
+   /* [MinValue(0)]
     [SerializeField]
-    private float _palmRadius = 0.015f;
-    #pragma warning restore 0649
+    private float _palmRadius = 0.015f;*/
+#pragma warning restore 0649
 
+    private Color _bodyColor = Color.black;
+    public Material _quadMaterial;
+    private Mesh _quadMesh;
     private Material _sphereMat;
     private Hand _hand;
     private Vector3[] _spherePositions;
@@ -332,10 +335,10 @@ namespace Leap.Unity {
       //ShowGameObjects();
       base.BeginHand();
       if (_hand.IsLeft) {
-        _sphereMat.color = _leftColorList[_leftColorIndex];
+        _sphereMat.color = _bodyColor;// _leftColorList[_leftColorIndex];
         _leftColorIndex = (_leftColorIndex + 1) % _leftColorList.Length;
       } else {
-        _sphereMat.color = _rightColorList[_rightColorIndex];
+        _sphereMat.color = _bodyColor;// _rightColorList[_rightColorIndex];
         _rightColorIndex = (_rightColorIndex + 1) % _rightColorList.Length;
       }
       setCollisionMode(true);
@@ -425,7 +428,7 @@ namespace Leap.Unity {
       //PalmPos, WristPos, and mockThumbJointPos, which is derived and not taken from the frame obj
 
       Vector3 palmPosition = _hand.PalmPosition.ToVector3();
-      drawSphere(palmPosition, _palmRadius);
+      /*drawSphere(palmPosition, _palmRadius);*/
 
       Vector3 thumbBaseToPalm = _spherePositions[THUMB_BASE_INDEX] - _hand.PalmPosition.ToVector3();
       Vector3 mockThumbJointPos = _hand.PalmPosition.ToVector3() + Vector3.Reflect(thumbBaseToPalm, _hand.Basis.xBasis.ToVector3());
@@ -497,6 +500,36 @@ namespace Leap.Unity {
             drawCylinder(armFrontLeft, armBackLeft);
             drawCylinder(armFrontRight, armBackRight);
 
+			// Join arm to wirst (MD)
+			if (_hand.IsLeft)
+			{
+                drawCylinder(armFrontLeft, mockThumbJointPos);
+                drawCylinder(armFrontRight, _spherePositions[THUMB_BASE_INDEX]);
+			} else
+			{
+                drawCylinder(armFrontLeft, _spherePositions[THUMB_BASE_INDEX]);
+                drawCylinder(armFrontRight, mockThumbJointPos);
+			}
+
+            // Fill Gap within arm (MD)
+            _quadMesh = getQuadMesh(armBackLeft, armBackRight, armFrontLeft, armFrontRight); 
+            Matrix4x4[] mat1 = new Matrix4x4[] { Matrix4x4.identity };
+              Vector4[] col1 = new Vector4[] { _bodyColor };
+            MaterialPropertyBlock block1 = new MaterialPropertyBlock();
+            block1.SetVectorArray("_Colors", col1);
+            Graphics.DrawMeshInstanced(_quadMesh, 0, _quadMaterial, mat1, mat1.Length, block1,
+            _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
+
+                // Fill Gap between hand and arm (MD)
+            _quadMesh = (_hand.IsLeft) ? getQuadMesh(armFrontLeft, armFrontRight, mockThumbJointPos, _spherePositions[THUMB_BASE_INDEX]): getQuadMesh(armFrontLeft, armFrontRight, _spherePositions[THUMB_BASE_INDEX], mockThumbJointPos);
+            Matrix4x4[] mat2 = new Matrix4x4[] { Matrix4x4.identity };
+            Vector4[] col2 = new Vector4[] { _bodyColor };
+            MaterialPropertyBlock block2 = new MaterialPropertyBlock();
+            block2.SetVectorArray("_Colors", col2);
+            Graphics.DrawMeshInstanced(_quadMesh, 0, _quadMaterial, mat2, mat2.Length, block2,
+            _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
+
+
             Vector3 centered = (armFrontLeft + armFrontRight + armBackLeft + armBackRight) / 4f;
             Vector3 dirForward = Vector3.Normalize(armFrontLeft - armBackLeft);
             Vector3 dirUpward = Vector3.Normalize(armFrontRight - armFrontLeft);
@@ -519,6 +552,8 @@ namespace Leap.Unity {
                 capsuleCollider.direction = 2;
             }
         }
+
+
       //Draw cylinders between finger joints
       for (int i = 0; i < 5; i++) {
         for (int j = 0; j < 3; j++) {
@@ -547,7 +582,16 @@ namespace Leap.Unity {
       drawCylinder(mockThumbJointPos, THUMB_BASE_INDEX);
       drawCylinder(mockThumbJointPos, PINKY_BASE_INDEX);
 
-       MaterialPropertyBlock mpb = new MaterialPropertyBlock();
+      // Fill Arm with Quad (MD)
+      _quadMesh = getQuadMesh(_spherePositions[THUMB_BASE_INDEX], mockThumbJointPos,_spherePositions[INDEX_BASE_INDEX], _spherePositions[PINKY_BASE_INDEX]); 
+      Matrix4x4[] mat = new Matrix4x4[] { Matrix4x4.identity };
+        Vector4[] col = new Vector4[] { _bodyColor };
+      MaterialPropertyBlock block = new MaterialPropertyBlock();
+      block.SetVectorArray("_Colors", col);
+      Graphics.DrawMeshInstanced(_quadMesh, 0, _quadMaterial, mat, mat.Length, block,
+      _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
+
+       /*MaterialPropertyBlock mpb = new MaterialPropertyBlock();
        Vector4[] colors = new Vector4[_curSphereIndex];
        Vector4[] firstOutlineColors = new Vector4[_curSphereIndex];
        float[] fistOutlineWidths = new float [_curSphereIndex];
@@ -562,7 +606,7 @@ namespace Leap.Unity {
                 secondOutlineWidths[i] = 0.5f;
                 angles[i] = 89.0f;
             }
-
+       */
        /*mpb.SetVectorArray("_Color", colors);
        mpb.SetVectorArray("_FirstOutlineColor", firstOutlineColors);
        mpb.SetFloatArray("_FirstOutlineWidth", fistOutlineWidths);
@@ -577,18 +621,22 @@ namespace Leap.Unity {
        //if (mpb.isEmpty) Debug.Log("MPB IS EMPTY!");
 
        // Draw Spheres
-       Graphics.DrawMeshInstanced(_sphereMesh, 0, _sphereMat, _sphereMatrices, _curSphereIndex, null, 
+       //Vector4[] col3 = new Vector4[_curSphereIndex];
+       // for (int i = 0; i < _curSphereIndex; i++) col3[i] = _bodyColor;
+       MaterialPropertyBlock block3 = new MaterialPropertyBlock();
+       //block3.SetVectorArray("_Colors", col3);
+       Graphics.DrawMeshInstanced(_sphereMesh, 0, _sphereMat, _sphereMatrices, _curSphereIndex, block3, 
        _castShadows?UnityEngine.Rendering.ShadowCastingMode.On: UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
 
       // Draw Cylinders
-      if(_cylinderMesh == null) { _cylinderMesh = getCylinderMesh(1f); }
-      Graphics.DrawMeshInstanced(_cylinderMesh, 0, _backing_material, _cylinderMatrices, _curCylinderIndex, null,
+       //Vector4[] col4 = new Vector4[_curCylinderIndex];
+       //for (int i = 0; i < _curCylinderIndex; i++) col4[i] = _bodyColor;
+       MaterialPropertyBlock block4 = new MaterialPropertyBlock();
+       //block4.SetVectorArray("_Colors", col4);
+      //if(_cylinderMesh == null) { _cylinderMesh = getCylinderMesh(1f); }
+      _cylinderMesh = getCylinderMesh(1f);
+      Graphics.DrawMeshInstanced(_cylinderMesh, 0, _sphereMat, _cylinderMatrices, _curCylinderIndex, block4,
         _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
-       // Draw Quads
-      // Mesh quadMesh = getQuadMesh();
-      //Graphics.DrawMeshInstanced(_cylinderMesh, 0, _backing_material, _cylinderMatrices, _curCylinderIndex, null,
-      //  _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
-
      }
 
     private void drawSphere(Vector3 position) {
@@ -618,22 +666,42 @@ namespace Leap.Unity {
         Mesh mesh = new Mesh();
         mesh.name = "GeneratedQuad";
         mesh.hideFlags = HideFlags.DontSave;
-        // Points
-        Vector3[] verts = new Vector3[4]{a,b,c,d};
-        // Triangles
+        Vector3[] vertices = new Vector3[4]
+        {
+                a,//new Vector3(0, 0, 0),
+				b,//new Vector3(width, 0, 0),
+				c,//new Vector3(0, height, 0),
+				d,//new Vector3(width, height, 0)
+        };
+        mesh.vertices = vertices;
+
         int[] tris = new int[6]
         {
-        // lower left triangle
-        0, 2, 1,
-        // upper right triangle
-        2, 3, 1
+                // lower left triangle
+                0, 2, 1,
+                // upper right triangle
+                2, 3, 1
         };
-       mesh.SetVertices(verts);
-       mesh.SetIndices(tris, MeshTopology.Triangles, 0);
-       mesh.RecalculateBounds();
-       mesh.RecalculateNormals();
-       mesh.UploadMeshData(true);
-       return mesh;
+        mesh.triangles = tris;
+
+        Vector3[] normals = new Vector3[4]
+        {
+                -Vector3.forward,
+                -Vector3.forward,
+                -Vector3.forward,
+                -Vector3.forward
+        };
+        mesh.normals = normals;
+
+        Vector2[] uv = new Vector2[4]
+        {
+                new Vector2(0, 0),
+                new Vector2(1, 0),
+                new Vector2(0, 1),
+                new Vector2(1, 1)
+        };
+        mesh.uv = uv;
+        return mesh;
     }
 
     private bool isNaN(Vector3 v) {

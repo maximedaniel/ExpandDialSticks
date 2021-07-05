@@ -111,7 +111,18 @@ public class ExpanDialStickView : MonoBehaviour
 	public const int UP_FEEDBACK = 2;
 
 	private int feedbackMode = DOWN_FEEDBACK;
+	private float feedbackDuration = 2f;
 
+	public int SafetyFeedbackMode
+	{
+		get => this.feedbackMode;
+		set => this.feedbackMode = value;
+	}
+	public float SafetyFeedbackDuration
+	{
+		get => this.feedbackDuration;
+		set => this.feedbackDuration = value;
+	}
 	public bool Paused
 	{
 		get => this.paused;
@@ -551,29 +562,29 @@ public class ExpanDialStickView : MonoBehaviour
 		this.transform.RotateAround(this.transform.position - new Vector3(0f, height / 2, 0f), Vector3.back, xAxisCurrentLerp);
 
 		// SAFETY CUE
-		if(this.pauseCurrent > 0f)
+		if(this.pauseCurrent > 0f  || (this.Row == 2 && this.Column == 3))
 		{
 			switch (feedbackMode)
 			{
 				case BLINK_FEEDBACK:
 					reverseColorCurrent = new Color(1.0f - this.colorCurrent.r, 1.0f - this.colorCurrent.g, 1.0f - this.colorCurrent.b);
-					meshRenderer.material.color =  Color.Lerp(this.colorCurrent, reverseColorCurrent, Mathf.PingPong(Time.time, 1.999f));
+					meshRenderer.material.color =  Color.Lerp(this.colorCurrent, reverseColorCurrent, Mathf.PingPong(Time.time, feedbackDuration));
 					projector.orthographicSize = 0f;
 					break;
 
 				case UP_FEEDBACK:
 					meshRenderer.material.color = this.colorCurrent;
 					reverseColorCurrent = new Color(1.0f - this.colorCurrent.r, 1.0f - this.colorCurrent.g, 1.0f - this.colorCurrent.b);
-					reverseColorCurrent.a = Mathf.Lerp(0f, 1f, Mathf.Repeat(Time.time, 1.999f));
+					reverseColorCurrent.a = Mathf.Lerp(0f, 1f, Mathf.Repeat(Time.time, feedbackDuration));
 					projector.material.color = reverseColorCurrent;
-					projector.orthographicSize = Mathf.Lerp(8f, 0f, Mathf.Repeat(Time.time, 1.999f));
+					projector.orthographicSize = Mathf.Lerp(8f, 0f, Mathf.Repeat(Time.time, feedbackDuration));
 					break;
 				case DOWN_FEEDBACK:
 					meshRenderer.material.color = this.colorCurrent;
 					reverseColorCurrent = new Color(1.0f - this.colorCurrent.r, 1.0f - this.colorCurrent.g, 1.0f - this.colorCurrent.b);
-					reverseColorCurrent.a = Mathf.Lerp(1f, 0f, Mathf.Repeat(Time.time, 1.999f));
+					reverseColorCurrent.a = Mathf.Lerp(1f, 0f, Mathf.Repeat(Time.time, feedbackDuration));
 					projector.material.color = reverseColorCurrent;
-					projector.orthographicSize = Mathf.Lerp(0f, 8f, Mathf.Repeat(Time.time, 1.999f));
+					projector.orthographicSize = Mathf.Lerp(0f, 8f, Mathf.Repeat(Time.time, feedbackDuration));
 					break;
 				default:
 					meshRenderer.material.color = this.colorCurrent;
