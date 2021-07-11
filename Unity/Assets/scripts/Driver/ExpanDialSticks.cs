@@ -147,6 +147,7 @@ public class ExpanDialSticks : MonoBehaviour
 	public float EVENT_INTERVAL = 0.25f; // 0.2f;
 	public const int nbColumns = 6;
 	public const int nbRows = 5;
+	public ExpanDialStickView.FeedbackMode safetyFeedbackMode = ExpanDialStickView.FeedbackMode.Flash;
 	float cameraDistanceFromMatrix = 70f;
 	private const float maxSpeed = 40f; // pos/seconds
 
@@ -287,6 +288,7 @@ public class ExpanDialSticks : MonoBehaviour
 				viewMatrix[i, j].Diameter = diameter;
 				viewMatrix[i, j].Height = height;
 				viewMatrix[i, j].Offset = offset;
+				viewMatrix[i, j].SafetyFeedbackMode = safetyFeedbackMode;
 
 				// collision
 				collisionMatrix[i, j] = gameObjectMatrix[i, j].GetComponent<ExpanDialStickCollision>();

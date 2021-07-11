@@ -24,6 +24,7 @@ public class Study1 : MonoBehaviour
 	private MyCapsuleHand leftHand;
 	private MyCapsuleHand rightHand;
 	public GUISkin guiSkin;
+	public int numeroParticipant = 0;
 	public int[] engagementRows;
 	public int[] engagementColumns;
 	public bool logEnabled = true;
@@ -235,14 +236,19 @@ public class Study1 : MonoBehaviour
 		{
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
-				if (i == (int)molePosition.x && j == (int)molePosition.y) 
-					expanDialSticks.modelMatrix[i, j].TargetColor = Color.green;
-				else 
+				if (i == (int)molePosition.x && j == (int)molePosition.y)
+					expanDialSticks.modelMatrix[i, j].TargetColor = Color.white; //Color.green;
+				else
 					expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
 				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
 			}
 		}
+		string participantNumber = "<pos=0%><b>P" + numeroParticipant + "</b>";
+		string trialProgress = "<pos=90%><b>" + (moleIndex+1) +  "/" + molePositions.Length + "</b>";
+		string legend = participantNumber + trialProgress;
+		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 16, Color.black, legend, new Vector3(90f, -90f, 0f));
 		expanDialSticks.triggerTextureChange();
+
 	}
 
 	/*private bool noProximity()
@@ -302,19 +308,48 @@ public class Study1 : MonoBehaviour
 	private void InitTrials()
 	{
 
-		molePositions = new Vector2[engagementRows.Length * engagementColumns.Length];
+		molePositions = new Vector2[engagementRows.Length * engagementRows.Length];
 
+		// Generate Squared-Latin Row Indexes
+		int[] shuffledRowIndexes = new int[engagementRows.Length * engagementRows.Length];
 		for (int i = 0; i < engagementRows.Length; i++)
+		{
+			for(int j = 0; j < engagementRows.Length; j++)
+			{
+				shuffledRowIndexes[i * engagementRows.Length + j] = engagementRows[(i+numeroParticipant+j)%engagementRows.Length];
+
+			}
+		}
+		// Generate Shuffled Column Indexes
+		int[] shuffledColumnsIndexes = new int[engagementRows.Length * engagementRows.Length];
+		for (int i = 0; i < engagementRows.Length; i++)
+		{
+			engagementColumns = Shuffle(engagementColumns);
+
+			for (int j = 0; j < engagementRows.Length; j++)
+			{
+				shuffledColumnsIndexes[i * engagementRows.Length + j] = engagementColumns[j];
+			}
+		}
+
+		for (int i = 0; i < engagementRows.Length * engagementRows.Length; i++)
+		{
+			molePositions[i] = new Vector2(shuffledRowIndexes[i], shuffledColumnsIndexes[i]);
+		}
+
+		// One Body Engagement Level at a time
+		/*for (int i = 0; i < engagementRows.Length; i++)
 		{
 			engagementColumns = Shuffle(engagementColumns);
 
 			for (int j = 0; j < engagementColumns.Length; j++)
 			{
+				int k = (j + numeroParticipant) % engagementColumns.Length;
 				int row = engagementRows[i];
-				int column = engagementColumns[j];
-				molePositions[(i * engagementColumns.Length) + j] = new Vector2(row, column);
+				int column = engagementColumns[k];
+				molePositions[(i * engagementColumns.Length) + k] = new Vector2(row, column);
 			}
-		}
+		}*/
 
 	}
 

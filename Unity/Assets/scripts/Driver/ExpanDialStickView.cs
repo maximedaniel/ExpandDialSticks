@@ -106,14 +106,15 @@ public class ExpanDialStickView : MonoBehaviour
 	private MeshRenderer meshRenderer;
 	private Projector projector;
 
-	public const int BLINK_FEEDBACK = 0;
-	public const int DOWN_FEEDBACK = 1;
-	public const int UP_FEEDBACK = 2;
-
-	private int feedbackMode = DOWN_FEEDBACK;
+	public enum FeedbackMode {Flash, PulseIn, PulseOut, None};
+	private FeedbackMode feedbackMode = FeedbackMode.PulseIn;
 	private float feedbackDuration = 2f;
+	private float feedbackRadius = 5f;
+	private float feedbackMinGamma = 0f;
+	private float feedbackMaxGamma = 0.6f;
+	private bool feebackRepeat = false;
 
-	public int SafetyFeedbackMode
+	public FeedbackMode SafetyFeedbackMode
 	{
 		get => this.feedbackMode;
 		set => this.feedbackMode = value;
@@ -122,6 +123,11 @@ public class ExpanDialStickView : MonoBehaviour
 	{
 		get => this.feedbackDuration;
 		set => this.feedbackDuration = value;
+	}
+	public float SafetyFeedbackRadius
+	{
+		get => this.feedbackRadius;
+		set => this.feedbackRadius = value;
 	}
 	public bool Paused
 	{
@@ -562,29 +568,35 @@ public class ExpanDialStickView : MonoBehaviour
 		this.transform.RotateAround(this.transform.position - new Vector3(0f, height / 2, 0f), Vector3.back, xAxisCurrentLerp);
 
 		// SAFETY CUE
-		if(this.pauseCurrent > 0f  || (this.Row == 2 && this.Column == 3))
+		if(this.pauseCurrent > 0f)//  || (this.colorCurrent != Color.white))
 		{
+
 			switch (feedbackMode)
 			{
-				case BLINK_FEEDBACK:
-					reverseColorCurrent = new Color(1.0f - this.colorCurrent.r, 1.0f - this.colorCurrent.g, 1.0f - this.colorCurrent.b);
-					meshRenderer.material.color =  Color.Lerp(this.colorCurrent, reverseColorCurrent, Mathf.PingPong(Time.time, feedbackDuration));
-					projector.orthographicSize = 0f;
+				case FeedbackMode.Flash:
+					meshRenderer.material.color = this.colorCurrent;
+					float H, S, V;
+					Color.RGBToHSV(this.colorCurrent, out H, out S, out V);
+					projector.material.color = (V > 0.5f) ? Color.Lerp(new Color(0f, 0f, 0f, feedbackMinGamma), new Color(0f, 0f, 0f, feedbackMaxGamma), Mathf.PingPong(Time.time, feedbackDuration) / feedbackDuration):
+						 Color.Lerp(new Color(1f, 1f, 1f, feedbackMinGamma), new Color(1f, 1f, 1f, feedbackMaxGamma), Mathf.PingPong(Time.time, feedbackDuration) / feedbackDuration);  
+					projector.orthographicSize = feedbackRadius*2f;
 					break;
 
-				case UP_FEEDBACK:
+				case FeedbackMode.PulseIn:
 					meshRenderer.material.color = this.colorCurrent;
-					reverseColorCurrent = new Color(1.0f - this.colorCurrent.r, 1.0f - this.colorCurrent.g, 1.0f - this.colorCurrent.b);
-					reverseColorCurrent.a = Mathf.Lerp(0f, 1f, Mathf.Repeat(Time.time, feedbackDuration));
-					projector.material.color = reverseColorCurrent;
-					projector.orthographicSize = Mathf.Lerp(8f, 0f, Mathf.Repeat(Time.time, feedbackDuration));
+					float H1, S1, V1;
+					Color.RGBToHSV(this.colorCurrent, out H1, out S1, out V1);
+					projector.material.color = (V1 > 0.5f) ? Color.Lerp(new Color(0f, 0f, 0f, feedbackMinGamma), new Color(0f, 0f, 0f, feedbackMaxGamma), Mathf.Repeat(Time.time, feedbackDuration) / feedbackDuration) :
+						 Color.Lerp(new Color(1f, 1f, 1f, feedbackMinGamma), new Color(1f, 1f, 1f, feedbackMaxGamma), Mathf.Repeat(Time.time, feedbackDuration) / feedbackDuration);
+					projector.orthographicSize = Mathf.Lerp(feedbackRadius*2f, 0f, Mathf.Repeat(Time.time, feedbackDuration)/ feedbackDuration);
 					break;
-				case DOWN_FEEDBACK:
+				case FeedbackMode.PulseOut:
 					meshRenderer.material.color = this.colorCurrent;
-					reverseColorCurrent = new Color(1.0f - this.colorCurrent.r, 1.0f - this.colorCurrent.g, 1.0f - this.colorCurrent.b);
-					reverseColorCurrent.a = Mathf.Lerp(1f, 0f, Mathf.Repeat(Time.time, feedbackDuration));
-					projector.material.color = reverseColorCurrent;
-					projector.orthographicSize = Mathf.Lerp(0f, 8f, Mathf.Repeat(Time.time, feedbackDuration));
+					float H2, S2, V2;
+					Color.RGBToHSV(this.colorCurrent, out H2, out S2, out V2);
+					projector.material.color = (V2 > 0.5f) ? Color.Lerp(new Color(0f, 0f, 0f, feedbackMaxGamma), new Color(0f, 0f, 0f, feedbackMinGamma), Mathf.Repeat(Time.time, feedbackDuration) / feedbackDuration) :
+						 Color.Lerp(new Color(1f, 1f, 1f, feedbackMaxGamma), new Color(1f, 1f, 1f, feedbackMinGamma), Mathf.Repeat(Time.time, feedbackDuration) / feedbackDuration);
+					projector.orthographicSize = Mathf.Lerp(0f, feedbackRadius*2f, Mathf.Repeat(Time.time, feedbackDuration) / feedbackDuration);
 					break;
 				default:
 					meshRenderer.material.color = this.colorCurrent;

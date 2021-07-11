@@ -591,28 +591,27 @@ namespace Leap.Unity {
       Graphics.DrawMeshInstanced(_quadMesh, 0, _quadMaterial, mat, mat.Length, block,
       _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
 
-       /*MaterialPropertyBlock mpb = new MaterialPropertyBlock();
-       Vector4[] colors = new Vector4[_curSphereIndex];
-       Vector4[] firstOutlineColors = new Vector4[_curSphereIndex];
-       float[] fistOutlineWidths = new float [_curSphereIndex];
-       Vector4[] secondOutlineColors = new Vector4[_curSphereIndex];
-       float[] secondOutlineWidths = new float[_curSphereIndex];
-       float[] angles = new float[_curSphereIndex];
+       MaterialPropertyBlock block3 = new MaterialPropertyBlock();
+       Vector4[] colors3 = new Vector4[_curSphereIndex];
+       Vector4[] firstOutlineColors3 = new Vector4[_curSphereIndex];
+       float[] fistOutlineWidths3 = new float [_curSphereIndex];
+       Vector4[] secondOutlineColors3 = new Vector4[_curSphereIndex];
+       float[] secondOutlineWidths3 = new float[_curSphereIndex];
+       float[] angles3 = new float[_curSphereIndex];
             for (int i = 0; i < _curSphereIndex; i++) {
-                colors[i] = Color.black;
-                firstOutlineColors[i] = Color.red;
-                fistOutlineWidths[i] = 0.5f;
-                secondOutlineColors[i] = Color.red;
-                secondOutlineWidths[i] = 0.5f;
-                angles[i] = 89.0f;
+                colors3[i] = Color.black;
+                firstOutlineColors3[i] = Color.red;
+                fistOutlineWidths3[i] = 0.5f;
+                secondOutlineColors3[i] = Color.red;
+                secondOutlineWidths3[i] = 0f;
+                angles3[i] = 89.0f;
             }
-       */
-       /*mpb.SetVectorArray("_Color", colors);
-       mpb.SetVectorArray("_FirstOutlineColor", firstOutlineColors);
-       mpb.SetFloatArray("_FirstOutlineWidth", fistOutlineWidths);
-       mpb.SetVectorArray("_FirstOutlineColor", secondOutlineColors);
-       mpb.SetFloatArray("_FirstOutlineWidth", secondOutlineWidths);
-       mpb.SetFloatArray("_Angle", angles);*/
+       block3.SetVectorArray("_Color", colors3);
+        block3.SetVectorArray("_FirstOutlineColor", firstOutlineColors3);
+        block3.SetFloatArray("_FirstOutlineWidth", fistOutlineWidths3);
+        block3.SetVectorArray("_FirstOutlineColor", secondOutlineColors3);
+        block3.SetFloatArray("_FirstOutlineWidth", secondOutlineWidths3);
+        block3.SetFloatArray("_Angle", angles3);
       /* mpb.SetVector("_Color", Color.black);
        mpb.SetVector("_FirstOutlineColor", Color.red);
        mpb.SetFloat("_FirstOutlineWidth", 0.5f);*/
@@ -623,19 +622,39 @@ namespace Leap.Unity {
        // Draw Spheres
        //Vector4[] col3 = new Vector4[_curSphereIndex];
        // for (int i = 0; i < _curSphereIndex; i++) col3[i] = _bodyColor;
-       MaterialPropertyBlock block3 = new MaterialPropertyBlock();
        //block3.SetVectorArray("_Colors", col3);
-       Graphics.DrawMeshInstanced(_sphereMesh, 0, _sphereMat, _sphereMatrices, _curSphereIndex, block3, 
+       Graphics.DrawMeshInstanced(_sphereMesh, 0, _sphereMat, _sphereMatrices, _curSphereIndex, null, 
        _castShadows?UnityEngine.Rendering.ShadowCastingMode.On: UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
 
-      // Draw Cylinders
-       //Vector4[] col4 = new Vector4[_curCylinderIndex];
-       //for (int i = 0; i < _curCylinderIndex; i++) col4[i] = _bodyColor;
-       MaterialPropertyBlock block4 = new MaterialPropertyBlock();
-       //block4.SetVectorArray("_Colors", col4);
-      //if(_cylinderMesh == null) { _cylinderMesh = getCylinderMesh(1f); }
-      _cylinderMesh = getCylinderMesh(1f);
-      Graphics.DrawMeshInstanced(_cylinderMesh, 0, _sphereMat, _cylinderMatrices, _curCylinderIndex, block4,
+            // Draw Cylinders
+            //Vector4[] col4 = new Vector4[_curCylinderIndex];
+            //for (int i = 0; i < _curCylinderIndex; i++) col4[i] = _bodyColor;
+            MaterialPropertyBlock block4 = new MaterialPropertyBlock();
+            Vector4[] colors4 = new Vector4[_curCylinderIndex];
+            Vector4[] firstOutlineColors4 = new Vector4[_curCylinderIndex];
+            float[] fistOutlineWidths4 = new float[_curCylinderIndex];
+            Vector4[] secondOutlineColors4 = new Vector4[_curCylinderIndex];
+            float[] secondOutlineWidths4 = new float[_curCylinderIndex];
+            float[] angles4 = new float[_curCylinderIndex];
+            for (int i = 0; i < _curCylinderIndex; i++)
+            {
+                colors4[i] = Color.black;
+                firstOutlineColors4[i] = Color.red;
+                fistOutlineWidths4[i] = 0.5f;
+                secondOutlineColors4[i] = Color.red;
+                secondOutlineWidths4[i] = 0.5f;
+                angles4[i] = 89.0f;
+            }
+            block4.SetVectorArray("_Color", colors4);
+            block4.SetVectorArray("_FirstOutlineColor", firstOutlineColors4);
+            block4.SetFloatArray("_FirstOutlineWidth", fistOutlineWidths4);
+            block4.SetVectorArray("_FirstOutlineColor", secondOutlineColors4);
+            block4.SetFloatArray("_FirstOutlineWidth", secondOutlineWidths4);
+            block4.SetFloatArray("_Angle", angles4);
+            //block4.SetVectorArray("_Colors", col4);
+            //if(_cylinderMesh == null) { _cylinderMesh = getCylinderMesh(1f); }
+            _cylinderMesh = getCylinderMesh(1f);
+      Graphics.DrawMeshInstanced(_cylinderMesh, 0, _sphereMat, _cylinderMatrices, _curCylinderIndex, null,
         _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
      }
 
