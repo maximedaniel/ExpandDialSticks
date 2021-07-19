@@ -123,7 +123,9 @@ public class ExpanDialSticks : MonoBehaviour
 	public float diameter = 6.0f;
 	public float height = 10.0f;
 	public float offset = 0.1f;
-	public int nbSeparationLevels = 3;
+	public enum SafetyMotionMode {SafetyRatedMonitoredStop, SpeedAndSeparationMonitoring};
+	public SafetyMotionMode safetyMotionMode = SafetyMotionMode.SafetyRatedMonitoredStop;
+	private int nbSeparationLevels = 1;
 
 
 	public const float JOYSTICK_THRESHOLD = 10f;
@@ -264,6 +266,18 @@ public class ExpanDialSticks : MonoBehaviour
 		}*/
 
 		// Init ExpanDialSticks Model and View
+		switch (safetyMotionMode)
+		{
+			case SafetyMotionMode.SafetyRatedMonitoredStop:
+				nbSeparationLevels = 1;
+				break;
+			case SafetyMotionMode.SpeedAndSeparationMonitoring:
+				nbSeparationLevels = 3;
+				break;
+			default:
+				break;
+
+		}
 		for (int i = 0; i < nbRows; i++)
 			for (int j = 0; j < nbColumns; j++)
 			{
