@@ -118,7 +118,6 @@ public class SetAns
 
 public class ExpanDialSticks : MonoBehaviour
 {
-	public Texture buttonTexture;
 	public bool SIMULATION = true;
 	public float diameter = 6.0f;
 	public float height = 10.0f;
@@ -157,7 +156,6 @@ public class ExpanDialSticks : MonoBehaviour
 	float borderOffset = 2.0f;
 
 	public GameObject expanDialStickPrefab;
-	public GUISkin guiSkin;
 
 	private Camera mainCamera;
 
@@ -170,7 +168,7 @@ public class ExpanDialSticks : MonoBehaviour
 	
     private GameObject topBorderText;
 	private Vector3 textRotationTop;
-	public TextMeshPro textMeshTop;
+	private TextMeshPro textMeshTop;
 	private TextAlignmentOptions textAlignmentTop;
 	private int textSizeTop;
 	private Color textColorTop;
@@ -178,7 +176,7 @@ public class ExpanDialSticks : MonoBehaviour
 
     private GameObject bottomBorderText;
 	private Vector3 textRotationBottom;
-	public TextMeshPro textMeshBottom;
+	private TextMeshPro textMeshBottom;
 	private TextAlignmentOptions textAlignmentBottom;
 	private int textSizeBottom;
 	private Color textColorBottom;
@@ -186,7 +184,7 @@ public class ExpanDialSticks : MonoBehaviour
 
     private GameObject leftBorderText;
 	private Vector3 textRotationLeft;
-	public TextMeshPro textMeshLeft;
+	private TextMeshPro textMeshLeft;
 	private TextAlignmentOptions textAlignmentLeft;
 	private int textSizeLeft;
 	private Color textColorLeft;
@@ -194,7 +192,7 @@ public class ExpanDialSticks : MonoBehaviour
 	
     private GameObject rightBorderText;
 	private Vector3 textRotationRight;
-	public TextMeshPro textMeshRight;
+	private TextMeshPro textMeshRight;
 	private TextAlignmentOptions textAlignmentRight;
 	private int textSizeRight;
 	private Color textColorRight;
@@ -241,7 +239,7 @@ public class ExpanDialSticks : MonoBehaviour
 	}
 	void OnGUI()
 	{
-		if (GUI.Button(new Rect(10, 10, 50, 50), buttonTexture))
+		/*if (GUI.Button(new Rect(10, 10, 50, 50), buttonTexture))
 		{
 			for (int i = 0; i < nbRows; i++)
 			{ 
@@ -250,7 +248,7 @@ public class ExpanDialSticks : MonoBehaviour
 					collisionMatrix[i, j].EnableCollision();
 				}
 			}
-		}
+		}*/
 	}
 	// Use this for initialization
 	void Start () {

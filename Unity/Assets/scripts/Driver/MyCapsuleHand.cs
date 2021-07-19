@@ -194,8 +194,8 @@ namespace Leap.Unity {
     private GameObject _handObject;
     private GameObject[] _handColliders;
     private GameObject [] _forearmColliders;
+    private float handColliderOffset = 6f;
     private float forearmColliderOffset = 24f;
-    private float handColliderOffset = 12f;
 
     private int _curSphereIndex = 0, _curCylinderIndex = 0;
 
@@ -466,7 +466,7 @@ namespace Leap.Unity {
 		{
             _handColliders[i].transform.position = centerPoint;
             SphereCollider sc = _handColliders[i].GetComponent<SphereCollider>();
-            sc.radius = maxDistPoint + handColliderOffset/2f;
+            sc.radius = maxDistPoint + handColliderOffset;
             sc.radius += sc.radius * (i * 0.5f);
             }
             /* Bounds b = new Bounds(new Vector3(0, 0, 0), extends);
