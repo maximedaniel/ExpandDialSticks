@@ -336,21 +336,6 @@ public class Study1 : MonoBehaviour
 		{
 			molePositions[i] = new Vector2(shuffledRowIndexes[i], shuffledColumnsIndexes[i]);
 		}
-
-		// One Body Engagement Level at a time
-		/*for (int i = 0; i < engagementRows.Length; i++)
-		{
-			engagementColumns = Shuffle(engagementColumns);
-
-			for (int j = 0; j < engagementColumns.Length; j++)
-			{
-				int k = (j + numeroParticipant) % engagementColumns.Length;
-				int row = engagementRows[i];
-				int column = engagementColumns[k];
-				molePositions[(i * engagementColumns.Length) + k] = new Vector2(row, column);
-			}
-		}*/
-
 	}
 
 	private void OnDestroy()
@@ -375,7 +360,6 @@ public class Study1 : MonoBehaviour
 	private void HandleConnected(object sender, MqttConnectionEventArgs e)
 	{
 		Debug.Log("Application connected.");
-
 		expanDialSticks.client.Publish(MQTT_CAMERA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
@@ -452,7 +436,7 @@ public class Study1 : MonoBehaviour
 		int moleX = (int)molePosition.x;
 		int moleY = (int)molePosition.y;
 
-		string colorString = "SYSTEM_COLOR ";
+		//string colorString = "SYSTEM_COLOR ";
 		string proximityString = "SYSTEM_PROXIMITY ";
 		string positionString = "SYSTEM_POSITION ";
 		string leftHandString = "USER_LEFT_HAND " + leftHand.ToString();
@@ -465,13 +449,13 @@ public class Study1 : MonoBehaviour
 		{
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
-				colorString += "0x" + ColorUtility.ToHtmlStringRGB(expanDialSticks.viewMatrix[i, j].CurrentColor) + " ";
+				//colorString += "0x" + ColorUtility.ToHtmlStringRGB(expanDialSticks.viewMatrix[i, j].CurrentColor) + " ";
 				proximityString += expanDialSticks.viewMatrix[i, j].CurrentProximity + " ";
 				positionString += expanDialSticks.viewMatrix[i, j].CurrentPosition + " ";
 			}
 		}
 
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(colorString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		//expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(colorString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(proximityString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(positionString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(leftHandString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);

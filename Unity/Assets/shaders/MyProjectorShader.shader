@@ -7,7 +7,7 @@ Shader "Custom/MyProjectorShader"
     Properties
     {
         _Color("Main Color", Color) = (1,0,0,1)
-        _ShadowTex("Cookie", 2D) = "white" { TexGen ObjectLinear }
+        _MainTex("Cookie", 2D) = "white" { TexGen ObjectLinear }
     }
 
         Subshader
@@ -37,7 +37,7 @@ Shader "Custom/MyProjectorShader"
                 float4 uv       : TEXCOORD0;
             };
 
-                uniform sampler2D _ShadowTex;
+                uniform sampler2D _MainTex;
                 uniform float4x4 unity_Projector;
                 uniform float4 _Color;
 
@@ -51,7 +51,7 @@ Shader "Custom/MyProjectorShader"
 
             half4 frag(v2f i) : COLOR
             {
-                float4 tex = tex2Dproj(_ShadowTex, i.uv)  *  _Color;
+                float4 tex = tex2Dproj(_MainTex, i.uv)  *  _Color;
                 tex.a = 1 - tex.a;
                 if (i.uv.w < 0)
                 {

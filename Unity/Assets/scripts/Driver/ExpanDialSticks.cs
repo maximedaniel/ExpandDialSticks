@@ -803,6 +803,15 @@ public class ExpanDialSticks : MonoBehaviour
 					modelMatrix[i, j].TargetTextureChangeDuration
 				);
 				modelMatrix[i, j].TargetTextureChangeDuration = 0f;
+				
+				modelMatrix[i, j].setProjectorChangeCurrent(
+					modelMatrix[i, j].TargetProjectorColor,
+					modelMatrix[i, j].TargetProjectorTexture,
+					modelMatrix[i, j].TargetProjectorRotation,
+					modelMatrix[i, j].TargetProjectorSize,
+					modelMatrix[i, j].TargetProjectorChangeDuration
+				);
+				modelMatrix[i, j].TargetProjectorChangeDuration = 0f;
 			}
 		}
 		textureChanging = true;
@@ -1010,6 +1019,13 @@ public class ExpanDialSticks : MonoBehaviour
 						modelMatrix[i, j].CurrentPlaneTexture,
 						modelMatrix[i, j].CurrentPlaneRotation,
 						modelMatrix[i, j].CurrentTextureChangeDuration
+					);
+					viewMatrix[i, j].setProjectorChangeTarget(
+						modelMatrix[i, j].CurrentProjectorColor,
+						modelMatrix[i, j].CurrentProjectorTexture,
+						modelMatrix[i, j].CurrentProjectorRotation,
+						modelMatrix[i, j].CurrentProjectorSize,
+						modelMatrix[i, j].CurrentProjectorChangeDuration
 					);
 				}
 			}

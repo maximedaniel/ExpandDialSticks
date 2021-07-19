@@ -87,6 +87,17 @@ public class ExpanDialStickView : MonoBehaviour
 	private float textureChangeDurationDiff = 0f;
 	private float textureChangeDurationTarget = 0f;
 
+	private Color projectorColorCurrent = Color.black;
+	private Color projectorColorTarget = Color.black;
+	private string projectorTextureCurrent = "";
+	private string projectorTextureTarget = "";
+	private float projectorRotationCurrent = 0f;
+	private float projectorRotationTarget = 0f;
+	private float projectorSizeCurrent = 0f;
+	private float projectorSizeTarget = 0f;
+	private float projectorChangeDurationCurrent = 0f;
+	private float projectorChangeDurationTarget = 0f;
+
 	public Material transparentMaterial;
 	
 	private GameObject textGameObject;
@@ -105,9 +116,13 @@ public class ExpanDialStickView : MonoBehaviour
 
 	private MeshRenderer meshRenderer;
 	private Projector projector;
+	public Material projectorMaterial;
+
 
 	public enum FeedbackMode {Flash, PulseIn, PulseOut, None};
 	private FeedbackMode feedbackMode = FeedbackMode.PulseIn;
+
+	private string projectorTexture = "projector";
 	private float feedbackDuration = 2f;
 	private float feedbackRadius = 5f;
 	private float feedbackMinGamma = 0f;
@@ -402,7 +417,47 @@ public class ExpanDialStickView : MonoBehaviour
 			this.textureChangeDurationCurrent = value;
 		}
 	}
-
+	public Color CurrentProjectorColor{
+		get => this.projectorColorCurrent;
+		set => this.projectorColorCurrent = value;
+	}
+	public Color TargetProjectorColor{
+		get => this.projectorColorTarget;
+		set => this.projectorColorTarget = value;
+	}
+	public string CurrentProjectorTexture{
+		get => this.projectorTextureCurrent;
+		set => this.projectorTextureCurrent = value;
+	}
+	public string TargetProjectorTexture{
+		get => this.projectorTextureTarget;
+		set => this.projectorTextureTarget = value;
+	}
+	public float CurrentProjectorRotation{
+		get => this.projectorRotationCurrent;
+		set => this.projectorRotationCurrent = value;
+	}
+	public float TargetProjectorRotation{
+		get => this.projectorRotationTarget;
+		set => this.projectorRotationTarget = value;
+	}
+	public float CurrentProjectorSize{
+		get => this.projectorSizeCurrent;
+		set => this.projectorSizeCurrent = value;
+	}
+	public float TargetProjectorSize{
+		get => this.projectorSizeTarget;
+		set => this.projectorSizeTarget = value;
+	}
+	public float CurrentProjectorChangeDuration{
+		get => this.projectorChangeDurationCurrent;
+		set => this.projectorChangeDurationCurrent = value;
+	}
+	public float TargetProjectorChangeDuration{
+		get => this.projectorChangeDurationTarget;
+		set => this.projectorChangeDurationTarget = value;
+	}
+	
 	public void setShapeChangeTarget(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, float proximity, bool paused, float shapeChangeDuration)
 	{
 		TargetAxisX = xAxis;
@@ -437,7 +492,22 @@ public class ExpanDialStickView : MonoBehaviour
 		
 		CurrentShapeChangeDuration = shapeChangeDuration;
 	}
-
+	public void setProjectorChangeTarget(Color color, string textureName, float textureRotation, float textureSize, float projectorChangeDuration )
+	{
+		TargetProjectorColor = color;
+		TargetProjectorTexture = textureName;
+		TargetProjectorRotation = textureRotation;
+		TargetProjectorSize = textureSize;
+		TargetProjectorChangeDuration = projectorChangeDuration;
+	}
+	public void setProjectorChangeCurrent(Color color, string textureName, float textureRotation, float textureSize, float projectorChangeDuration )
+	{
+		CurrentProjectorColor = color;
+		CurrentProjectorTexture = textureName;
+		CurrentProjectorRotation = textureRotation;
+		CurrentProjectorSize = textureSize;
+		CurrentProjectorChangeDuration = projectorChangeDuration;
+	}
 	public void setTextureChangeTarget(Color color, string textureName, float textureRotation, float textureChangeDuration )
 	{
 		TargetColor = color;
@@ -521,6 +591,7 @@ public class ExpanDialStickView : MonoBehaviour
 		this.name = "ExpanDialStick (" + i + ", " + j + ")";
 
 		projector = this.transform.GetChild(0).gameObject.GetComponent<Projector>();
+		projector.material  = new Material(projectorMaterial);
 
 		textGameObject = new GameObject( "Text (" + i + ", " + j + ")");
 		textGameObject.transform.parent = this.transform;
@@ -570,6 +641,9 @@ public class ExpanDialStickView : MonoBehaviour
 		// SAFETY CUE
 		if(this.pauseCurrent > 0f)//  || (this.colorCurrent != Color.white))
 		{
+			if (this.projectorTextureCurrent != projectorTexture){
+				projector.material.mainTexture = Resources.Load<Texture2D>(projectorTexture);
+			}
 
 			switch (feedbackMode)
 			{
@@ -611,7 +685,13 @@ public class ExpanDialStickView : MonoBehaviour
 		else
 		{
 			meshRenderer.material.color = this.colorCurrent;
-			projector.orthographicSize = 0f;
+			projector.orthographicSize = this.projectorSizeCurrent;
+			projector.material.color = this.projectorColorCurrent;
+			projector.transform.eulerAngles = new Vector3(90f, this.projectorRotationCurrent, 0f);
+			if (this.projectorTextureCurrent != this.projectorTextureTarget){
+				projector.material.mainTexture = Resources.Load<Texture2D>(this.projectorTextureTarget);
+				this.projectorTextureCurrent = this.projectorTextureTarget;
+			}
 		}
 
 		this.textMesh.alignment = this.textAlignmentTarget;
@@ -681,6 +761,13 @@ public class ExpanDialStickView : MonoBehaviour
 			//this.textRotationCurrent += (this.textRotationTarget - this.textRotationCurrent) / this.textureChangeDurationTarget * Time.deltaTime;
 			this.textRotationCurrent = this.textRotationTarget;
 			this.textureChangeDurationTarget -= Time.deltaTime;
+		}
+		if (this.projectorChangeDurationTarget > 0f)
+		{
+			this.projectorColorCurrent = this.projectorColorTarget;
+			this.projectorSizeCurrent = this.projectorSizeTarget;
+			this.projectorRotationCurrent = this.projectorRotationTarget;
+			this.projectorChangeDurationTarget -= Time.deltaTime;
 		}
 		render();
 	}

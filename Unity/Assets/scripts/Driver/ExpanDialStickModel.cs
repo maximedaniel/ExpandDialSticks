@@ -92,6 +92,18 @@ public class ExpanDialStickModel
 	private float planeRotationTarget= 0f;
 	private float planeRotationCurrent= 0f;
 
+
+	private Color projectorColorCurrent = Color.black;
+	private Color projectorColorTarget = Color.black;
+	private string projectorTextureCurrent = "";
+	private string projectorTextureTarget = "";
+	private float projectorRotationCurrent = 0f;
+	private float projectorRotationTarget = 0f;
+	private float projectorSizeCurrent = 0f;
+	private float projectorSizeTarget = 0f;
+	private float projectorChangeDurationCurrent = 0f;
+	private float projectorChangeDurationTarget = 0f;
+
 	private bool init = false;
 
 
@@ -374,6 +386,46 @@ public class ExpanDialStickModel
 			this.textureChangeDurationCurrent = value;
 		}
 	}
+		public Color CurrentProjectorColor{
+		get => this.projectorColorCurrent;
+		set => this.projectorColorCurrent = value;
+	}
+	public Color TargetProjectorColor{
+		get => this.projectorColorTarget;
+		set => this.projectorColorTarget = value;
+	}
+	public string CurrentProjectorTexture{
+		get => this.projectorTextureCurrent;
+		set => this.projectorTextureCurrent = value;
+	}
+	public string TargetProjectorTexture{
+		get => this.projectorTextureTarget;
+		set => this.projectorTextureTarget = value;
+	}
+	public float CurrentProjectorRotation{
+		get => this.projectorRotationCurrent;
+		set => this.projectorRotationCurrent = value;
+	}
+	public float TargetProjectorRotation{
+		get => this.projectorRotationTarget;
+		set => this.projectorRotationTarget = value;
+	}
+	public float CurrentProjectorSize{
+		get => this.projectorSizeCurrent;
+		set => this.projectorSizeCurrent = value;
+	}
+	public float TargetProjectorSize{
+		get => this.projectorSizeTarget;
+		set => this.projectorSizeTarget = value;
+	}
+	public float CurrentProjectorChangeDuration{
+		get => this.projectorChangeDurationCurrent;
+		set => this.projectorChangeDurationCurrent = value;
+	}
+	public float TargetProjectorChangeDuration{
+		get => this.projectorChangeDurationTarget;
+		set => this.projectorChangeDurationTarget = value;
+	}
 	
 	public void setShapeChangeTarget(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, float proximity, bool paused, float shapeChangeDuration)
 	{
@@ -415,7 +467,22 @@ public class ExpanDialStickModel
 			this.init = !this.init;
 		}
 	}
-
+	public void setProjectorChangeTarget(Color color, string textureName, float textureRotation, float textureSize, float projectorChangeDuration )
+	{
+		TargetProjectorColor = color;
+		TargetProjectorTexture = textureName;
+		TargetProjectorRotation = textureRotation;
+		TargetProjectorSize = textureSize;
+		TargetProjectorChangeDuration = projectorChangeDuration;
+	}
+	public void setProjectorChangeCurrent(Color color, string textureName, float textureRotation, float textureSize, float projectorChangeDuration )
+	{
+		CurrentProjectorColor = color;
+		CurrentProjectorTexture = textureName;
+		CurrentProjectorRotation = textureRotation;
+		CurrentProjectorSize = textureSize;
+		CurrentProjectorChangeDuration = projectorChangeDuration;
+	}
 	public void setTextureChangeTarget(Color color, string textureName, float textureRotation, float textureChangeDuration )
 	{
 		TargetColor = color;
