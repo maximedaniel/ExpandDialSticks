@@ -1,226 +1,187 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿#define DEBUG
+
 using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.Concurrent;
+using System.Net;
+using uPLibrary.Networking.M2Mqtt;
+using uPLibrary.Networking.M2Mqtt.Messages;
+using uPLibrary.Networking.M2Mqtt.Utility;
+using uPLibrary.Networking.M2Mqtt.Exceptions;
+using TMPro;
+using System;
+using System.Globalization;
+using Leap.Unity;
+using Random = UnityEngine.Random;
 
 public class Test : MonoBehaviour
 {
-    // How many meshes to draw.
-    public int population;
-    // Range to draw meshes within.
-    public float range;
 
-    // Material to use for drawing the meshes.
-    public Material material;
+	public GameObject expanDialSticksPrefab;
+	private MyCapsuleHand leftHand;
+	private MyCapsuleHand rightHand;
+	public GUISkin guiSkin;
+	public int numeroParticipant = 0;
+	public int[] engagementRows;
+	public int[] engagementColumns;
+	public bool logEnabled = true;
+	private ExpanDialSticks expanDialSticks;
+	private bool connected = false;
 
-    private Matrix4x4[] matrices;
-    private MaterialPropertyBlock block;
+	private CultureInfo en = CultureInfo.CreateSpecificCulture("en-US");
 
-    private Mesh mesh;
+	private IEnumerator coroutine;
 
-    private void Setup()
-    {
-        Vector3 a = new Vector3(0, 0);
-        Vector3 b = new Vector3(0, 10);
-        Vector3 c = new Vector3(10, 0);
-        Vector3 d = new Vector3(10, 10);
-        Mesh mesh = CreateQuad(a, b, c, d);
-        this.mesh = mesh;
+	private const string LEFT_BENDING = "LEFT_BENDING";
+	private const string RIGHT_BENDING = "RIGHT_BENDING";
+	private const string TOP_BENDING = "TOP_BENDING";
+	private const string BOTTOM_BENDING = "BOTTOM_BENDING";
+	private const string LEFT_ROTATION = "LEFT_ROTATION";
+	private const string RIGHT_ROTATION = "RIGHT_ROTATION";
+	private const string PULL = "PULL";
+	private const string PUSH = "PUSH";
+	private const string CLICK = "CLICK";
+	private const string NONE = "NONE";
 
-        matrices = new Matrix4x4[population];
-        Vector4[] colors = new Vector4[population];
+	private const float JOYSTICK_THRESHOLD = 10f;
 
-        block = new MaterialPropertyBlock();
+	private int currentIndex = 0;
 
-        for (int i = 0; i < population; i++)
-        {
-            // Build matrix.
-            /*Vector3 position = new Vector3(Random.Range(-range, range), Random.Range(-range, range), Random.Range(-range, range));
-            Quaternion rotation = Quaternion.Euler(Random.Range(-180, 180), Random.Range(-180, 180), Random.Range(-180, 180));
-            Vector3 scale = Vector3.one;
+	//private FileLogger fileLogger;
+	public const float LOG_INTERVAL = 0.25f; // 0.2f;
+	private float currTime;
+	private float prevTime;
 
-            Matrix4x4 mat = Matrix4x4.TRS(position, rotation, scale);*/
+	public const string MQTT_CAMERA_RECORDER = "CAMERA_RECORDER";
+	public const string MQTT_EMPATICA_RECORDER = "EMPATICA_RECORDER";
+	public const string MQTT_SYSTEM_RECORDER = "SYSTEM_RECORDER";
+	public const string CMD_START = "START";
+	public const string CMD_STOP = "STOP";
 
-            Matrix4x4 mat = Matrix4x4.identity;
-            matrices[i] = mat;
 
-            colors[i] = Color.Lerp(Color.red, Color.blue, Random.value);
-        }
+	private MqttClient client;
 
-        // Custom shader needed to read these!!
-        block.SetVectorArray("_Colors", colors);
-    }
 
-    private Mesh CreateQuad(Vector3 a, Vector3 b, Vector3 c, Vector3 d)
-    {
-		Mesh m = new Mesh();
+	void Start()
+	{
+		expanDialSticks = expanDialSticksPrefab.GetComponent<ExpanDialSticks>();
+		// Listen to events
+		expanDialSticks.OnConnecting += HandleConnecting;
+		expanDialSticks.OnConnected += HandleConnected;
+		expanDialSticks.OnDisconnected += HandleDisconnected;
+		expanDialSticks.OnXAxisChanged += HandleXAxisChanged;
+		expanDialSticks.OnYAxisChanged += HandleYAxisChanged;
+		expanDialSticks.OnClickChanged += HandleClickChanged;
+		expanDialSticks.OnRotationChanged += HandleRotationChanged;
+		expanDialSticks.OnPositionChanged += HandlePositionChanged;
+		expanDialSticks.onHoldingChanged += HandleHoldingChanged;
+		expanDialSticks.onReachingChanged += HandleReachingChanged;
 
-		Vector3[] vertices = new Vector3[4]
-		{
-					a,//new Vector3(0, 0, 0),
-					b,//new Vector3(width, 0, 0),
-					c,//new Vector3(0, height, 0),
-					d,//new Vector3(width, height, 0)
-		};
-		m.vertices = vertices;
+		connected = false;
 
-		int[] tris = new int[6]
-		{
-                    // lower left triangle
-                    0, 2, 1,
-                    // upper right triangle
-                    2, 3, 1
-		};
-		m.triangles = tris;
+		// init trials
+		currentIndex = 0;
+		//fileLogger = new FileLogger(logEnabled);
+		currTime = LOG_INTERVAL;
+		prevTime = 0f;
+		// Connection to MQTT Broker
+		expanDialSticks.client_MqttConnect();
 
-		Vector3[] normals = new Vector3[4]
-		{
-					-Vector3.forward,
-					-Vector3.forward,
-					-Vector3.forward,
-					-Vector3.forward
-		};
-		m.normals = normals;
-
-		Vector2[] uv = new Vector2[4]
-		{
-					new Vector2(0, 0),
-					new Vector2(1, 0),
-					new Vector2(0, 1),
-					new Vector2(1, 1)
-		};
-		m.uv = uv;
-        return m;
+	}
+	private void OnDestroy()
+	{
 	}
 
-    private void Start()
-    {
-        Setup();
-    }
+	private void HandleConnecting(object sender, MqttConnectionEventArgs e)
+	{
+		Debug.Log("Application connecting to MQTT Broker @" + e.address + ":" + e.port + "...");
+		connected = false;
+	}
 
-    private void Update()
-    {
-        // Draw a bunch of meshes each frame.
-        Graphics.DrawMeshInstanced(mesh, 0, material, matrices, population, block);
-    }
+	private void HandleConnected(object sender, MqttConnectionEventArgs e)
+	{
+		Debug.Log("Application connected.");
+		expanDialSticks.client.Publish(MQTT_CAMERA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		connected = true;
+
+	}
+
+	private void HandleDisconnected(object sender, MqttConnectionEventArgs e)
+	{
+		Debug.Log("Application disconnected.");
+		connected = false;
+	}
+
+	private void HandleXAxisChanged(object sender, ExpanDialStickEventArgs e)
+	{
+
+	}
+
+	private void HandleYAxisChanged(object sender, ExpanDialStickEventArgs e)
+	{
+
+	}
+
+	private void HandleClickChanged(object sender, ExpanDialStickEventArgs e)
+	{
+
+	}
+
+	private void HandleRotationChanged(object sender, ExpanDialStickEventArgs e)
+	{
+
+	}
+
+	private void HandlePositionChanged(object sender, ExpanDialStickEventArgs e)
+	{
+
+
+	}
+
+	private void HandleReachingChanged(object sender, ExpanDialStickEventArgs e)
+	{
+
+	}
+
+	private void HandleHoldingChanged(object sender, ExpanDialStickEventArgs e)
+	{
+
+	}
+
+	void Quit()
+	{
+#if UNITY_EDITOR
+		// Application.Quit() does not work in the editor so
+		// UnityEditor.EditorApplication.isPlaying need to be set to false to end the game
+		UnityEditor.EditorApplication.isPlaying = false;
+#else
+				Application.Quit();
+#endif
+	}
+
+	void Update()
+	{
+		// check if ExpanDialSticks is connected
+		if (connected)
+		{
+			if (Input.GetKey("escape") || (currentIndex > expanDialSticks.NbRows * expanDialSticks.NbColumns - 1))
+			{
+				Quit();
+			}
+
+			if (Input.GetKeyDown("n"))
+			{
+				int i = 4;//currentIndex / expanDialSticks.NbColumns;
+				int j = 3; //currentIndex % expanDialSticks.NbColumns;
+
+				expanDialSticks.modelMatrix[i, j].TargetPosition = 30;
+				expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = 1f;
+				expanDialSticks.triggerShapeChange();
+				currentIndex++;
+			}
+		}
+	}
 }
-
-//using System.Collections;
-//using System.Collections.Generic;
-//using UnityEngine;
-
-//public class Test : MonoBehaviour
-//{
-//	public Material mat;
-//	private Mesh mesh;
-//	private Matrix4x4[] m4x4;
-
-//	private Mesh getQuadMesh(Vector3 a, Vector3 b, Vector3 c, Vector3 d)
-//	{
-//		Mesh mesh = new Mesh();
-//		mesh.name = "GeneratedQuad";
-//		mesh.hideFlags = HideFlags.DontSave;
-//		// Points
-//		Vector3[] verts = new Vector3[4] { a, b, c, d };
-//		// Triangles
-//		int[] tris = new int[6]
-//		{
-//        // lower left triangle
-//        0, 2, 1,
-//        // upper right triangle
-//        2, 3, 1
-//		};
-//		mesh.SetVertices(verts);
-//		mesh.SetIndices(tris, MeshTopology.Triangles, 0);
-//		mesh.RecalculateBounds();
-//		mesh.RecalculateNormals();
-//		mesh.UploadMeshData(true);
-//		return mesh;
-//	}
-
-//	// Start is called before the first frame update
-//	void Start()
-//	{
-//		mesh = new Mesh();
-
-//		Vector3[] vertices = new Vector3[4]
-//		{
-//			new Vector3(0, 0, 0),
-//			new Vector3(10, 0, 0),
-//			new Vector3(0, 10, 0),
-//			new Vector3(10, 10, 0)
-//		};
-//		mesh.vertices = vertices;
-
-//		int[] tris = new int[6]
-//		{
-//            // lower left triangle
-//            0, 2, 1,
-//            // upper right triangle
-//            2, 3, 1
-//		};
-//		mesh.triangles = tris;
-
-//		Vector3[] normals = new Vector3[4]
-//		{
-//			-Vector3.forward,
-//			-Vector3.forward,
-//			-Vector3.forward,
-//			-Vector3.forward
-//		};
-//		mesh.normals = normals;
-
-//		Vector2[] uv = new Vector2[4]
-//		{
-//			new Vector2(0, 0),
-//			new Vector2(1, 0),
-//			new Vector2(0, 1),
-//			new Vector2(1, 1)
-//		};
-//		mesh.uv = uv;
-//		/*Vector3 a = new Vector3(0, 0, 0);
-//        Vector3 b = new Vector3(10, 0, 0);
-//        Vector3 c = new Vector3(0, 10, 0);
-//        Vector3 d = new Vector3(10, 10, 0);
-//        mesh = getQuadMesh(a, b, c, d);*/
-
-//		int population = 10;
-//		int range = 10;
-//		m4x4 = new Matrix4x4[population];
-//		for (int i = 0; i < population; i++)
-//		{
-//			// Build matrix.
-//			Vector3 position = new Vector3(Random.Range(-range, range), Random.Range(-range, range), Random.Range(-range, range));
-//			Quaternion rotation = Quaternion.Euler(Random.Range(-180, 180), Random.Range(-180, 180), Random.Range(-180, 180));
-//			Vector3 scale = Vector3.one;
-
-//			m4x4[i] = Matrix4x4.TRS(position, rotation, scale);
-//			m4x4[i] = Matrix4x4.identity;
-
-
-//		}
-
-
-//		Graphics.DrawMeshInstanced(mesh, 0, mat, m4x4, population, null, UnityEngine.Rendering.ShadowCastingMode.On, true, gameObject.layer);
-
-//		/*GameObject go = new GameObject("Empty");
-//        go.AddComponent<MeshFilter>();
-//        go.AddComponent<MeshRenderer>();
-//        go.GetComponent<MeshFilter>().mesh = mesh;
-//        go.GetComponent<MeshRenderer>().material = mat;*/
-//	}
-
-//	// Update is called once per frame
-//	void Update()
-//	{
-//		Graphics.DrawMeshInstanced(mesh, 0, mat, m4x4, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, gameObject.layer);
-//		/* Vector3 a = new Vector3(0, 1, 0);
-//         Vector3 b = new Vector3(0, 2, 0);
-//         Vector3 c = new Vector3(1, 2, 0);
-//         Vector3 d = new Vector3(1, 1, 0);
-//         Mesh mesh = getQuadMesh(a, b, c, d);
-//         Matrix4x4[] m4x4 = new Matrix4x4 [] { Matrix4x4.identity };
-//         Graphics.DrawMeshInstanced(mesh, 0, mat, m4x4, 0, null, UnityEngine.Rendering.ShadowCastingMode.On, true, gameObject.layer);*/
-
-
-//	}
-//}

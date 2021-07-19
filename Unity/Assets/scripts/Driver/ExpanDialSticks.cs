@@ -449,11 +449,11 @@ public class ExpanDialSticks : MonoBehaviour
 
 			OnConnecting(this, new MqttConnectionEventArgs(BROKER_ADDRESS, BROKER_PORT));
 			client.Connect(clientId);
-			/*client.Subscribe(new string[] { MQTT_TOPIC }, new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
+			client.Subscribe(new string[] { MQTT_TOPIC }, new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
 			triggerShapeReset();
-			CancelInvoke("client_MqttConnect");
-			InvokeRepeating("publishGetRequest", MQTT_DELAY_AT_START, MQTT_INTERVAL);*/
-			//}
+			//CancelInvoke("client_MqttConnect");
+			InvokeRepeating("publishGetRequest", MQTT_DELAY_AT_START, MQTT_INTERVAL);
+			
 
 			OnConnected(this, new MqttConnectionEventArgs(BROKER_ADDRESS, BROKER_PORT));
 
@@ -474,10 +474,10 @@ public class ExpanDialSticks : MonoBehaviour
 
 				OnConnecting(this, new MqttConnectionEventArgs(BROKER_ADDRESS, BROKER_PORT));
 				client.Connect(clientId);
-				/*client.Subscribe(new string[] { MQTT_TOPIC }, new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
+				client.Subscribe(new string[] { MQTT_TOPIC }, new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
 				triggerShapeReset();
-				CancelInvoke("client_MqttConnect");
-				InvokeRepeating("publishGetRequest", MQTT_DELAY_AT_START, MQTT_INTERVAL);*/
+				//CancelInvoke("client_MqttConnect");
+				InvokeRepeating("publishGetRequest", MQTT_DELAY_AT_START, MQTT_INTERVAL);
 				//}
 
 				OnConnected(this, new MqttConnectionEventArgs(BROKER_ADDRESS, BROKER_PORT));
@@ -503,9 +503,9 @@ public class ExpanDialSticks : MonoBehaviour
 		try
 		{
 			/*#if DEBUG
-				Debug.Log("Received: " + System.Text.Encoding.UTF8.GetString(e.Message));
+			Debug.Log("Received: " + System.Text.Encoding.UTF8.GetString(e.Message));
+				
 			#endif*/
-
 			GetAns gans = JsonUtility.FromJson<GetAns>(System.Text.Encoding.UTF8.GetString(e.Message));
 			if (gans.GET != null && gans.ANS.status != null)
 			{
@@ -536,7 +536,7 @@ public class ExpanDialSticks : MonoBehaviour
 									(bool)(gans.ANS.content.reachingValue[i * nbColumns + j] == 1 ? true : false), // reachingValue (0, 1)
 									(bool)(gans.ANS.content.holdingValue[i * nbColumns + j] == 1 ? true : false), // holdingValue (0, 1)
 									nextProximity,
-									false,
+									modelMatrix[i, j].CurrentPaused,
 									MQTT_INTERVAL
 									);
 								// doing nothing for each pin
@@ -560,11 +560,12 @@ public class ExpanDialSticks : MonoBehaviour
 										}
 									}
 								} else
-								{ // PIN IS FREE
+								{
+									// PIN IS FREE
 									// PIN HAS BEEN PAUSED THEN START IT
-									if (!modelMatrix[i, j].CurrentReaching) 
+									if (!modelMatrix[i, j].CurrentReaching)
 									{
-										if (modelMatrix[i, j].CurrentPaused) 
+										if (modelMatrix[i, j].CurrentPaused)
 										{
 											modelMatrix[i, j].CurrentPaused = false;
 											positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
@@ -763,8 +764,11 @@ public class ExpanDialSticks : MonoBehaviour
 						positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
 						holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
 					    if(modelMatrix[i, j].CurrentProximity < 1f)
-						{ 
-							durations[i * nbColumns + j] = modelMatrix[i, j].TargetShapeChangeDuration;
+						{
+							float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
+							float distance = Math.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition);
+							float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
+							durations[i * nbColumns + j] = safetyDuration;// modelMatrix[i, j].TargetShapeChangeDuration;
 						} else {
 							//Debug.Log("modelMatrix[" + i + "," + j + "] pause at start!");
 							modelMatrix[i, j].CurrentPaused = true;
@@ -881,8 +885,6 @@ public class ExpanDialSticks : MonoBehaviour
 					{
 						if (modelMatrix[i, j].CurrentPaused)
 						{
-							//if(i == 4 && j == 5) Debug.Log("modelMatrix[" + i + "," + j + "] unpause!");
-							//Debug.Log("modelMatrix[" + i + "," + j + "] unpause!");
 							float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
 							float distance = Math.Abs(modelMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition);
 							float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
@@ -897,7 +899,7 @@ public class ExpanDialSticks : MonoBehaviour
 									modelMatrix[i, j].CurrentProximity,
 									false,
 									safetyDuration //  fast
-								); ;
+								);
 							shapeChanging = true;
 						}
 					}

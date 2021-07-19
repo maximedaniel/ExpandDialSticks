@@ -119,7 +119,7 @@ public class ExpanDialStickView : MonoBehaviour
 	public Material projectorMaterial;
 
 
-	public enum FeedbackMode {Flash, PulseIn, PulseOut, None};
+	public enum FeedbackMode {Flash, PulseIn, PulseOut, Debug, None};
 	private FeedbackMode feedbackMode = FeedbackMode.PulseIn;
 
 	private string projectorTexture = "projector";
@@ -639,7 +639,7 @@ public class ExpanDialStickView : MonoBehaviour
 		this.transform.RotateAround(this.transform.position - new Vector3(0f, height / 2, 0f), Vector3.back, xAxisCurrentLerp);
 
 		// SAFETY CUE
-		if(this.pauseCurrent > 0f)//  || (this.colorCurrent != Color.white))
+		if (this.pauseCurrent > 0f)//  || (this.colorCurrent != Color.white))
 		{
 			if (this.projectorTextureCurrent != projectorTexture){
 				projector.material.mainTexture = Resources.Load<Texture2D>(projectorTexture);
@@ -684,7 +684,10 @@ public class ExpanDialStickView : MonoBehaviour
 		}
 		else
 		{
-			meshRenderer.material.color = this.colorCurrent;
+			if(feedbackMode == FeedbackMode.Debug) 
+				meshRenderer.material.color = Color.Lerp(Color.white, Color.red, this.proximityCurrent);
+			else 
+				meshRenderer.material.color = this.colorCurrent;
 			projector.orthographicSize = this.projectorSizeCurrent;
 			projector.material.color = this.projectorColorCurrent;
 			projector.transform.eulerAngles = new Vector3(90f, this.projectorRotationCurrent, 0f);

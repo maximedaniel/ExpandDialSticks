@@ -23,7 +23,7 @@ public class ExpanDialStickCollision: MonoBehaviour
 
 	private const int SEPARATION_LAYER = 10; // Safety Level 0
 	private float proximity = 0f;
-	private float minDistanceFromLayer = 3f;
+	private float minDistanceFromLayer = 10.0f;
 	//private bool collisionDetected = false;
 
 	// Getters and Setters
@@ -48,7 +48,10 @@ public class ExpanDialStickCollision: MonoBehaviour
 	public float Height
 	{
 		get => this.height;
-		set => this.height = value;
+		set {
+			this.minDistanceFromLayer = value;
+			this.height = value;
+		}
 	}
 
 	public float Offset

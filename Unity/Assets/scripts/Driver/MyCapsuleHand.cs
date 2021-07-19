@@ -194,6 +194,8 @@ namespace Leap.Unity {
     private GameObject _handObject;
     private GameObject[] _handColliders;
     private GameObject [] _forearmColliders;
+    private float forearmColliderOffset = 24f;
+    private float handColliderOffset = 12f;
 
     private int _curSphereIndex = 0, _curCylinderIndex = 0;
 
@@ -464,7 +466,7 @@ namespace Leap.Unity {
 		{
             _handColliders[i].transform.position = centerPoint;
             SphereCollider sc = _handColliders[i].GetComponent<SphereCollider>();
-            sc.radius = maxDistPoint;
+            sc.radius = maxDistPoint + handColliderOffset/2f;
             sc.radius += sc.radius * (i * 0.5f);
             }
             /* Bounds b = new Bounds(new Vector3(0, 0, 0), extends);
@@ -539,16 +541,15 @@ namespace Leap.Unity {
                 offsetExtends.x * 2.0f, Vector3.Distance(armBackLeft, armFrontLeft) +
                 offsetExtends.x * 2.0f);
             Bounds bounds = new Bounds(new Vector3(0, 0, 0), extended);
-            float offset = 12.0f;
 
             for (var i = 0; i < SEPARATION_LEVEL; i++)
             {
                 _forearmColliders[i].transform.position = centered;
                 _forearmColliders[i].transform.rotation = rotationForearm;
                 CapsuleCollider capsuleCollider = _forearmColliders[i].GetComponent<CapsuleCollider>();
-                capsuleCollider.radius = (Vector3.Distance(armFrontRight, armFrontLeft) + offsetExtends.x) / 2.0f + offset / 2.0f;
+                capsuleCollider.radius = (Vector3.Distance(armFrontRight, armFrontLeft) + offsetExtends.x) / 2.0f + forearmColliderOffset / 4.0f;
                 capsuleCollider.radius += capsuleCollider.radius * (i * 0.5f);
-                capsuleCollider.height = Vector3.Distance(armBackLeft, armFrontLeft) + offsetExtends.x + offset;
+                capsuleCollider.height = Vector3.Distance(armBackLeft, armFrontLeft) + offsetExtends.x + forearmColliderOffset;
                 capsuleCollider.direction = 2;
             }
         }
