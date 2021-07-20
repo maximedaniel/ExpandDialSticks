@@ -15,7 +15,7 @@ using System.Globalization;
 using Leap.Unity;
 using Random = UnityEngine.Random;
 
-public class Study1 : MonoBehaviour
+public class XP1_P1 : MonoBehaviour
 {
 
     public GameObject expanDialSticksPrefab;
@@ -62,7 +62,7 @@ public class Study1 : MonoBehaviour
 	private bool nextMole;
 
 	//private FileLogger fileLogger;
-	public const float LOG_INTERVAL = 0.25f; // 0.2f;
+	public float LOG_INTERVAL = 0.2f; // 0.2f;
 	private float currTime;
 	private float prevTime;
 
@@ -71,6 +71,8 @@ public class Study1 : MonoBehaviour
 	public const string MQTT_SYSTEM_RECORDER = "SYSTEM_RECORDER";
 	public const string CMD_START = "START";
 	public const string CMD_STOP = "STOP";
+
+	public float shapeChangeDuration = 2f;
 
 
 	private MqttClient client;
@@ -81,19 +83,24 @@ public class Study1 : MonoBehaviour
 		// trigger most unsafe SC
 
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("TRIGGER_LANDSCAPE_ASCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		AllUp(1f);
+		AllUp(shapeChangeDuration);
+		Debug.Log("AllUp");
 		yield return new WaitForSeconds(3f);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("TRIGGER_LANDSCAPE_DESCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		AllDown(1f);
+		AllDown(shapeChangeDuration);
+		Debug.Log("AllDown");
 		yield return new WaitForSeconds(3f); 
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("TRIGGER_LANDSCAPE_BLACKING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		AllBlack(0.5f);
+		Debug.Log("AllBlack");
 		yield return new WaitForSeconds(0.5f);
 		// wait until all pins are down
 		while (!IsAllDown())
 		{
 			yield return new WaitForSeconds(0.1f);
 		}
+
+		Debug.Log("AreAllDown");
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("END_LANDSCAPE_CHANGING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 
 		//fileLogger.Log("END_LANDSCAPE_CHANGING");
@@ -158,7 +165,7 @@ public class Study1 : MonoBehaviour
 		{
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
-				if (expanDialSticks.viewMatrix[i, j].CurrentPosition > 0) return false;
+				if (expanDialSticks.viewMatrix[i, j].CurrentPosition > 0 || expanDialSticks.viewMatrix[i, j].CurrentReaching) return false;
 			}
 		}
 		return true;
@@ -193,7 +200,8 @@ public class Study1 : MonoBehaviour
 	{
 
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("TRIGGER_MOLE_APPEARING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		MoleUp(1f);
+		MoleUp(shapeChangeDuration);
+		Debug.Log("MoleUp");
 		yield return new WaitForSeconds(1f);
 		// wait until all pins are down
 		while (!IsMoleUp())
@@ -202,6 +210,7 @@ public class Study1 : MonoBehaviour
 		}
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("TRIGGER_MOLE_GREENING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		MoleGreen(0.5f);
+		Debug.Log("MoleGreen");
 		yield return new WaitForSeconds(0.5f);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("END_MOLE_APPEARING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		moleState = MOLE_APPEARED;

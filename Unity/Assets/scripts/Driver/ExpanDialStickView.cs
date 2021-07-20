@@ -684,10 +684,7 @@ public class ExpanDialStickView : MonoBehaviour
 		}
 		else
 		{
-			if(feedbackMode == FeedbackMode.Debug) 
-				meshRenderer.material.color = Color.Lerp(Color.white, Color.red, this.proximityCurrent);
-			else 
-				meshRenderer.material.color = this.colorCurrent;
+			meshRenderer.material.color = this.colorCurrent;
 			projector.orthographicSize = this.projectorSizeCurrent;
 			projector.material.color = this.projectorColorCurrent;
 			projector.transform.eulerAngles = new Vector3(90f, this.projectorRotationCurrent, 0f);
@@ -696,6 +693,9 @@ public class ExpanDialStickView : MonoBehaviour
 				this.projectorTextureCurrent = this.projectorTextureTarget;
 			}
 		}
+
+		if (feedbackMode == FeedbackMode.Debug)
+			meshRenderer.material.color = Color.Lerp(Color.white, Color.red, this.proximityCurrent);
 
 		this.textMesh.alignment = this.textAlignmentTarget;
 		this.textMesh.fontSize =  this.textSizeCurrent;

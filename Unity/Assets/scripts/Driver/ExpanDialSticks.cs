@@ -150,7 +150,7 @@ public class ExpanDialSticks : MonoBehaviour
 	public const int nbRows = 5;
 	public ExpanDialStickView.FeedbackMode safetyFeedbackMode = ExpanDialStickView.FeedbackMode.Flash;
 	float cameraDistanceFromMatrix = 70f;
-	private const float maxSpeed = 40f; // pos/seconds
+	private const float maxSpeed = 20f; // pos/seconds
 
 
 	float borderOffset = 2.0f;
@@ -766,7 +766,7 @@ public class ExpanDialSticks : MonoBehaviour
 							float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
 							float distance = Math.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition);
 							float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
-							durations[i * nbColumns + j] = safetyDuration;// modelMatrix[i, j].TargetShapeChangeDuration;
+							durations[i * nbColumns + j] = Math.Max(safetyDuration, modelMatrix[i, j].TargetShapeChangeDuration);
 						} else {
 							//Debug.Log("modelMatrix[" + i + "," + j + "] pause at start!");
 							modelMatrix[i, j].CurrentPaused = true;

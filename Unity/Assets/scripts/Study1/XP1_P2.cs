@@ -15,7 +15,7 @@ using System.Globalization;
 using Leap.Unity;
 using Random = UnityEngine.Random;
 
-public class Study2 : MonoBehaviour
+public class XP1_P2 : MonoBehaviour
 {
 
 	public GameObject expanDialSticksPrefab;
@@ -62,7 +62,7 @@ public class Study2 : MonoBehaviour
 	private bool nextGauge;
 
 	//private FileLogger fileLogger;
-	public const float LOG_INTERVAL = 0.25f; // 0.2f;
+	public const float LOG_INTERVAL = 0.2f; // 0.2f;
 	private float currTime;
 	private float prevTime;
 
@@ -71,6 +71,7 @@ public class Study2 : MonoBehaviour
 	public const string MQTT_SYSTEM_RECORDER = "SYSTEM_RECORDER";
 	public const string CMD_START = "START";
 	public const string CMD_STOP = "STOP";
+	public float shapeChangeDuration = 2f;
 
 
 	private MqttClient client;
@@ -98,7 +99,7 @@ public class Study2 : MonoBehaviour
 		AllBlack(0.5f);
 		yield return new WaitForSeconds(0.5f);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_DESCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		AllReset(1f);
+		AllDown(shapeChangeDuration);
 		yield return new WaitForSeconds(1f);
 		// wait until all pins are down
 		while (!IsAllDown())
@@ -113,7 +114,7 @@ public class Study2 : MonoBehaviour
 	{
 
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_APPEARING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		GaugeUp(1f);
+		GaugeUp(shapeChangeDuration);
 		yield return new WaitForSeconds(1f);
 		// wait until all pins are down
 		while (!IsGaugeUp())
@@ -134,10 +135,10 @@ public class Study2 : MonoBehaviour
 	{
 		// trigger most unsafe SC
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_ASCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		AllUpExceptGauge(1f);
+		AllUpExceptGauge(shapeChangeDuration);
 		yield return new WaitForSeconds(3f);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_DESCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		AllDownExceptGauge(1f);
+		AllDownExceptGauge(shapeChangeDuration);
 		yield return new WaitForSeconds(3f);
 		/*expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("TRIGGER_LANDSCAPE_BLACKING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		AllBlack(0.5f);
@@ -151,7 +152,7 @@ public class Study2 : MonoBehaviour
 		gaugeState = GAUGE_APPEARED;
 	}
 
-	void AllReset(float duration)
+	/*void AllReset(float duration)
 	{
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
 		{
@@ -183,7 +184,7 @@ public class Study2 : MonoBehaviour
 		}
 		expanDialSticks.triggerTextureChange();
 		expanDialSticks.triggerShapeChange();
-	}
+	}*/
 	void AllDown(float duration)
 	{
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
@@ -206,7 +207,7 @@ public class Study2 : MonoBehaviour
 		{
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
-				if (expanDialSticks.viewMatrix[i, j].CurrentPosition > 0) return false;
+				if (expanDialSticks.viewMatrix[i, j].CurrentPosition > 0 || expanDialSticks.viewMatrix[i, j].CurrentReaching) return false;
 			}
 		}
 		return true;
@@ -250,18 +251,6 @@ public class Study2 : MonoBehaviour
 		expanDialSticks.triggerTextureChange();
 		expanDialSticks.triggerShapeChange();
 	}
-	bool IsAllDownExceptGauge()
-	{
-		Vector2 gaugePosition = gaugePositions[gaugeIndex];
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
-		{
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-			{
-				if ((i != (int)gaugePosition.x || j != (int)gaugePosition.y) && expanDialSticks.viewMatrix[i, j].CurrentPosition > 0) return false;
-			}
-		}
-		return true;
-	}
 
 	void AllBlack(float duration)
 	{
@@ -284,18 +273,7 @@ public class Study2 : MonoBehaviour
 		}
 		expanDialSticks.triggerTextureChange();
 	}
-	void AllWhite(float duration)
-	{
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
-		{
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-			{
-				expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
-				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
-			}
-		}
-		expanDialSticks.triggerTextureChange();
-	}
+
 	public int[] Shuffle(int[] array)
 	{
 		for (int i = 0; i < array.Length; i++)
@@ -344,7 +322,7 @@ public class Study2 : MonoBehaviour
 	bool IsGaugeUp()
 	{
 		Vector2 gaugePosition = gaugePositions[gaugeIndex];
-		return expanDialSticks[(int)gaugePosition.x, (int)gaugePosition.y].TargetPosition == 20;
+		return !expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentReaching && expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].TargetPosition == 20;
 	}
 
 	void GaugeUp(float duration)
@@ -496,7 +474,7 @@ public class Study2 : MonoBehaviour
 		{
 
 			float prevRotation = currentRotation;
-			currentRotation += e.diff * anglePerStep;
+			currentRotation -= e.diff * anglePerStep;
 			string msg = "";
 			if (gaugeState == GAUGE_APPEARING)
 			{
