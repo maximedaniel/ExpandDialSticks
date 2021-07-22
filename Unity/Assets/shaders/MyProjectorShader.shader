@@ -12,7 +12,7 @@ Shader "Custom/MyProjectorShader"
 
         Subshader
     {
-        Tags { "RenderType" = "Transparent"  "Queue" = "Transparent+100"}
+        Tags { "RenderType" = "Transparent" "Queue" = "Transparent+100"}
         Pass
         {
             ZWrite Off
@@ -22,6 +22,8 @@ Shader "Custom/MyProjectorShader"
 
             ColorMask RGB
             Blend OneMinusSrcAlpha SrcAlpha
+            //Blend SrcColor DstColor 
+
 
 
             CGPROGRAM
@@ -35,10 +37,12 @@ Shader "Custom/MyProjectorShader"
             {
                 float4 pos      : SV_POSITION;
                 float4 uv       : TEXCOORD0;
+                float4 uvFalloff : TEXCOORD1;
             };
 
                 uniform sampler2D _MainTex;
                 uniform float4x4 unity_Projector;
+                uniform float4x4 unity_ProjectorClip;
                 uniform float4 _Color;
 
             v2f vert(appdata_tan v)
@@ -46,17 +50,23 @@ Shader "Custom/MyProjectorShader"
                 v2f o;
                 o.pos = UnityObjectToClipPos(v.vertex);
                 o.uv = mul(unity_Projector, v.vertex);
+                o.uvFalloff = mul(unity_ProjectorClip, v.vertex);
                 return o;
             }
 
             half4 frag(v2f i) : COLOR
             {
-                float4 tex = tex2Dproj(_MainTex, i.uv)  *  _Color;
+                float4 tex = tex2Dproj(_MainTex, UNITY_PROJ_COORD(i.uv))  *  _Color;
                 tex.a = 1 - tex.a;
                 if (i.uv.w < 0)
                 {
                     tex = float4(0,0,0,1);
                 }
+
+               /* fixed4 texS = tex2Dproj(_MainTex, UNITY_PROJ_COORD(i.uv));
+                texS.a = 1 - texS.a;
+
+                fixed4 res = float4(_Color.r, _Color.g, _Color.b, _Color.a) * texS;*/
                 return tex;
             }
             ENDCG

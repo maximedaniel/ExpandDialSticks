@@ -48,6 +48,11 @@ public class ExpanDialStickModel
 	private float holdingDiff = 0f;
 	private float holdingTarget = 0f;
 
+	private float separationLevelTarget = 0f;
+	private float separationLevelCurrent = 0f;
+	private float separationLevelDiff = 0f;
+
+
 	private float proximityCurrent = 0f;
 	private float proximityDiff = 0f;
 	private float proximityTarget = 0f;
@@ -141,12 +146,12 @@ public class ExpanDialStickModel
 	}
 
 	public sbyte TargetAxisX{
-		get => (sbyte)this.xAxisTarget;
+		get => (sbyte)Mathf.Round(this.xAxisTarget);
 		set => this.xAxisTarget = value;
 	}
 
 	public sbyte CurrentAxisX{
-		get => (sbyte)this.xAxisCurrent;
+		get => (sbyte)Mathf.Round(this.xAxisCurrent);
 		set {
 			this.xAxisDiff += value - this.xAxisCurrent;
 			if (this.xAxisCurrent < AXIS_THRESHOLD && value > AXIS_THRESHOLD) this.xAxisRiseDiff++;
@@ -156,12 +161,12 @@ public class ExpanDialStickModel
 	}
 
 	public sbyte TargetAxisY{
-		get => (sbyte)this.yAxisTarget;
+		get => (sbyte)Mathf.Round(this.yAxisTarget);
 		set => this.yAxisTarget = value;
 	}
 
 	public sbyte CurrentAxisY{
-		get => (sbyte)this.yAxisCurrent;
+		get => (sbyte)Mathf.Round(this.yAxisCurrent);
 		set {
 			this.yAxisDiff += value - this.yAxisCurrent;
 			if (this.yAxisCurrent < AXIS_THRESHOLD && value > AXIS_THRESHOLD) this.yAxisRiseDiff++;
@@ -171,12 +176,12 @@ public class ExpanDialStickModel
 	}
 
 	public byte TargetSelectCount{
-		get => (byte)this.selectCountTarget;
+		get => (byte)Mathf.Round(this.selectCountTarget);
 		set => this.selectCountTarget = value;
 	}
 
 	public byte CurrentSelectCount{
-		get => (byte)this.selectCountCurrent;
+		get => (byte)Mathf.Round(this.selectCountCurrent);
 		set {
 			this.selectCountDiff += this.selectCountCurrent <= value ? value - this.selectCountCurrent : 255 + value - this.selectCountCurrent;
 			this.selectCountCurrent = value;
@@ -184,12 +189,12 @@ public class ExpanDialStickModel
 	}
 	
 	public sbyte TargetRotation{
-		get => (sbyte)this.rotationTarget;
+		get => (sbyte)Mathf.Round(this.rotationTarget);
 		set => this.rotationTarget = value;
 	}
 	
 	public sbyte CurrentRotation{
-		get => (sbyte)this.rotationCurrent;
+		get => (sbyte)Mathf.Round(this.rotationCurrent);
 		set {
 			this.rotationDiff += Mathf.Abs(value - this.rotationCurrent) <= 127 ? value - this.rotationCurrent : 255 + value - this.rotationCurrent;
 			this.rotationCurrent = value;
@@ -197,12 +202,12 @@ public class ExpanDialStickModel
 	}
 	
 	public sbyte TargetPosition{
-		get => (sbyte)this.positionTarget;
+		get => (sbyte)Mathf.Round(this.positionTarget);
 		set => this.positionTarget = value;
 	}
 	
 	public sbyte CurrentPosition{
-		get => (sbyte)this.positionCurrent;
+		get => (sbyte)Mathf.Round(this.positionCurrent);
 		set {
 			this.positionDiff += (CurrentReaching) ? 0 : value - this.positionCurrent;
 			this.positionCurrent = value;
@@ -234,6 +239,21 @@ public class ExpanDialStickModel
 			this.holdingCurrent = value ? 1f : 0f;
 		}
 	}
+	public int TargetSeparationLevel
+	{
+		get => (int)this.separationLevelTarget;
+		set => this.separationLevelTarget = value;
+	}
+	public int CurrentSeparationLevel
+	{
+		get => (int)this.separationLevelCurrent;
+		set
+		{
+			this.separationLevelDiff += value - this.separationLevelCurrent;
+			this.separationLevelCurrent = value;
+		}
+	}
+
 	public float TargetProximity
 	{
 		get => this.proximityTarget;
@@ -249,19 +269,19 @@ public class ExpanDialStickModel
 			this.proximityCurrent = value;
 		}
 	}
-	public bool TargetPaused
+	public int TargetPaused
 	{
-		get => this.pauseTarget > 0f ? true : false;
-		set => this.pauseTarget = value ? 1f : 0f;
+		get => (int)Mathf.Round(this.pauseTarget);
+		set => this.pauseTarget = value;
 	}
 
-	public bool CurrentPaused
+	public int CurrentPaused
 	{
-		get => this.pauseCurrent > 0f ? true : false;
+		get => (int)Mathf.Round(this.pauseCurrent);
 		set
 		{
-			this.pauseDiff += (value ? 1f : 0f) - this.pauseCurrent;
-			this.pauseCurrent = value ? 1f : 0f;
+			this.pauseDiff += value - this.pauseCurrent;
+			this.pauseCurrent = value;
 		}
 	}
 
@@ -427,7 +447,7 @@ public class ExpanDialStickModel
 		set => this.projectorChangeDurationTarget = value;
 	}
 	
-	public void setShapeChangeTarget(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, float proximity, bool paused, float shapeChangeDuration)
+	public void setShapeChangeTarget(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, int separationLevel, float proximity, int paused, float shapeChangeDuration)
 	{
 		TargetAxisX = xAxis;
 		TargetAxisY = yAxis;
@@ -436,12 +456,13 @@ public class ExpanDialStickModel
 		TargetReaching = reaching;
 		TargetHolding = holding;
 		TargetPosition = position;
+		TargetSeparationLevel = separationLevel;
 		TargetProximity = proximity;
 		TargetPaused = paused;
 		TargetShapeChangeDuration = shapeChangeDuration;
 	}
 	
-	public void setShapeChangeCurrent(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, float proximity, bool paused, float shapeChangeDuration)
+	public void setShapeChangeCurrent(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, int separationLevel, float proximity, int paused, float shapeChangeDuration)
 	{
 		
 		CurrentAxisX = xAxis;
@@ -449,6 +470,7 @@ public class ExpanDialStickModel
 		CurrentSelectCount = selectCount;
 		CurrentRotation = rotation;
 		CurrentHolding = holding;
+		CurrentSeparationLevel = separationLevel;
 		CurrentProximity = proximity;
 		CurrentPaused = paused;
 
@@ -531,6 +553,7 @@ public class ExpanDialStickModel
 			this.positionDiff,
 			this.reachingDiff,
 			this.holdingDiff,
+			this.separationLevelDiff,
 			this.proximityDiff,
 			this.shapeChangeDurationDiff
 		};
@@ -554,6 +577,7 @@ public class ExpanDialStickModel
 			= this.positionDiff
 			= this.reachingDiff
 			= this.holdingDiff
+			= this.separationLevelDiff
 			= this.proximityDiff
 			= this.shapeChangeDurationDiff
 			= 0f;

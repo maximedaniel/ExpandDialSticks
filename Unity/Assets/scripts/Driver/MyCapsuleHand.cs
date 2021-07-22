@@ -192,6 +192,10 @@ namespace Leap.Unity {
     private const int SEPARATION_LEVEL = 3;
     private const int SEPARATION_LAYER = 10; // Safety Level 0
     private GameObject _handObject;
+    private GameObject[] _fillColliders;
+    private const int _fillCollidersSize = 3;
+    private GameObject[] _fingerColliders;
+    private const int _fingerCollidersSize = 27;
     private GameObject[] _handColliders;
     private GameObject [] _forearmColliders;
     private float handColliderOffset = 6f;
@@ -238,6 +242,42 @@ namespace Leap.Unity {
         }
         _handObject = handObjectFound;
 
+
+        // Init FILL COLLIDERS
+        _fillColliders = new GameObject[_fillCollidersSize];
+        for (var i = 0; i < _fillCollidersSize; i++)
+        {
+            var fillColliderName = Handedness + "FillCollider" + i;
+            _fillColliders[i] = GameObject.Find(fillColliderName);
+            if (_fillColliders[i] == null)
+            {
+                _fillColliders[i] = new GameObject(fillColliderName);
+                MeshCollider meshCollider = _fillColliders[i].AddComponent<MeshCollider>();
+                _fillColliders[i].transform.parent = _handObject.transform;
+                _fillColliders[i].gameObject.tag = "Player";
+                _fillColliders[i].gameObject.layer = SEPARATION_LAYER;
+                _fillColliders[i].GetComponent<MeshCollider>().enabled = true;
+            }
+        }
+        
+        // Init FINGER COLLIDERS
+        _fingerColliders = new GameObject[_fingerCollidersSize];
+        for (var i = 0; i < _fingerCollidersSize; i++)
+        {
+            var fingerColliderName = Handedness + "FingerCollider" + i;
+            _fingerColliders[i] = GameObject.Find(fingerColliderName);
+            if (_fingerColliders[i] == null)
+            {
+                _fingerColliders[i] = new GameObject(fingerColliderName);
+                _fingerColliders[i].AddComponent<CapsuleCollider>();
+                _fingerColliders[i].transform.parent = _handObject.transform;
+                _fingerColliders[i].gameObject.tag = "Player";
+                _fingerColliders[i].gameObject.layer = SEPARATION_LAYER+1;
+                _fingerColliders[i].GetComponent<CapsuleCollider>().enabled = true;
+            }
+        }
+
+        // Init HAND COLLIDERS
         _handColliders = new GameObject[SEPARATION_LEVEL];
         for(var i = 0; i < SEPARATION_LEVEL; i++)
             {
@@ -249,11 +289,12 @@ namespace Leap.Unity {
                     _handColliders[i].AddComponent<SphereCollider>();
                     _handColliders[i].transform.parent = _handObject.transform;
                     _handColliders[i].gameObject.tag = "Player";
-                    _handColliders[i].gameObject.layer = SEPARATION_LAYER + i;
+                    _handColliders[i].gameObject.layer = SEPARATION_LAYER + i + 1;
                     _handColliders[i].GetComponent<SphereCollider>().enabled = true;
                 }
             }
-
+        
+        // Init FOREARM COLLIDERS
         _forearmColliders = new GameObject[SEPARATION_LEVEL];
         for (var i = 0; i < SEPARATION_LEVEL; i++)
         {
@@ -265,15 +306,29 @@ namespace Leap.Unity {
                 _forearmColliders[i].AddComponent<CapsuleCollider>();
                 _forearmColliders[i].transform.parent = _handObject.transform;
                 _forearmColliders[i].gameObject.tag = "Player";
-                _forearmColliders[i].gameObject.layer = SEPARATION_LAYER + i;
+                _forearmColliders[i].gameObject.layer = SEPARATION_LAYER + i + 1;
                 _forearmColliders[i].GetComponent<CapsuleCollider>().enabled = true;
              }
         }
     }
     private void setCollisionMode(bool enabled)
 	{
-        if (_handColliders != null && _forearmColliders != null)
+        if (_fillColliders!= null && _fingerColliders!= null && _handColliders != null && _forearmColliders != null)
         {
+            for (var i = 0; i < _fillCollidersSize; i++)
+            {
+                if (_fillColliders[i] != null)
+                {
+                    _fillColliders[i].GetComponent<MeshCollider>().enabled = enabled;
+                }
+            }
+            for (var i = 0; i < _fingerCollidersSize; i++)
+            {
+                if (_fingerColliders[i] != null)
+                {
+                    _fingerColliders[i].GetComponent<CapsuleCollider>().enabled = enabled;
+                }
+            }
             for (var i = 0; i < SEPARATION_LEVEL; i++)
             {
                 if (_handColliders[i] != null)
@@ -304,7 +359,7 @@ namespace Leap.Unity {
 
      public override void InitHand() {
       //Debug.Log(handedness + "InitHand()");
-      if (_handColliders == null || _forearmColliders == null) InstantiateGameObjects();
+      if (_fillColliders== null || _fingerColliders == null ||  _handColliders == null || _forearmColliders == null) InstantiateGameObjects();
 
       if (_material != null && (_backing_material == null || !_backing_material.enableInstancing)) {
         _backing_material = new Material(_material);
@@ -395,12 +450,41 @@ namespace Leap.Unity {
     }
     return s;
   }
+    private void configureFillColliderAt(int index, Mesh mesh)
+	{
+            
+        MeshCollider meshCollider = _fillColliders[index].GetComponent<MeshCollider>();
+        meshCollider.sharedMesh = mesh;    
+
+        /*Vector3 fingerCenter = from + (to - from)/2f;
+        Quaternion fingerRotation = Quaternion.LookRotation(to - from);
+        _fingerColliders[index].transform.position = fingerCenter;
+        _fingerColliders[index].transform.rotation = fingerRotation;
+        CapsuleCollider capsuleCollider = _fingerColliders[index].GetComponent<CapsuleCollider>();
+        capsuleCollider.radius = transform.lossyScale.x * _cylinderRadius;
+        capsuleCollider.height = Vector3.Distance(from, to) + 2f * transform.lossyScale.x * _jointRadius;
+        capsuleCollider.direction = 2;*/
+	}
+    private void configureFingerColliderAt(int index, Vector3 from, Vector3 to, int separationLevel)
+	{
+            
+        Vector3 fingerCenter = from + (to - from)/2f;
+        Quaternion fingerRotation = Quaternion.LookRotation(to - from);
+        _fingerColliders[index].transform.position = fingerCenter;
+        _fingerColliders[index].transform.rotation = fingerRotation;
+        _fingerColliders[index].gameObject.layer = separationLevel;
+        CapsuleCollider capsuleCollider = _fingerColliders[index].GetComponent<CapsuleCollider>();
+        capsuleCollider.radius = transform.lossyScale.x * _cylinderRadius;
+        capsuleCollider.height = Vector3.Distance(from, to) + 2f * transform.lossyScale.x * _jointRadius;
+        capsuleCollider.direction = 2;
+	}
 
   public override void UpdateHand() {
       //Debug.Log(handedness + "UpdateHand()");
 
-      if (_handColliders == null || _forearmColliders == null) return; //InstantiateGameObjects();
-
+      if (_fillColliders == null || _fingerColliders == null || _handColliders == null || _forearmColliders == null) return; //InstantiateGameObjects();
+      int _currFingerColliderIndex = 0;
+      int _currFillColliderIndex = 0;
       _curSphereIndex = 0;
       _curCylinderIndex = 0;
 
@@ -498,23 +582,32 @@ namespace Leap.Unity {
             drawSphere(armBackRight);
 
             drawCylinder(armFrontLeft, armFrontRight);
+            configureFingerColliderAt(_currFingerColliderIndex++, armFrontLeft, armFrontRight, SEPARATION_LAYER + 1);
             drawCylinder(armBackLeft, armBackRight);
+            configureFingerColliderAt(_currFingerColliderIndex++, armBackLeft, armBackRight, SEPARATION_LAYER + 1);
             drawCylinder(armFrontLeft, armBackLeft);
+            configureFingerColliderAt(_currFingerColliderIndex++, armFrontLeft, armBackLeft, SEPARATION_LAYER + 1);
             drawCylinder(armFrontRight, armBackRight);
+            configureFingerColliderAt(_currFingerColliderIndex++, armFrontRight, armBackRight, SEPARATION_LAYER + 1);
 
 			// Join arm to wirst (MD)
 			if (_hand.IsLeft)
 			{
                 drawCylinder(armFrontLeft, mockThumbJointPos);
+                configureFingerColliderAt(_currFingerColliderIndex++, armFrontLeft, mockThumbJointPos, SEPARATION_LAYER + 1);
                 drawCylinder(armFrontRight, _spherePositions[THUMB_BASE_INDEX]);
+                configureFingerColliderAt(_currFingerColliderIndex++, armFrontRight, _spherePositions[THUMB_BASE_INDEX], SEPARATION_LAYER + 1);
 			} else
 			{
                 drawCylinder(armFrontLeft, _spherePositions[THUMB_BASE_INDEX]);
+                configureFingerColliderAt(_currFingerColliderIndex++, armFrontLeft, _spherePositions[THUMB_BASE_INDEX], SEPARATION_LAYER + 1);
                 drawCylinder(armFrontRight, mockThumbJointPos);
+                configureFingerColliderAt(_currFingerColliderIndex++, armFrontRight, mockThumbJointPos, SEPARATION_LAYER + 1);
 			}
 
             // Fill Gap within arm (MD)
-            _quadMesh = getQuadMesh(armBackLeft, armBackRight, armFrontLeft, armFrontRight); 
+            _quadMesh = getQuadMesh(armBackRight, armBackLeft, armFrontRight, armFrontLeft); 
+            configureFillColliderAt(_currFillColliderIndex++, _quadMesh);
             Matrix4x4[] mat1 = new Matrix4x4[] { Matrix4x4.identity };
               Vector4[] col1 = new Vector4[] { _bodyColor };
             MaterialPropertyBlock block1 = new MaterialPropertyBlock();
@@ -522,8 +615,9 @@ namespace Leap.Unity {
             Graphics.DrawMeshInstanced(_quadMesh, 0, _quadMaterial, mat1, mat1.Length, block1,
             _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
 
-                // Fill Gap between hand and arm (MD)
-            _quadMesh = (_hand.IsLeft) ? getQuadMesh(armFrontLeft, armFrontRight, mockThumbJointPos, _spherePositions[THUMB_BASE_INDEX]): getQuadMesh(armFrontLeft, armFrontRight, _spherePositions[THUMB_BASE_INDEX], mockThumbJointPos);
+            // Fill Gap between hand and arm (MD)
+            _quadMesh = (_hand.IsLeft) ? getQuadMesh(armFrontRight, armFrontLeft, _spherePositions[THUMB_BASE_INDEX], mockThumbJointPos): getQuadMesh(armFrontRight,  armFrontLeft, mockThumbJointPos,  _spherePositions[THUMB_BASE_INDEX]);
+            configureFillColliderAt(_currFillColliderIndex++, _quadMesh); 
             Matrix4x4[] mat2 = new Matrix4x4[] { Matrix4x4.identity };
             Vector4[] col2 = new Vector4[] { _bodyColor };
             MaterialPropertyBlock block2 = new MaterialPropertyBlock();
@@ -565,6 +659,9 @@ namespace Leap.Unity {
           Vector3 posB = _spherePositions[keyB];
 
           drawCylinder(posA, posB);
+          configureFingerColliderAt(_currFingerColliderIndex++, posA, posB, SEPARATION_LAYER + 1);
+                    // Configure capsule collider
+                    
         }
       }
 
@@ -577,16 +674,20 @@ namespace Leap.Unity {
         Vector3 posB = _spherePositions[keyB];
 
         drawCylinder(posA, posB);
+        configureFingerColliderAt(_currFingerColliderIndex++, posA, posB, SEPARATION_LAYER);
       }
 
       //Draw the rest of the hand
       drawCylinder(mockThumbJointPos, THUMB_BASE_INDEX);
+      configureFingerColliderAt(_currFingerColliderIndex++, mockThumbJointPos, _spherePositions[THUMB_BASE_INDEX], SEPARATION_LAYER + 1);
       drawCylinder(mockThumbJointPos, PINKY_BASE_INDEX);
+      configureFingerColliderAt(_currFingerColliderIndex++, mockThumbJointPos, _spherePositions[PINKY_BASE_INDEX], SEPARATION_LAYER + 1);
 
       // Fill Arm with Quad (MD)
-      _quadMesh = getQuadMesh(_spherePositions[THUMB_BASE_INDEX], mockThumbJointPos,_spherePositions[INDEX_BASE_INDEX], _spherePositions[PINKY_BASE_INDEX]); 
+      _quadMesh = (_hand.IsLeft) ? getQuadMesh(_spherePositions[THUMB_BASE_INDEX], mockThumbJointPos,_spherePositions[INDEX_BASE_INDEX], _spherePositions[PINKY_BASE_INDEX]): getQuadMesh(mockThumbJointPos, _spherePositions[THUMB_BASE_INDEX], _spherePositions[PINKY_BASE_INDEX],  _spherePositions[INDEX_BASE_INDEX]);
+      configureFillColliderAt(_currFillColliderIndex++, _quadMesh);
       Matrix4x4[] mat = new Matrix4x4[] { Matrix4x4.identity };
-        Vector4[] col = new Vector4[] { _bodyColor };
+      Vector4[] col = new Vector4[] { _bodyColor };
       MaterialPropertyBlock block = new MaterialPropertyBlock();
       block.SetVectorArray("_Colors", col);
       Graphics.DrawMeshInstanced(_quadMesh, 0, _quadMaterial, mat, mat.Length, block,
@@ -706,10 +807,10 @@ namespace Leap.Unity {
 
         Vector3[] normals = new Vector3[4]
         {
-                -Vector3.forward,
-                -Vector3.forward,
-                -Vector3.forward,
-                -Vector3.forward
+                Vector3.down,
+                Vector3.down,
+                Vector3.down,
+                Vector3.down
         };
         mesh.normals = normals;
 

@@ -23,6 +23,7 @@ public class ExpanDialStickCollision: MonoBehaviour
 
 	private const int SEPARATION_LAYER = 10; // Safety Level 0
 	private float proximity = 0f;
+	private int separationLevel = 0;
 	private float minDistanceFromLayer = 10.0f;
 	//private bool collisionDetected = false;
 
@@ -69,6 +70,12 @@ public class ExpanDialStickCollision: MonoBehaviour
 	{
 		return proximity;
 	}
+
+	public int SeparationLevel()
+	{
+		return separationLevel;
+	}
+
 	public void EnableCollision()
 	{
 		this.GetComponent<BoxCollider>().enabled = true;
@@ -95,13 +102,15 @@ public class ExpanDialStickCollision: MonoBehaviour
 				Vector3 hitPoint = hit.point;
 				if ((hitPoint.y - pinHeadPoint.y) <= minDistanceFromLayer)
 				{
-					float coeff = level / (float)nbSeparationLevels;
+					separationLevel = level;
+					float coeff = Mathf.Max(0, level - 1)/(float)nbSeparationLevels;
 					proximity = 1f - coeff;
 					Debug.DrawLine(transform.position - transform.up * 100, hitPoint, Color.HSVToRGB(coeff, 1f, 1f));
 					return;
 				}
 			}
 		}
+		separationLevel = nbSeparationLevels;
 		proximity = 0f;
 		/*
 		RaycastHit hitLevel0;

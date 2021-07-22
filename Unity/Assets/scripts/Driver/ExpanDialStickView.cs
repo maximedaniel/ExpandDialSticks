@@ -14,6 +14,8 @@ public class ExpanDialStickView : MonoBehaviour
 	private float diameter = 4.0f;
 	private float height = 10.0f;
 	private float offset = 0.5f;
+	private int nbSeparationLevels = 2;
+
 
 	private int i = 0;
 	private int j = 0;
@@ -46,9 +48,14 @@ public class ExpanDialStickView : MonoBehaviour
 	private float holdingDiff = 0f;
 	private float holdingTarget = 0f;
 
+	private float separationLevelTarget = 0f;
+	private float separationLevelCurrent = 0f;
+	private float separationLevelDiff = 0f;
+
 	private float proximityCurrent = 0f;
 	private float proximityDiff = 0f;
 	private float proximityTarget = 0f;
+
 
 	private float pauseCurrent = 0f;
 	private float pauseDiff = 0f;
@@ -119,15 +126,22 @@ public class ExpanDialStickView : MonoBehaviour
 	public Material projectorMaterial;
 
 
-	public enum FeedbackMode {Flash, PulseIn, PulseOut, Debug, None};
-	private FeedbackMode feedbackMode = FeedbackMode.PulseIn;
+	public enum FeedbackMode {Flash, Wave, Debug, None,
+		Blink
+	}
+	private FeedbackMode feedbackMode = FeedbackMode.Wave;
 
 	private string projectorTexture = "projector";
-	private float feedbackDuration = 2f;
-	private float feedbackRadius = 5f;
+	private float feedbackInDuration = 1f;
+	private float feedbackOutDuration = 0.250f;
+	private float feedbackRadius = 6f;
 	private float feedbackMinGamma = 0f;
-	private float feedbackMaxGamma = 0.6f;
+	private float feedbackMaxGamma = 0.8f;
+	private float feedbackMinOrthographicSize = 3.2f;
+	private float feedbackMaxOrthographicSize = 9.6f;
+	private float delayPerRow = 0f;
 	private bool feebackRepeat = false;
+
 
 	public FeedbackMode SafetyFeedbackMode
 	{
@@ -136,8 +150,8 @@ public class ExpanDialStickView : MonoBehaviour
 	}
 	public float SafetyFeedbackDuration
 	{
-		get => this.feedbackDuration;
-		set => this.feedbackDuration = value;
+		get => this.feedbackInDuration;
+		set => this.feedbackInDuration = value;
 	}
 	public float SafetyFeedbackRadius
 	{
@@ -174,14 +188,19 @@ public class ExpanDialStickView : MonoBehaviour
 		get => this.offset;
 		set => this.offset = value;
 	}
+	public int NbSeparationLevels
+	{
+		get => this.nbSeparationLevels;
+		set => this.nbSeparationLevels = value;
+	}
 
 	public sbyte TargetAxisX{
-		get => (sbyte)this.xAxisTarget;
+		get => (sbyte)Mathf.Round(this.xAxisTarget);
 		set => this.xAxisTarget = value;
 	}
 
 	public sbyte CurrentAxisX{
-		get => (sbyte)this.xAxisCurrent;
+		get => (sbyte)Mathf.Round(this.xAxisCurrent);
 		set {
 			this.xAxisDiff += value - this.xAxisCurrent;
 			this.xAxisCurrent = value;
@@ -189,12 +208,12 @@ public class ExpanDialStickView : MonoBehaviour
 	}
 
 	public sbyte TargetAxisY{
-		get => (sbyte)this.yAxisTarget;
+		get => (sbyte)Mathf.Round(this.yAxisTarget);
 		set => this.yAxisTarget = value;
 	}
 
 	public sbyte CurrentAxisY{
-		get => (sbyte)this.yAxisCurrent;
+		get => (sbyte)Mathf.Round(this.yAxisCurrent);
 		set {
 			this.yAxisDiff += value - this.yAxisCurrent;
 			this.yAxisCurrent = value;
@@ -202,12 +221,12 @@ public class ExpanDialStickView : MonoBehaviour
 	}
 
 	public byte TargetSelectCount{
-		get => (byte)this.selectCountTarget;
+		get => (byte)Mathf.Round(this.selectCountTarget);
 		set => this.selectCountTarget = value;
 	}
 
 	public byte CurrentSelectCount{
-		get => (byte)this.selectCountCurrent;
+		get => (byte)Mathf.Round(this.selectCountCurrent);
 		set {
 			this.selectCountDiff += this.selectCountCurrent <= value ? value - this.selectCountCurrent : 255 + value - this.selectCountCurrent;
 			this.selectCountCurrent = value;
@@ -215,12 +234,12 @@ public class ExpanDialStickView : MonoBehaviour
 	}
 	
 	public sbyte TargetRotation{
-		get => (sbyte)this.rotationTarget;
+		get => (sbyte)Mathf.Round(this.rotationTarget);
 		set => this.rotationTarget = value;
 	}
 	
 	public sbyte CurrentRotation{
-		get => (sbyte)this.rotationCurrent;
+		get => (sbyte)Mathf.Round(this.rotationCurrent);
 		set {
 			this.rotationDiff += Mathf.Abs(value - this.rotationCurrent) <= 127 ? value - this.rotationCurrent : 255 + value - this.rotationCurrent;
 			this.rotationCurrent = value;
@@ -228,12 +247,12 @@ public class ExpanDialStickView : MonoBehaviour
 	}
 	
 	public sbyte TargetPosition{
-		get => (sbyte)this.positionTarget;
+		get => (sbyte)Mathf.Round(this.positionTarget);
 		set => this.positionTarget = value;
 	}
 	
 	public sbyte CurrentPosition{
-		get => (sbyte)this.positionCurrent;
+		get => (sbyte)Mathf.Round(this.positionCurrent);
 		set {
 			this.positionDiff += (CurrentReaching) ? 0 :  value - this.positionCurrent;
 			this.positionCurrent = value;
@@ -265,6 +284,22 @@ public class ExpanDialStickView : MonoBehaviour
 			this.holdingCurrent = value ? 1f : 0f;
 		}
 	}
+	public int TargetSeparationLevel
+	{
+		get => (int)this.separationLevelTarget;
+		set => this.separationLevelTarget = value;
+	}
+	public int CurrentSeparationLevel
+	{
+		get => (int)this.separationLevelCurrent;
+		set
+		{
+			this.separationLevelDiff += value - this.separationLevelCurrent;
+			this.separationLevelCurrent = value;
+		}
+	}
+
+
 	public float TargetProximity
 	{
 		get => this.proximityTarget;
@@ -280,21 +315,22 @@ public class ExpanDialStickView : MonoBehaviour
 			this.proximityCurrent = value;
 		}
 	}
-	public bool TargetPaused
+	public int TargetPaused
 	{
-		get => this.pauseTarget > 0f ? true : false;
-		set => this.pauseTarget = value ? 1f : 0f;
+		get => (int)Mathf.Round(this.pauseTarget);
+		set => this.pauseTarget = value;
 	}
 
-	public bool CurrentPaused
+	public int CurrentPaused
 	{
-		get => this.pauseCurrent > 0f ? true : false;
+		get => (int)Mathf.Round(this.pauseCurrent);
 		set
 		{
-			this.pauseDiff += (value ? 1f : 0f) - this.pauseCurrent;
-			this.pauseCurrent = value ? 1f : 0f;
+			this.pauseDiff += value - this.pauseCurrent;
+			this.pauseCurrent = value;
 		}
 	}
+
 	public float TargetShapeChangeDuration{
 		get => this.shapeChangeDurationTarget;
 		set => this.shapeChangeDurationTarget = value;
@@ -457,8 +493,8 @@ public class ExpanDialStickView : MonoBehaviour
 		get => this.projectorChangeDurationTarget;
 		set => this.projectorChangeDurationTarget = value;
 	}
-	
-	public void setShapeChangeTarget(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, float proximity, bool paused, float shapeChangeDuration)
+
+	public void setShapeChangeTarget(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, int separationLevel, float proximity, int paused, float shapeChangeDuration)
 	{
 		TargetAxisX = xAxis;
 		TargetAxisY = yAxis;
@@ -466,19 +502,21 @@ public class ExpanDialStickView : MonoBehaviour
 		TargetRotation = rotation;
 		TargetReaching = reaching;
 		TargetHolding = holding;
+		TargetSeparationLevel = separationLevel;
 		TargetProximity = proximity;
 		TargetPaused = paused;
 		TargetPosition = position;
 		TargetShapeChangeDuration = shapeChangeDuration;
 	}
 	
-	public void setShapeChangeCurrent(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, float proximity, bool paused, float shapeChangeDuration)
+	public void setShapeChangeCurrent(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, int separationLevel, float proximity, int paused, float shapeChangeDuration)
 	{
 		CurrentAxisX = xAxis;
 		CurrentAxisY = yAxis;
 		CurrentSelectCount = selectCount;
 		CurrentRotation = rotation;
 		CurrentHolding = holding;
+		CurrentSeparationLevel = separationLevel;
 		CurrentProximity = proximity;
 		CurrentPaused = paused;
 
@@ -557,6 +595,7 @@ public class ExpanDialStickView : MonoBehaviour
 			this.positionDiff,
 			this.reachingDiff,
 			this.holdingDiff,
+			this.separationLevelDiff,
 			this.proximityDiff,
 			this.shapeChangeDurationDiff
 		};
@@ -571,6 +610,7 @@ public class ExpanDialStickView : MonoBehaviour
 			= this.positionDiff
 			= this.reachingDiff
 			= this.holdingDiff
+			= this.separationLevelDiff
 			= this.proximityDiff
 			= this.shapeChangeDurationDiff
 			= 0f;
@@ -639,11 +679,29 @@ public class ExpanDialStickView : MonoBehaviour
 		this.transform.RotateAround(this.transform.position - new Vector3(0f, height / 2, 0f), Vector3.back, xAxisCurrentLerp);
 
 		// SAFETY CUE
-		if (this.pauseCurrent > 0f)//  || (this.colorCurrent != Color.white))
+		if (this.pauseCurrent != 0f)//  || (this.colorCurrent != Color.white))
 		{
 			if (this.projectorTextureCurrent != projectorTexture){
 				projector.material.mainTexture = Resources.Load<Texture2D>(projectorTexture);
 			}
+			/*if(this.pauseCurrent < 0f)
+			{
+				meshRenderer.material.color = this.colorCurrent;
+				float H1, S1, V1;
+				Color.RGBToHSV(this.colorCurrent, out H1, out S1, out V1);
+				projector.material.color = (V1 > 0.5f) ? Color.Lerp(new Color(0f, 0f, 0f, feedbackMinGamma), new Color(0f, 0f, 0f, feedbackMaxGamma), Mathf.Repeat(Time.time, feedbackInDuration) / feedbackInDuration) :
+					 Color.Lerp(new Color(1f, 1f, 1f, feedbackMinGamma), new Color(1f, 1f, 1f, feedbackMaxGamma), Mathf.Repeat(Time.time, feedbackInDuration) / feedbackInDuration);
+				projector.orthographicSize = Mathf.Lerp(feedbackRadius * 2f, 0f, Mathf.Repeat(Time.time, feedbackInDuration) / feedbackInDuration);
+			}
+			else
+			{
+				meshRenderer.material.color = this.colorCurrent;
+				float H2, S2, V2;
+				Color.RGBToHSV(this.colorCurrent, out H2, out S2, out V2);
+				projector.material.color = (V2 > 0.5f) ? Color.Lerp(new Color(0f, 0f, 0f, feedbackMaxGamma), new Color(0f, 0f, 0f, feedbackMinGamma), Mathf.Repeat(Time.time, feedbackInDuration) / feedbackInDuration) :
+					 Color.Lerp(new Color(1f, 1f, 1f, feedbackMaxGamma), new Color(1f, 1f, 1f, feedbackMinGamma), Mathf.Repeat(Time.time, feedbackInDuration) / feedbackInDuration);
+				projector.orthographicSize = Mathf.Lerp(0f, feedbackRadius * 2f, Mathf.Repeat(Time.time, feedbackInDuration) / feedbackInDuration);
+			}*/
 
 			switch (feedbackMode)
 			{
@@ -651,28 +709,74 @@ public class ExpanDialStickView : MonoBehaviour
 					meshRenderer.material.color = this.colorCurrent;
 					float H, S, V;
 					Color.RGBToHSV(this.colorCurrent, out H, out S, out V);
-					projector.material.color = (V > 0.5f) ? Color.Lerp(new Color(0f, 0f, 0f, feedbackMinGamma), new Color(0f, 0f, 0f, feedbackMaxGamma), Mathf.PingPong(Time.time, feedbackDuration) / feedbackDuration):
-						 Color.Lerp(new Color(1f, 1f, 1f, feedbackMinGamma), new Color(1f, 1f, 1f, feedbackMaxGamma), Mathf.PingPong(Time.time, feedbackDuration) / feedbackDuration);  
-					projector.orthographicSize = feedbackRadius*2f;
-					break;
+					float delayDuration = this.Row * delayPerRow;
+					float currentDuration = feedbackInDuration + delayDuration;
+					float recoveryRate = (feedbackMaxGamma - feedbackMinGamma) / currentDuration;
 
-				case FeedbackMode.PulseIn:
+					float alpha = Mathf.MoveTowards(projector.material.color.a, feedbackMaxGamma, recoveryRate * Time.deltaTime);
+					projector.material.color = (V > 0.5f) ? new Color(0f, 0f, 0f, alpha) : new Color(1f, 1f, 1f, alpha);
+					projector.orthographicSize = feedbackMaxOrthographicSize; // feedbackRadius*2f;
+				break;
+
+
+				case FeedbackMode.Blink:
+					float delayDuration0 = this.Row * delayPerRow;
+					float currentDuration0 = Mathf.PingPong(Time.time, feedbackInDuration + delayDuration0);
+					currentDuration0 = Mathf.Max (0f, currentDuration0 - delayDuration0);
+					float coeff0 = currentDuration0 / feedbackInDuration;
+					float alpha0 =  feedbackMinGamma + (feedbackMaxGamma - feedbackMinGamma) * coeff0;
+					meshRenderer.material.color = this.colorCurrent;
+					float H0, S0, V0;
+					Color.RGBToHSV(this.colorCurrent, out H0, out S0, out V0);
+					projector.material.color = (V0 > 0.5f) ? new Color(0f, 0f, 0f, alpha0) : new Color(1f, 1f, 1f, alpha0);
+
+					//meshRenderer.material.color = new Color(this.colorCurrent.r, this.colorCurrent.g, this.colorCurrent.b, alpha0);
+					if (this.separationLevelCurrent == 0) // core level
+					{
+						if(alpha0 < feedbackMinGamma + 0.05f) projector.orthographicSize = feedbackMaxOrthographicSize;
+					} else
+					{
+						if (alpha0 < feedbackMinGamma + 0.05f) projector.orthographicSize = feedbackMinOrthographicSize;
+					}
+
+					//meshRenderer.material.color = new Color(this.colorCurrent.r, this.colorCurrent.g, this.colorCurrent.b, alpha) ;
+
+					//projector.material.color = (V0 > 0.5f) ? Color.Lerp(new Color(0f, 0f, 0f, feedbackMinGamma), new Color(0f, 0f, 0f, feedbackMaxGamma), currentDuration0 / feedbackInDuration):
+					//Color.Lerp(new Color(1f, 1f, 1f, feedbackMinGamma), new Color(1f, 1f, 1f, feedbackMaxGamma), currentDuration0 / feedbackInDuration);
+					//projector.orthographicSize = feedbackMaxOrthographicSize; // feedbackRadius*2f;
+				break;
+				
+				/*case FeedbackMode.PulseIn:
 					meshRenderer.material.color = this.colorCurrent;
 					float H1, S1, V1;
 					Color.RGBToHSV(this.colorCurrent, out H1, out S1, out V1);
-					projector.material.color = (V1 > 0.5f) ? Color.Lerp(new Color(0f, 0f, 0f, feedbackMinGamma), new Color(0f, 0f, 0f, feedbackMaxGamma), Mathf.Repeat(Time.time, feedbackDuration) / feedbackDuration) :
-						 Color.Lerp(new Color(1f, 1f, 1f, feedbackMinGamma), new Color(1f, 1f, 1f, feedbackMaxGamma), Mathf.Repeat(Time.time, feedbackDuration) / feedbackDuration);
-					projector.orthographicSize = Mathf.Lerp(feedbackRadius*2f, 0f, Mathf.Repeat(Time.time, feedbackDuration)/ feedbackDuration);
-					break;
-				case FeedbackMode.PulseOut:
+					float delayDuration1 = this.Row * delayPerRow;
+					float currentDuration1 = Mathf.Repeat(Time.time, feedbackInDuration + delayDuration1);
+					currentDuration1 = Mathf.Max(0f, currentDuration1 - delayDuration1);
+					projector.material.color = (V1 > 0.5f) ? Color.Lerp(new Color(0f, 0f, 0f, feedbackMinGamma), new Color(0f, 0f, 0f, feedbackMaxGamma), currentDuration1 / feedbackInDuration) :
+						 Color.Lerp(new Color(1f, 1f, 1f, feedbackMinGamma), new Color(1f, 1f, 1f, feedbackMaxGamma), currentDuration1 / feedbackInDuration);
+					projector.orthographicSize = Mathf.Lerp(feedbackMaxOrthographicSize, 0f, currentDuration1 / feedbackInDuration);
+					break;*/
+				case FeedbackMode.Wave:
 					meshRenderer.material.color = this.colorCurrent;
 					float H2, S2, V2;
 					Color.RGBToHSV(this.colorCurrent, out H2, out S2, out V2);
-					projector.material.color = (V2 > 0.5f) ? Color.Lerp(new Color(0f, 0f, 0f, feedbackMaxGamma), new Color(0f, 0f, 0f, feedbackMinGamma), Mathf.Repeat(Time.time, feedbackDuration) / feedbackDuration) :
-						 Color.Lerp(new Color(1f, 1f, 1f, feedbackMaxGamma), new Color(1f, 1f, 1f, feedbackMinGamma), Mathf.Repeat(Time.time, feedbackDuration) / feedbackDuration);
-					projector.orthographicSize = Mathf.Lerp(0f, feedbackRadius*2f, Mathf.Repeat(Time.time, feedbackDuration) / feedbackDuration);
+					/*float delayDuration2 = this.Row * delayPerRow;
+					float currentDuration2 = Mathf.Repeat(Time.time, feedbackInDuration + delayDuration2);
+					currentDuration2 = Mathf.Max(0f, currentDuration2 - delayDuration2);*/
+					//projector.material.color = (V2 > 0.5f) ? Color.Lerp(new Color(0f, 0f, 0f, feedbackMaxGamma), new Color(0f, 0f, 0f, feedbackMinGamma), currentDuration2 / feedbackInDuration) :
+					//	 Color.Lerp(new Color(1f, 1f, 1f, feedbackMaxGamma), new Color(1f, 1f, 1f, feedbackMinGamma), currentDuration2 / feedbackInDuration);
+					//projector.orthographicSize = Mathf.Lerp(0f, feedbackMaxOrthographicSize, currentDuration2 / feedbackInDuration);
+
+					float delayDuration2 = this.Row * delayPerRow;
+					float currentDuration2 = feedbackInDuration + delayDuration2;
+					float recoveryRate2 = (feedbackMaxOrthographicSize - feedbackMinOrthographicSize) / currentDuration2;
+
+					projector.material.color = (V2 > 0.5f) ? new Color(0f, 0f, 0f, feedbackMaxGamma) : new Color(1f, 1f, 1f, feedbackMaxGamma);
+					projector.orthographicSize =  Mathf.MoveTowards(projector.orthographicSize, feedbackMaxOrthographicSize, recoveryRate2 * Time.deltaTime ); // * 1f / currentDuration2
 					break;
 				default:
+
 					meshRenderer.material.color = this.colorCurrent;
 					projector.orthographicSize = 0f;
 					break;
@@ -684,18 +788,67 @@ public class ExpanDialStickView : MonoBehaviour
 		}
 		else
 		{
-			meshRenderer.material.color = this.colorCurrent;
-			projector.orthographicSize = this.projectorSizeCurrent;
-			projector.material.color = this.projectorColorCurrent;
+
+			switch (feedbackMode)
+			{
+				case FeedbackMode.Blink:
+					float delayDuration0 = this.Row * delayPerRow;
+					float currentDuration0 = Mathf.PingPong(Time.time, feedbackOutDuration + delayDuration0);
+					currentDuration0 = Mathf.Max(0f, currentDuration0 - delayDuration0);
+					float recoveryRate0 = (feedbackMaxGamma - feedbackMinGamma) / currentDuration0;
+					float alpha0 = Mathf.MoveTowards(projector.material.color.a, feedbackMinGamma, recoveryRate0 * Time.deltaTime);
+					meshRenderer.material.color = this.colorCurrent;
+					float H0, S0, V0;
+					Color.RGBToHSV(this.colorCurrent, out H0, out S0, out V0);
+					projector.material.color = (V0 > 0.5f) ? new Color(0f, 0f, 0f, alpha0) : new Color(1f, 1f, 1f, alpha0);
+					if (Mathf.Approximately(alpha0, feedbackMinGamma)) projector.orthographicSize = this.projectorSizeCurrent;
+				break;
+
+				case FeedbackMode.Flash:
+					meshRenderer.material.color = this.colorCurrent;
+					float H, S, V;
+					Color.RGBToHSV(this.colorCurrent, out H, out S, out V);
+					float delayDuration = this.Row * delayPerRow;
+					float currentDuration = feedbackOutDuration + delayDuration;
+					float recoveryRate = (feedbackMaxGamma - feedbackMinGamma) / currentDuration;
+
+					float alpha = Mathf.MoveTowards(projector.material.color.a, feedbackMinGamma, recoveryRate * Time.deltaTime);
+					if (Mathf.Approximately(alpha, feedbackMinGamma)) projector.orthographicSize = this.projectorSizeCurrent; //ATTENTION
+					projector.material.color = (V > 0.5f) ? new Color(0f, 0f, 0f, alpha) : new Color(1f, 1f, 1f, alpha);
+				break;
+
+				case FeedbackMode.Wave:
+					meshRenderer.material.color = this.colorCurrent;
+					float H1, S1, V1;
+					Color.RGBToHSV(this.colorCurrent, out H1, out S1, out V1);
+					float delayDuration1 = this.Row * delayPerRow;
+					float currentDuration1 = feedbackOutDuration + delayDuration1;
+					float recoveryRate1 = (feedbackMaxGamma - feedbackMinGamma) / currentDuration1;
+					float recoveryRate2 = (feedbackMaxOrthographicSize - feedbackMinOrthographicSize) / currentDuration1;
+
+					float alpha1 = Mathf.MoveTowards(projector.material.color.a, feedbackMinGamma, recoveryRate1 * Time.deltaTime);
+					float size1 = Mathf.MoveTowards(projector.orthographicSize, feedbackMinOrthographicSize, recoveryRate2 * Time.deltaTime);
+					projector.material.color = (V1 > 0.5f) ? new Color(0f, 0f, 0f, alpha1) : new Color(1f, 1f, 1f, alpha1);
+					projector.orthographicSize = size1;
+					break;
+				default:
+					meshRenderer.material.color = this.colorCurrent;
+					projector.material.color = this.projectorColorCurrent;
+					projector.orthographicSize = this.projectorSizeCurrent;
+				break;
+			}
+
 			projector.transform.eulerAngles = new Vector3(90f, this.projectorRotationCurrent, 0f);
-			if (this.projectorTextureCurrent != this.projectorTextureTarget){
+			if (this.projectorTextureCurrent != this.projectorTextureTarget)
+			{
 				projector.material.mainTexture = Resources.Load<Texture2D>(this.projectorTextureTarget);
 				this.projectorTextureCurrent = this.projectorTextureTarget;
 			}
 		}
 
 		if (feedbackMode == FeedbackMode.Debug)
-			meshRenderer.material.color = Color.Lerp(Color.white, Color.red, this.proximityCurrent);
+			//meshRenderer.material.color = Color.Lerp(Color.white, Color.red, this.proximityCurrent);
+			meshRenderer.material.color = Color.Lerp(Color.white, Color.red, 1f - this.separationLevelCurrent/(float)this.nbSeparationLevels);
 
 		this.textMesh.alignment = this.textAlignmentTarget;
 		this.textMesh.fontSize =  this.textSizeCurrent;
@@ -733,9 +886,11 @@ public class ExpanDialStickView : MonoBehaviour
 			this.selectCountCurrent += (this.selectCountTarget - this.selectCountCurrent) / this.shapeChangeDurationTarget * Time.deltaTime;
 			this.rotationCurrent += (this.rotationTarget - this.rotationCurrent) / this.shapeChangeDurationTarget * Time.deltaTime;
 			this.positionCurrent += (this.positionTarget - this.positionCurrent) / this.shapeChangeDurationTarget * Time.deltaTime;
-			this.proximityCurrent += (this.proximityTarget - this.proximityCurrent) / this.shapeChangeDurationTarget * Time.deltaTime;
+			//this.proximityCurrent += (this.proximityTarget - this.proximityCurrent) / this.shapeChangeDurationTarget * Time.deltaTime;
 			this.reachingCurrent = this.reachingTarget;
 			this.holdingCurrent = this.holdingTarget;
+			this.separationLevelCurrent = this.separationLevelTarget;
+			this.proximityCurrent = this.proximityTarget;
 			/*if(this.pauseTarget == 0.0f && this.pauseCurrent == 1.0f)
 			{
 				toUnpause = true;
