@@ -127,7 +127,7 @@ public class ExpanDialStickView : MonoBehaviour
 
 
 	public enum FeedbackMode {Flash, Wave, Debug, None,
-		Blink
+		Blink, Pulse
 	}
 	private FeedbackMode feedbackMode = FeedbackMode.Wave;
 
@@ -679,112 +679,45 @@ public class ExpanDialStickView : MonoBehaviour
 		this.transform.RotateAround(this.transform.position - new Vector3(0f, height / 2, 0f), Vector3.back, xAxisCurrentLerp);
 
 		// SAFETY CUE
-		if (this.pauseCurrent != 0f)//  || (this.colorCurrent != Color.white))
+		if (this.pauseCurrent != 0f) // this.positionCurrent > 0f)//  || (this.colorCurrent != Color.white))
 		{
 			if (this.projectorTextureCurrent != projectorTexture){
 				projector.material.mainTexture = Resources.Load<Texture2D>(projectorTexture);
 			}
-			/*if(this.pauseCurrent < 0f)
-			{
-				meshRenderer.material.color = this.colorCurrent;
-				float H1, S1, V1;
-				Color.RGBToHSV(this.colorCurrent, out H1, out S1, out V1);
-				projector.material.color = (V1 > 0.5f) ? Color.Lerp(new Color(0f, 0f, 0f, feedbackMinGamma), new Color(0f, 0f, 0f, feedbackMaxGamma), Mathf.Repeat(Time.time, feedbackInDuration) / feedbackInDuration) :
-					 Color.Lerp(new Color(1f, 1f, 1f, feedbackMinGamma), new Color(1f, 1f, 1f, feedbackMaxGamma), Mathf.Repeat(Time.time, feedbackInDuration) / feedbackInDuration);
-				projector.orthographicSize = Mathf.Lerp(feedbackRadius * 2f, 0f, Mathf.Repeat(Time.time, feedbackInDuration) / feedbackInDuration);
-			}
-			else
-			{
-				meshRenderer.material.color = this.colorCurrent;
-				float H2, S2, V2;
-				Color.RGBToHSV(this.colorCurrent, out H2, out S2, out V2);
-				projector.material.color = (V2 > 0.5f) ? Color.Lerp(new Color(0f, 0f, 0f, feedbackMaxGamma), new Color(0f, 0f, 0f, feedbackMinGamma), Mathf.Repeat(Time.time, feedbackInDuration) / feedbackInDuration) :
-					 Color.Lerp(new Color(1f, 1f, 1f, feedbackMaxGamma), new Color(1f, 1f, 1f, feedbackMinGamma), Mathf.Repeat(Time.time, feedbackInDuration) / feedbackInDuration);
-				projector.orthographicSize = Mathf.Lerp(0f, feedbackRadius * 2f, Mathf.Repeat(Time.time, feedbackInDuration) / feedbackInDuration);
-			}*/
 
 			switch (feedbackMode)
 			{
-				case FeedbackMode.Flash:
-					meshRenderer.material.color = this.colorCurrent;
-					float H, S, V;
-					Color.RGBToHSV(this.colorCurrent, out H, out S, out V);
-					float delayDuration = this.Row * delayPerRow;
-					float currentDuration = feedbackInDuration + delayDuration;
-					float recoveryRate = (feedbackMaxGamma - feedbackMinGamma) / currentDuration;
-
-					float alpha = Mathf.MoveTowards(projector.material.color.a, feedbackMaxGamma, recoveryRate * Time.deltaTime);
-					projector.material.color = (V > 0.5f) ? new Color(0f, 0f, 0f, alpha) : new Color(1f, 1f, 1f, alpha);
-					projector.orthographicSize = feedbackMaxOrthographicSize; // feedbackRadius*2f;
-				break;
-
-
 				case FeedbackMode.Blink:
+					meshRenderer.material.color = this.colorCurrent;
 					float delayDuration0 = this.Row * delayPerRow;
 					float currentDuration0 = Mathf.PingPong(Time.time, feedbackInDuration + delayDuration0);
 					currentDuration0 = Mathf.Max (0f, currentDuration0 - delayDuration0);
-					float coeff0 = currentDuration0 / feedbackInDuration;
-					float alpha0 =  feedbackMinGamma + (feedbackMaxGamma - feedbackMinGamma) * coeff0;
-					meshRenderer.material.color = this.colorCurrent;
+					float blinkCoeff0 = currentDuration0 / feedbackInDuration;
+					float alpha0 =  feedbackMinGamma + (feedbackMaxGamma - feedbackMinGamma) * blinkCoeff0;
 					float H0, S0, V0;
 					Color.RGBToHSV(this.colorCurrent, out H0, out S0, out V0);
 					projector.material.color = (V0 > 0.5f) ? new Color(0f, 0f, 0f, alpha0) : new Color(1f, 1f, 1f, alpha0);
-
-					//meshRenderer.material.color = new Color(this.colorCurrent.r, this.colorCurrent.g, this.colorCurrent.b, alpha0);
-					if (this.separationLevelCurrent == 0) // core level
-					{
-						if(alpha0 < feedbackMinGamma + 0.05f) projector.orthographicSize = feedbackMaxOrthographicSize;
-					} else
-					{
-						if (alpha0 < feedbackMinGamma + 0.05f) projector.orthographicSize = feedbackMinOrthographicSize;
-					}
-
-					//meshRenderer.material.color = new Color(this.colorCurrent.r, this.colorCurrent.g, this.colorCurrent.b, alpha) ;
-
-					//projector.material.color = (V0 > 0.5f) ? Color.Lerp(new Color(0f, 0f, 0f, feedbackMinGamma), new Color(0f, 0f, 0f, feedbackMaxGamma), currentDuration0 / feedbackInDuration):
-					//Color.Lerp(new Color(1f, 1f, 1f, feedbackMinGamma), new Color(1f, 1f, 1f, feedbackMaxGamma), currentDuration0 / feedbackInDuration);
-					//projector.orthographicSize = feedbackMaxOrthographicSize; // feedbackRadius*2f;
+					if (alpha0 < feedbackMinGamma + 0.05f) projector.orthographicSize = (this.separationLevelCurrent == 0) ? feedbackMaxOrthographicSize : feedbackMinOrthographicSize;
 				break;
-				
-				/*case FeedbackMode.PulseIn:
+				case FeedbackMode.Pulse:
 					meshRenderer.material.color = this.colorCurrent;
+					float delayDuration1 = this.Row * delayPerRow;
+					float currentDuration1 = Mathf.Repeat(Time.time, feedbackInDuration + feedbackInDuration + delayDuration1);
+					currentDuration1 = Mathf.Max(0f, currentDuration1 - delayDuration1);
+					float pulseCoeff1 = (this.pauseCurrent >= 0f) ? Mathf.Min(currentDuration1 / feedbackInDuration, 1f) : 1f - Mathf.Max(0f, (currentDuration1 - feedbackInDuration) / feedbackInDuration);
+					float blinkCoeff1 = (this.pauseCurrent >= 0f) ? 1f - Mathf.Max(0f, (currentDuration1 - feedbackInDuration) / feedbackInDuration) : Mathf.Min(currentDuration1 / feedbackInDuration, 1f);
+					float alpha1 = feedbackMinGamma + (feedbackMaxGamma - feedbackMinGamma) * blinkCoeff1; // from black to white
 					float H1, S1, V1;
 					Color.RGBToHSV(this.colorCurrent, out H1, out S1, out V1);
-					float delayDuration1 = this.Row * delayPerRow;
-					float currentDuration1 = Mathf.Repeat(Time.time, feedbackInDuration + delayDuration1);
-					currentDuration1 = Mathf.Max(0f, currentDuration1 - delayDuration1);
-					projector.material.color = (V1 > 0.5f) ? Color.Lerp(new Color(0f, 0f, 0f, feedbackMinGamma), new Color(0f, 0f, 0f, feedbackMaxGamma), currentDuration1 / feedbackInDuration) :
-						 Color.Lerp(new Color(1f, 1f, 1f, feedbackMinGamma), new Color(1f, 1f, 1f, feedbackMaxGamma), currentDuration1 / feedbackInDuration);
-					projector.orthographicSize = Mathf.Lerp(feedbackMaxOrthographicSize, 0f, currentDuration1 / feedbackInDuration);
-					break;*/
-				case FeedbackMode.Wave:
-					meshRenderer.material.color = this.colorCurrent;
-					float H2, S2, V2;
-					Color.RGBToHSV(this.colorCurrent, out H2, out S2, out V2);
-					/*float delayDuration2 = this.Row * delayPerRow;
-					float currentDuration2 = Mathf.Repeat(Time.time, feedbackInDuration + delayDuration2);
-					currentDuration2 = Mathf.Max(0f, currentDuration2 - delayDuration2);*/
-					//projector.material.color = (V2 > 0.5f) ? Color.Lerp(new Color(0f, 0f, 0f, feedbackMaxGamma), new Color(0f, 0f, 0f, feedbackMinGamma), currentDuration2 / feedbackInDuration) :
-					//	 Color.Lerp(new Color(1f, 1f, 1f, feedbackMaxGamma), new Color(1f, 1f, 1f, feedbackMinGamma), currentDuration2 / feedbackInDuration);
-					//projector.orthographicSize = Mathf.Lerp(0f, feedbackMaxOrthographicSize, currentDuration2 / feedbackInDuration);
-
-					float delayDuration2 = this.Row * delayPerRow;
-					float currentDuration2 = feedbackInDuration + delayDuration2;
-					float recoveryRate2 = (feedbackMaxOrthographicSize - feedbackMinOrthographicSize) / currentDuration2;
-
-					projector.material.color = (V2 > 0.5f) ? new Color(0f, 0f, 0f, feedbackMaxGamma) : new Color(1f, 1f, 1f, feedbackMaxGamma);
-					projector.orthographicSize =  Mathf.MoveTowards(projector.orthographicSize, feedbackMaxOrthographicSize, recoveryRate2 * Time.deltaTime ); // * 1f / currentDuration2
-					break;
+					projector.material.color = (V1 > 0.5f) ? new Color(0f, 0f, 0f, alpha1) : new Color(1f, 1f, 1f, alpha1);
+					projector.orthographicSize =  Mathf.Lerp(0f, (this.separationLevelCurrent == 0) ? feedbackMaxOrthographicSize : feedbackMinOrthographicSize, pulseCoeff1);
+				break;
 				default:
-
 					meshRenderer.material.color = this.colorCurrent;
 					projector.orthographicSize = 0f;
-					break;
+				break;
 
 			}
-			//this.transform.localScale = Vector3.Lerp(new Vector3(diameter, height / 2, diameter), new Vector3(diameter * 1.1f, height / 2, diameter * 1.1f), Mathf.PingPong(Time.time, 1));
-			//meshRenderer.material.SetColor("_FirstOutlineColor", meshRenderer.material.color);
-			//meshRenderer.material.SetFloat("_FirstOutlineWidth", Mathf.Lerp(0f, 1f, Mathf.PingPong(Time.time, 1)));
 		}
 		else
 		{
@@ -792,44 +725,22 @@ public class ExpanDialStickView : MonoBehaviour
 			switch (feedbackMode)
 			{
 				case FeedbackMode.Blink:
-					float delayDuration0 = this.Row * delayPerRow;
-					float currentDuration0 = Mathf.PingPong(Time.time, feedbackOutDuration + delayDuration0);
-					currentDuration0 = Mathf.Max(0f, currentDuration0 - delayDuration0);
-					float recoveryRate0 = (feedbackMaxGamma - feedbackMinGamma) / currentDuration0;
-					float alpha0 = Mathf.MoveTowards(projector.material.color.a, feedbackMinGamma, recoveryRate0 * Time.deltaTime);
 					meshRenderer.material.color = this.colorCurrent;
+					float recoveryRate0 = (feedbackMaxGamma - feedbackMinGamma) / feedbackOutDuration;
+					float alpha0 = Mathf.MoveTowards(projector.material.color.a, feedbackMinGamma, recoveryRate0 * Time.deltaTime);
 					float H0, S0, V0;
 					Color.RGBToHSV(this.colorCurrent, out H0, out S0, out V0);
 					projector.material.color = (V0 > 0.5f) ? new Color(0f, 0f, 0f, alpha0) : new Color(1f, 1f, 1f, alpha0);
 					if (Mathf.Approximately(alpha0, feedbackMinGamma)) projector.orthographicSize = this.projectorSizeCurrent;
 				break;
-
-				case FeedbackMode.Flash:
+				case FeedbackMode.Pulse:
 					meshRenderer.material.color = this.colorCurrent;
-					float H, S, V;
-					Color.RGBToHSV(this.colorCurrent, out H, out S, out V);
-					float delayDuration = this.Row * delayPerRow;
-					float currentDuration = feedbackOutDuration + delayDuration;
-					float recoveryRate = (feedbackMaxGamma - feedbackMinGamma) / currentDuration;
-
-					float alpha = Mathf.MoveTowards(projector.material.color.a, feedbackMinGamma, recoveryRate * Time.deltaTime);
-					if (Mathf.Approximately(alpha, feedbackMinGamma)) projector.orthographicSize = this.projectorSizeCurrent; //ATTENTION
-					projector.material.color = (V > 0.5f) ? new Color(0f, 0f, 0f, alpha) : new Color(1f, 1f, 1f, alpha);
-				break;
-
-				case FeedbackMode.Wave:
-					meshRenderer.material.color = this.colorCurrent;
+					float recoveryRate1 = (feedbackMaxGamma - feedbackMinGamma) / feedbackOutDuration;
+					float alpha1 = Mathf.MoveTowards(projector.material.color.a, feedbackMinGamma, recoveryRate1 * Time.deltaTime);
 					float H1, S1, V1;
 					Color.RGBToHSV(this.colorCurrent, out H1, out S1, out V1);
-					float delayDuration1 = this.Row * delayPerRow;
-					float currentDuration1 = feedbackOutDuration + delayDuration1;
-					float recoveryRate1 = (feedbackMaxGamma - feedbackMinGamma) / currentDuration1;
-					float recoveryRate2 = (feedbackMaxOrthographicSize - feedbackMinOrthographicSize) / currentDuration1;
-
-					float alpha1 = Mathf.MoveTowards(projector.material.color.a, feedbackMinGamma, recoveryRate1 * Time.deltaTime);
-					float size1 = Mathf.MoveTowards(projector.orthographicSize, feedbackMinOrthographicSize, recoveryRate2 * Time.deltaTime);
 					projector.material.color = (V1 > 0.5f) ? new Color(0f, 0f, 0f, alpha1) : new Color(1f, 1f, 1f, alpha1);
-					projector.orthographicSize = size1;
+					if (Mathf.Approximately(alpha1, feedbackMinGamma)) projector.orthographicSize = this.projectorSizeCurrent;
 					break;
 				default:
 					meshRenderer.material.color = this.colorCurrent;
@@ -847,7 +758,6 @@ public class ExpanDialStickView : MonoBehaviour
 		}
 
 		if (feedbackMode == FeedbackMode.Debug)
-			//meshRenderer.material.color = Color.Lerp(Color.white, Color.red, this.proximityCurrent);
 			meshRenderer.material.color = Color.Lerp(Color.white, Color.red, 1f - this.separationLevelCurrent/(float)this.nbSeparationLevels);
 
 		this.textMesh.alignment = this.textAlignmentTarget;
