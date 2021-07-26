@@ -98,6 +98,8 @@ public class ExpanDialStickView : MonoBehaviour
 	private Color projectorColorTarget = Color.black;
 	private string projectorTextureCurrent = "";
 	private string projectorTextureTarget = "";
+	private Vector2 projectorOffsetCurrent = Vector2.zero;
+	private Vector2 projectorOffsetTarget = Vector2.zero;
 	private float projectorRotationCurrent = 0f;
 	private float projectorRotationTarget = 0f;
 	private float projectorSizeCurrent = 0f;
@@ -117,11 +119,16 @@ public class ExpanDialStickView : MonoBehaviour
 	private MeshRenderer planeMeshRenderer;
 	private string planeTextureCurrent = "";
 	private string planeTextureTarget = "";
+	private Color planeColorCurrent = Color.black;
+	private Color planeColorTarget = Color.black;
+	private Vector2 planeOffsetCurrent = Vector2.zero;
+	private Vector2 planeOffsetTarget = Vector2.zero;
 	private float planeRotationTarget= 0f;
 	private float planeRotationCurrent= 0f;
 	private bool paused = false;
 
 	private MeshRenderer meshRenderer;
+	private GameObject projectorGameObject;
 	private Projector projector;
 	public Material projectorMaterial;
 
@@ -354,6 +361,26 @@ public class ExpanDialStickView : MonoBehaviour
 		get => this.planeTextureCurrent;
 		set => this.planeTextureCurrent = value;
 	}
+	public Color CurrentPlaneColor
+	{
+		get => this.planeColorCurrent;
+		set => this.planeColorCurrent = value;
+	}
+	public Color TargetPlaneColor
+	{
+		get => this.planeColorTarget;
+		set => this.planeColorTarget = value;
+	}
+	public Vector2 CurrentPlaneOffset
+	{
+		get => this.planeOffsetCurrent;
+		set => this.planeOffsetCurrent = value;
+	}
+	public Vector2 TargetPlaneOffset
+	{
+		get => this.planeOffsetTarget;
+		set => this.planeOffsetTarget = value;
+	}
 
 	public float TargetPlaneRotation{
 		get => this.planeRotationTarget;
@@ -469,6 +496,16 @@ public class ExpanDialStickView : MonoBehaviour
 		get => this.projectorTextureTarget;
 		set => this.projectorTextureTarget = value;
 	}
+	public Vector2 CurrentProjectorOffset
+	{
+		get => this.projectorOffsetCurrent;
+		set => this.projectorOffsetCurrent = value;
+	}
+	public Vector2 TargetProjectorOffset
+	{
+		get => this.projectorOffsetTarget;
+		set => this.projectorOffsetTarget = value;
+	}
 	public float CurrentProjectorRotation{
 		get => this.projectorRotationCurrent;
 		set => this.projectorRotationCurrent = value;
@@ -530,38 +567,43 @@ public class ExpanDialStickView : MonoBehaviour
 		
 		CurrentShapeChangeDuration = shapeChangeDuration;
 	}
-	public void setProjectorChangeTarget(Color color, string textureName, float textureRotation, float textureSize, float projectorChangeDuration )
+	public void setProjectorChangeTarget(Color color, string textureName, Vector2 textureOffset, float textureRotation, float textureSize, float projectorChangeDuration)
 	{
 		TargetProjectorColor = color;
 		TargetProjectorTexture = textureName;
+		TargetProjectorOffset = textureOffset;
 		TargetProjectorRotation = textureRotation;
 		TargetProjectorSize = textureSize;
 		TargetProjectorChangeDuration = projectorChangeDuration;
 	}
-	public void setProjectorChangeCurrent(Color color, string textureName, float textureRotation, float textureSize, float projectorChangeDuration )
+	public void setProjectorChangeCurrent(Color color, string textureName, Vector2 textureOffset, float textureRotation, float textureSize, float projectorChangeDuration)
 	{
 		CurrentProjectorColor = color;
 		CurrentProjectorTexture = textureName;
+		CurrentProjectorOffset = textureOffset;
 		CurrentProjectorRotation = textureRotation;
 		CurrentProjectorSize = textureSize;
 		CurrentProjectorChangeDuration = projectorChangeDuration;
 	}
-	public void setTextureChangeTarget(Color color, string textureName, float textureRotation, float textureChangeDuration )
+	public void setTextureChangeTarget(Color color, string textureName, Color textureColor, Vector2 textureOffset, float textureRotation, float textureChangeDuration)
 	{
 		TargetColor = color;
 		TargetPlaneTexture = textureName;
+		TargetPlaneColor = textureColor;
+		TargetPlaneOffset = textureOffset;
 		TargetPlaneRotation = textureRotation;
 		TargetTextureChangeDuration = textureChangeDuration;
 	}
 
-	public void setTextureChangeCurrent(Color color, string textureName, float textureRotation, float textureChangeDuration )
+	public void setTextureChangeCurrent(Color color, string textureName, Color textureColor, Vector2 textureOffset, float textureRotation, float textureChangeDuration)
 	{
 		CurrentColor = color;
 		CurrentPlaneTexture = textureName;
+		CurrentPlaneColor = textureColor;
+		CurrentPlaneOffset = textureOffset;
 		CurrentPlaneRotation = textureRotation;
 		CurrentTextureChangeDuration = textureChangeDuration;
 	}
-
 
 	public void setTextChangeTarget(Color color, TextAlignmentOptions textAlignment, float textSize, float textRotation, Color textColor, string text, float textureChangeDuration )
 	{
@@ -630,7 +672,8 @@ public class ExpanDialStickView : MonoBehaviour
 		meshRenderer.material = transparentMaterial;
 		this.name = "ExpanDialStick (" + i + ", " + j + ")";
 
-		projector = this.transform.GetChild(0).gameObject.GetComponent<Projector>();
+		projectorGameObject = this.transform.GetChild(0).gameObject;
+		projector = projectorGameObject.GetComponent<Projector>();
 		projector.material  = new Material(projectorMaterial);
 
 		textGameObject = new GameObject( "Text (" + i + ", " + j + ")");
@@ -646,11 +689,11 @@ public class ExpanDialStickView : MonoBehaviour
 		textRectTransform.Rotate(90f, 0f, 0f, Space.Self);
 
 		// Image Plane
-		planeGameObject  = GameObject.CreatePrimitive(PrimitiveType.Plane);
+		planeGameObject  = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
 		Destroy(planeGameObject.GetComponent<MeshCollider>());
 		planeGameObject.transform.parent = this.transform;
 		planeGameObject.transform.position += new Vector3(0f, 1.01f, 0f);
-		planeGameObject.transform.localScale  = new Vector3(0.06f, 0.06f, 0.06f);
+		planeGameObject.transform.localScale  = new Vector3(1f, 0.01f, 1f);
 		planeMeshRenderer  = planeGameObject.GetComponent<MeshRenderer> ();
 		planeMeshRenderer.material = planeMaterial;
 		planeMeshRenderer.material.mainTexture = Resources.Load<Texture2D>("default");
@@ -748,13 +791,15 @@ public class ExpanDialStickView : MonoBehaviour
 					projector.orthographicSize = this.projectorSizeCurrent;
 				break;
 			}
-
-			projector.transform.eulerAngles = new Vector3(90f, this.projectorRotationCurrent, 0f);
 			if (this.projectorTextureCurrent != this.projectorTextureTarget)
 			{
 				projector.material.mainTexture = Resources.Load<Texture2D>(this.projectorTextureTarget);
 				this.projectorTextureCurrent = this.projectorTextureTarget;
 			}
+			projector.material.SetTextureOffset("_MainTex", this.planeOffsetCurrent);
+
+			projector.transform.rotation = Quaternion.LookRotation(-transform.up, transform.forward);
+			projector.transform.Rotate(Vector3.forward, this.projectorRotationCurrent);
 		}
 
 		if (feedbackMode == FeedbackMode.Debug)
@@ -779,10 +824,11 @@ public class ExpanDialStickView : MonoBehaviour
 			planeMeshRenderer.material.mainTexture = Resources.Load<Texture2D>(this.planeTextureTarget);
 			this.planeTextureCurrent = this.planeTextureTarget;
 		}
+		planeMeshRenderer.material.color = this.planeColorCurrent;
+		planeMeshRenderer.material.SetTextureOffset("_MainTex", this.planeOffsetCurrent);
 
-		planeGameObject.transform.eulerAngles = new Vector3(0f, this.planeRotationCurrent, 0f);
-		
-		//textRectTransform.LookAt(Vector3.zero, Vector3.up);
+		planeGameObject.transform.rotation = Quaternion.LookRotation(transform.forward, transform.up);
+		planeGameObject.transform.Rotate(Vector3.up, this.planeRotationCurrent);
 
 	}
 
@@ -815,6 +861,8 @@ public class ExpanDialStickView : MonoBehaviour
 		
 		if (this.textureChangeDurationTarget > 0f)
 		{
+			this.planeOffsetCurrent += (this.planeOffsetTarget - this.planeOffsetCurrent) / this.textureChangeDurationTarget * Time.deltaTime;
+			this.planeColorCurrent = this.planeColorTarget;
 			this.planeRotationCurrent = this.planeRotationTarget;
 			this.colorCurrent += (this.colorTarget - this.colorCurrent) / this.textureChangeDurationTarget * Time.deltaTime;
 			this.textColorCurrent += (this.textColorTarget - this.textColorCurrent) / this.textureChangeDurationTarget * Time.deltaTime;

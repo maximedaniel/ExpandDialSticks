@@ -5,7 +5,7 @@
 	}
 
 		SubShader{
-			Tags{ "RenderType" = "Transparent" "Queue" = "Transparent"}
+			Tags{ "RenderType" = "Transparent" "Queue" = "Transparent" "IgnoreProjector" = "true" }
 
 			Blend SrcAlpha OneMinusSrcAlpha
 			ZWrite on

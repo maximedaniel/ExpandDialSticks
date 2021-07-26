@@ -820,6 +820,8 @@ public class ExpanDialSticks : MonoBehaviour
 				modelMatrix[i, j].setTextureChangeCurrent(
 					modelMatrix[i, j].TargetColor,
 					modelMatrix[i, j].TargetPlaneTexture,
+					modelMatrix[i, j].TargetPlaneColor,
+					modelMatrix[i, j].TargetPlaneOffset,
 					modelMatrix[i, j].TargetPlaneRotation,
 					modelMatrix[i, j].TargetTextureChangeDuration
 				);
@@ -828,6 +830,7 @@ public class ExpanDialSticks : MonoBehaviour
 				modelMatrix[i, j].setProjectorChangeCurrent(
 					modelMatrix[i, j].TargetProjectorColor,
 					modelMatrix[i, j].TargetProjectorTexture,
+					modelMatrix[i, j].TargetProjectorOffset,
 					modelMatrix[i, j].TargetProjectorRotation,
 					modelMatrix[i, j].TargetProjectorSize,
 					modelMatrix[i, j].TargetProjectorChangeDuration
@@ -855,7 +858,10 @@ public class ExpanDialSticks : MonoBehaviour
 				int currSeparationLevel = collisionMatrix[i, j].SeparationLevel();
 				viewMatrix[i, j].CurrentProximity = modelMatrix[i, j].CurrentProximity = nextProximity;
 				viewMatrix[i, j].CurrentSeparationLevel = modelMatrix[i, j].CurrentSeparationLevel = currSeparationLevel;
-				modelMatrix[i, j].CurrentReaching = (modelMatrix[i, j].CurrentPosition != viewMatrix[i, j].CurrentPosition);
+				viewMatrix[i, j].CurrentReaching = modelMatrix[i, j].CurrentReaching = modelMatrix[i, j].CurrentPosition != viewMatrix[i, j].CurrentPosition;
+
+				if(viewMatrix[i, j].CurrentReaching)
+				Debug.Log(modelMatrix[i, j].CurrentPosition + " " + viewMatrix[i, j].CurrentPosition);
 
 				/*if (prevProximity != nextProximity)
 				{
@@ -867,6 +873,7 @@ public class ExpanDialSticks : MonoBehaviour
 					{
 						if (modelMatrix[i, j].CurrentPaused == 0)
 						{
+							//Debug.Log("MOVING PIN > PAUSE IT");
 							//Debug.Log("modelMatrix[i, j].CurrentPosition: " + modelMatrix[i, j].CurrentPosition);
 							//Debug.Log("viewMatrix[i, j].CurrentPosition: " + viewMatrix[i, j].CurrentPosition);
 							//Debug.Log("modelMatrix[" + i + "," + j + "] pause at pos:  " + viewMatrix[i, j].CurrentPosition);
@@ -893,6 +900,8 @@ public class ExpanDialSticks : MonoBehaviour
 					{
 						if (modelMatrix[i, j].CurrentPaused != 0)
 						{
+
+							//Debug.Log("NOT MOVING PIN > UNPAUSE IT");
 							//Debug.Log("modelMatrix[i, j].CurrentPosition: " + modelMatrix[i, j].CurrentPosition);
 							//Debug.Log("modelMatrix[i, j].TargetPosition: " + modelMatrix[i, j].TargetPosition);
 							//Debug.Log("viewMatrix[i, j].CurrentPosition: " + viewMatrix[i, j].CurrentPosition);
@@ -920,6 +929,7 @@ public class ExpanDialSticks : MonoBehaviour
 					{
 						if (prevProximity != nextProximity)
 						{
+							//Debug.Log("MOVING PIN > CHANGE ITS SPEED");
 							//Debug.Log("modelMatrix[i, j].CurrentPosition: " + modelMatrix[i, j].CurrentPosition);
 							//Debug.Log("viewMatrix[i, j].CurrentPosition: " + viewMatrix[i, j].CurrentPosition);
 							//Debug.Log("modelMatrix[" + i + "," + j + "] change speed towards pos: " + modelMatrix[i, j].TargetPosition);
@@ -1055,12 +1065,15 @@ public class ExpanDialSticks : MonoBehaviour
 					viewMatrix[i, j].setTextureChangeTarget(
 						modelMatrix[i, j].CurrentColor,
 						modelMatrix[i, j].CurrentPlaneTexture,
+						modelMatrix[i, j].CurrentPlaneColor,
+						modelMatrix[i, j].CurrentPlaneOffset,
 						modelMatrix[i, j].CurrentPlaneRotation,
 						modelMatrix[i, j].CurrentTextureChangeDuration
 					);
 					viewMatrix[i, j].setProjectorChangeTarget(
 						modelMatrix[i, j].CurrentProjectorColor,
 						modelMatrix[i, j].CurrentProjectorTexture,
+						modelMatrix[i, j].CurrentProjectorOffset,
 						modelMatrix[i, j].CurrentProjectorRotation,
 						modelMatrix[i, j].CurrentProjectorSize,
 						modelMatrix[i, j].CurrentProjectorChangeDuration

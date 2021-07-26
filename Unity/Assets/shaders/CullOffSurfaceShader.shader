@@ -9,7 +9,7 @@
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
+        Tags { "RenderType"="Opaque" "IgnoreProjector" = "True" }
         LOD 200
         Cull Off
 

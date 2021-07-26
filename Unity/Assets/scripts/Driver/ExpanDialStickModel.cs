@@ -94,6 +94,10 @@ public class ExpanDialStickModel
 
 	private string planeTextureCurrent = "";
 	private string planeTextureTarget = "";
+	private Color planeColorCurrent = Color.black;
+	private Color planeColorTarget = Color.black;
+	private Vector2 planeOffsetCurrent = Vector2.zero;
+	private Vector2 planeOffsetTarget = Vector2.zero;
 	private float planeRotationTarget= 0f;
 	private float planeRotationCurrent= 0f;
 
@@ -102,6 +106,8 @@ public class ExpanDialStickModel
 	private Color projectorColorTarget = Color.black;
 	private string projectorTextureCurrent = "";
 	private string projectorTextureTarget = "";
+	private Vector2 projectorOffsetCurrent = Vector2.zero;
+	private Vector2 projectorOffsetTarget = Vector2.zero;
 	private float projectorRotationCurrent = 0f;
 	private float projectorRotationTarget = 0f;
 	private float projectorSizeCurrent = 0f;
@@ -308,6 +314,27 @@ public class ExpanDialStickModel
 		get => this.planeTextureCurrent;
 		set => this.planeTextureCurrent = value;
 	}
+	public Color CurrentPlaneColor
+	{
+		get => this.planeColorCurrent;
+		set => this.planeColorCurrent = value;
+	}
+	public Color TargetPlaneColor
+	{
+		get => this.planeColorTarget;
+		set => this.planeColorTarget = value;
+	}
+	public Vector2 CurrentPlaneOffset
+	{
+		get => this.planeOffsetCurrent;
+		set => this.planeOffsetCurrent = value;
+	}
+	public Vector2 TargetPlaneOffset
+	{
+		get => this.planeOffsetTarget;
+		set => this.planeOffsetTarget = value;
+	}
+
 
 	public float TargetPlaneRotation{
 		get => this.planeRotationTarget;
@@ -357,19 +384,22 @@ public class ExpanDialStickModel
 		}
 	}
 
-	public Color TargetTextColor{
+	public Color TargetTextColor
+	{
 		get => this.textColorTarget;
 		set => this.textColorTarget = value;
 	}
-	
-	public Color CurrentTextColor{
+
+	public Color CurrentTextColor
+	{
 		get => this.textColorCurrent;
-		set {
+		set
+		{
 			this.textColorDiff += value - this.textColorCurrent;
 			this.textColorCurrent = value;
 		}
 	}
-	
+
 
 	public string TargetText{
 		get => this.textTarget;
@@ -421,6 +451,16 @@ public class ExpanDialStickModel
 	public string TargetProjectorTexture{
 		get => this.projectorTextureTarget;
 		set => this.projectorTextureTarget = value;
+	}
+	public Vector2 CurrentProjectorOffset
+	{
+		get => this.projectorOffsetCurrent;
+		set => this.projectorOffsetCurrent = value;
+	}
+	public Vector2 TargetProjectorOffset
+	{
+		get => this.projectorOffsetTarget;
+		set => this.projectorOffsetTarget = value;
 	}
 	public float CurrentProjectorRotation{
 		get => this.projectorRotationCurrent;
@@ -489,34 +529,40 @@ public class ExpanDialStickModel
 			this.init = !this.init;
 		}
 	}
-	public void setProjectorChangeTarget(Color color, string textureName, float textureRotation, float textureSize, float projectorChangeDuration )
+	public void setProjectorChangeTarget(Color color, string textureName, Vector2 textureOffset, float textureRotation, float textureSize, float projectorChangeDuration )
 	{
 		TargetProjectorColor = color;
 		TargetProjectorTexture = textureName;
+		TargetProjectorOffset = textureOffset;
 		TargetProjectorRotation = textureRotation;
 		TargetProjectorSize = textureSize;
 		TargetProjectorChangeDuration = projectorChangeDuration;
 	}
-	public void setProjectorChangeCurrent(Color color, string textureName, float textureRotation, float textureSize, float projectorChangeDuration )
+	public void setProjectorChangeCurrent(Color color, string textureName, Vector2 textureOffset, float textureRotation, float textureSize, float projectorChangeDuration )
 	{
 		CurrentProjectorColor = color;
 		CurrentProjectorTexture = textureName;
+		CurrentProjectorOffset = textureOffset;
 		CurrentProjectorRotation = textureRotation;
 		CurrentProjectorSize = textureSize;
 		CurrentProjectorChangeDuration = projectorChangeDuration;
 	}
-	public void setTextureChangeTarget(Color color, string textureName, float textureRotation, float textureChangeDuration )
+	public void setTextureChangeTarget(Color color, string textureName, Color textureColor, Vector2 textureOffset, float textureRotation, float textureChangeDuration )
 	{
 		TargetColor = color;
 		TargetPlaneTexture = textureName;
+		TargetPlaneColor = textureColor;
+		TargetPlaneOffset = textureOffset;
 		TargetPlaneRotation = textureRotation;
 		TargetTextureChangeDuration = textureChangeDuration;
 	}
 
-	public void setTextureChangeCurrent(Color color, string textureName, float textureRotation,  float textureChangeDuration )
+	public void setTextureChangeCurrent(Color color, string textureName, Color textureColor, Vector2 textureOffset, float textureRotation,  float textureChangeDuration )
 	{
 		CurrentColor = color;
 		CurrentPlaneTexture = textureName;
+		CurrentPlaneColor = textureColor;
+		CurrentPlaneOffset = textureOffset;
 		CurrentPlaneRotation = textureRotation;
 		CurrentTextureChangeDuration = textureChangeDuration;
 	}
