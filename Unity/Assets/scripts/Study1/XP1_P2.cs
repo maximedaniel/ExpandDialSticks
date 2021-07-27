@@ -76,7 +76,8 @@ public class XP1_P2 : MonoBehaviour
 
 	private MqttClient client;
 
-	private float currentRotation = 90f;
+	private float aiguilleRotation = 90f;
+	private float cadranRotation = 90f;
 	private float targetRotation = 90f;
 	private float speedRotation = 1f;
 
@@ -90,7 +91,7 @@ public class XP1_P2 : MonoBehaviour
 	private const float anglePerStep = 360f / 24f;
 	private float startRotation = 90f - anglePerStep;
 	private float endRotation = 270f;
-	public enum DirectionRotation { CW, CCW, IDDLE };
+	public enum DirectionRotation { CW, CCW, IDDLE };	
 	private DirectionRotation directionRotation = DirectionRotation.CW;
 
 	IEnumerator NextGauge()
@@ -99,13 +100,25 @@ public class XP1_P2 : MonoBehaviour
 		AllBlack(0.5f);
 		yield return new WaitForSeconds(0.5f);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_DESCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		Debug.Log("AllDown...");
 		AllDown(shapeChangeDuration);
 		yield return new WaitForSeconds(1f);
 		// wait until all pins are down
+		//float waitingSince = 0f;
 		while (!IsAllDown())
 		{
-			yield return new WaitForSeconds(0.1f);
+			/*if (waitingSince >= 2f)
+			{
+				waitingSince = 0f;
+				AllDown(shapeChangeDuration);
+			}
+			else
+			{
+				waitingSince += 0.1f;*/
+				yield return new WaitForSeconds(0.1f);
+			//}
 		}
+		Debug.Log("AllIsDown!");
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_TO_APPEAR"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		gaugeState = GAUGE_TO_APPEAR;
 	}
@@ -114,16 +127,30 @@ public class XP1_P2 : MonoBehaviour
 	{
 
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_APPEARING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		Debug.Log("GaugeUp...");
 		GaugeUp(shapeChangeDuration);
 		yield return new WaitForSeconds(1f);
 		// wait until all pins are down
+		//float waitingSince = 0f;
 		while (!IsGaugeUp())
 		{
-			yield return new WaitForSeconds(0.1f);
+
+			/*if (waitingSince >= 2f)
+			{
+				waitingSince = 0f;
+				GaugeUp(shapeChangeDuration);
+			}
+			else
+			{
+				waitingSince += 0.1f;*/
+				yield return new WaitForSeconds(0.1f);
+			//}
 		}
+		Debug.Log("GaugeIsUp!");
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_DISPLAYING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		currentRotation = startRotation;
+		cadranRotation = aiguilleRotation = startRotation;
 		GaugeInit(0.5f);
+		Debug.Log("GaugeInit!");
 		yield return new WaitForSeconds(0.5f);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_APPEARED"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		startGameTime = Time.time;
@@ -207,6 +234,7 @@ public class XP1_P2 : MonoBehaviour
 		{
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
+
 				if (expanDialSticks.viewMatrix[i, j].CurrentPosition > 0 || expanDialSticks.viewMatrix[i, j].CurrentReaching) return false;
 			}
 		}
@@ -259,10 +287,10 @@ public class XP1_P2 : MonoBehaviour
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
 				expanDialSticks.modelMatrix[i, j].TargetPlaneTexture = "default";
-				expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = currentRotation;
+				expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = aiguilleRotation;
 
 				expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "projector";
-				expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 270f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = cadranRotation;
 				expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 0f;
 				expanDialSticks.modelMatrix[i, j].TargetProjectorColor = Color.white;
 				expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = duration;
@@ -322,18 +350,26 @@ public class XP1_P2 : MonoBehaviour
 	bool IsGaugeUp()
 	{
 		Vector2 gaugePosition = gaugePositions[gaugeIndex];
-		return !expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentReaching && expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].TargetPosition == 20;
+		Debug.Log("IsGaugeUp -> gauge Index: " + gaugePosition + " position: " + expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentPosition);
+		//Debug.Log("IsGaugeUp -> Gauge CurrentReaching: " + expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentReaching);
+		//Debug.Log("IsGaugeUp -> Gauge CurrentPosition: " + expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentPosition);
+		return !expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentReaching && expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentPosition == 20;
 	}
 
 	void GaugeUp(float duration)
 	{
 		Vector2 gaugePosition = gaugePositions[gaugeIndex];
+		int count = 0;
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
 		{
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
+
 				if (i == (int)gaugePosition.x && j == (int)gaugePosition.y)
+				{
+					Debug.Log("GaugeUp -> gauge Index: " + gaugePosition + " (" + (count++) + ")");
 					expanDialSticks.modelMatrix[i, j].TargetPosition = 20;
+				}
 				else
 					expanDialSticks.modelMatrix[i, j].TargetPosition = 0;
 				expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = duration;
@@ -351,22 +387,26 @@ public class XP1_P2 : MonoBehaviour
 				expanDialSticks.modelMatrix[i, j].TargetColor = Color.white; //Color.green;
 				if (i == (int)gaugePosition.x && j == (int)gaugePosition.y)
 				{
-					expanDialSticks.modelMatrix[i, j].TargetPlaneTexture = "aiguille";
-					expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = currentRotation;
+					expanDialSticks.modelMatrix[i, j].TargetPlaneTexture = "cadran";
+					expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = cadranRotation;
+					expanDialSticks.modelMatrix[i, j].TargetPlaneSize = 0.6f;
+					expanDialSticks.modelMatrix[i, j].TargetPlaneColor = Color.red;
 
-					expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "cadran";
-					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 270f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "aiguille";
+					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = aiguilleRotation; 
 					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorColor = Color.red;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorColor = Color.black;
 				}
 
 				else
 				{
 					expanDialSticks.modelMatrix[i, j].TargetPlaneTexture = "default";
-					expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = currentRotation;
+					expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = cadranRotation;
+					expanDialSticks.modelMatrix[i, j].TargetPlaneSize = 1f;
+					expanDialSticks.modelMatrix[i, j].TargetPlaneColor = Color.white;
 
 					expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "projector";
-					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 270f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = aiguilleRotation;
 					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 0f;
 					expanDialSticks.modelMatrix[i, j].TargetProjectorColor = Color.white;
 				}
@@ -473,16 +513,17 @@ public class XP1_P2 : MonoBehaviour
 		if (e.i == (int)gaugePosition.x && e.j == (int)gaugePosition.y)
 		{
 
-			float prevRotation = currentRotation;
-			currentRotation -= e.diff * anglePerStep;
+			float prevRotation = aiguilleRotation;
+			aiguilleRotation += e.diff * anglePerStep;
 			string msg = "";
 			if (gaugeState == GAUGE_APPEARING)
 			{
-				msg += "USER_START_GAUGE" + prevRotation + " " + currentRotation;
+				msg += "USER_START_GAUGE" + prevRotation + " " + aiguilleRotation;
+				Debug.Log("UserStartGauge!");
 				gaugeState = GAUGE_APPEARED;
 			} else
 			{
-				msg += "USER_ROTATE_GAUGE " + prevRotation + " " + currentRotation;
+				msg += "USER_ROTATE_GAUGE " + prevRotation + " " + aiguilleRotation;
 			}
 			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		}
@@ -553,13 +594,16 @@ public class XP1_P2 : MonoBehaviour
 		fileLogger.Log(pinOrientationString);*/
 		//fileLogger.Log(pinRotationString);
 	}
-	void MoveAiguille()
+	void MoveAiguilleCadran()
 	{
 		Vector2 gaugePosition = gaugePositions[gaugeIndex];
 		int i = (int)gaugePosition.x;
 		int j = (int)gaugePosition.y;
-		expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = currentRotation;
+		//Debug.Log("aiguilleRotation: " + aiguilleRotation + " cadranRotation: " + cadranRotation);
+		expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = cadranRotation;
 		expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = 0.1f;
+		expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = aiguilleRotation;
+		expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
 		expanDialSticks.triggerTextureChange();
 	}
 	void Update()
@@ -592,33 +636,33 @@ public class XP1_P2 : MonoBehaviour
 			if (gaugeState == GAUGE_APPEARED || gaugeState == LANDSCAPE_IS_CHANGING)
 			{
 
-				if (gaugeState == GAUGE_APPEARED && Time.time - startGameTime >= motionDuration)
+				/*if (gaugeState == GAUGE_APPEARED && Time.time - startGameTime >= motionDuration)
 				{
 					gaugeState = LANDSCAPE_IS_CHANGING;
 					StartCoroutine(Earthquake());
 					motionDuration = Mathf.Infinity;
-				}
+				}*/
 				if (gaugeState == GAUGE_APPEARED && Time.time - startGameTime >= gameDuration)
 				{
-					StartCoroutine(NextGauge());
 					gaugeState = GAUGE_APPEARING;
+					StartCoroutine(NextGauge());
 				}
 				else
 				{
 					// Gauge Game
-					float prevRotation  = currentRotation;
+					float prevRotation  = cadranRotation;
 					switch (directionRotation)
 					{
 						case DirectionRotation.CW:
-							currentRotation += speedRotation * Time.deltaTime;
+							cadranRotation += speedRotation * Time.deltaTime;
 							break;
 						case DirectionRotation.CCW:
-							currentRotation -= speedRotation * Time.deltaTime;
+							cadranRotation -= speedRotation * Time.deltaTime;
 							break;
 						default:
 							break;
 					}
-					string msg = "SYSTEM_ROTATE_GAUGE " + prevRotation + " " + currentRotation;
+					string msg = "SYSTEM_ROTATE_GAUGE " + prevRotation + " " + cadranRotation;
 					expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 
 					if (Time.time - directionTime >= directionDuration)
@@ -629,7 +673,7 @@ public class XP1_P2 : MonoBehaviour
 						directionDuration = UnityEngine.Random.Range(3f, 9f);
 						directionTime = Time.time;
 					}
-					MoveAiguille();
+					MoveAiguilleCadran();
 				}
 			}
 

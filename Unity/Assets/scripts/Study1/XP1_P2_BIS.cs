@@ -325,7 +325,7 @@ public class XP1_P2_BIS : MonoBehaviour
 	{
 		Vector2 gaugePosition = gaugePositions[gaugeIndex];
 		Debug.Log("model: " + expanDialSticks.modelMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentReaching + " view: " + expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentReaching);
-		return !expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentReaching && expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].TargetPosition == 20;
+		return !expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentReaching && expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].TargetPosition == 40;
 	}
 
 	void GaugeUp(float duration)
@@ -336,7 +336,7 @@ public class XP1_P2_BIS : MonoBehaviour
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
 				if (i == (int)gaugePosition.x && j == (int)gaugePosition.y)
-					expanDialSticks.modelMatrix[i, j].TargetPosition = 20;
+					expanDialSticks.modelMatrix[i, j].TargetPosition = 40;
 				else
 					expanDialSticks.modelMatrix[i, j].TargetPosition = 0;
 				expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = duration;
@@ -461,11 +461,23 @@ public class XP1_P2_BIS : MonoBehaviour
 	private void HandleXAxisChanged(object sender, ExpanDialStickEventArgs e)
 	{
 
+		Vector2 gaugePosition = gaugePositions[gaugeIndex];
+		if (e.i == (int)gaugePosition.x && e.j == (int)gaugePosition.y)
+		{
+			triggerChangeXYAxis((sbyte)e.diff, 0);
+		}
+
 	}
 
 	private void HandleYAxisChanged(object sender, ExpanDialStickEventArgs e)
 	{
 
+
+		Vector2 gaugePosition = gaugePositions[gaugeIndex];
+		if (e.i == (int)gaugePosition.x && e.j == (int)gaugePosition.y)
+		{
+			triggerChangeXYAxis(0, (sbyte)e.diff);
+		}
 	}
 
 	private void HandleClickChanged(object sender, ExpanDialStickEventArgs e)

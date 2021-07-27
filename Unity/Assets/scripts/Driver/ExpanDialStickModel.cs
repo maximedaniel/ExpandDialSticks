@@ -98,6 +98,8 @@ public class ExpanDialStickModel
 	private Color planeColorTarget = Color.black;
 	private Vector2 planeOffsetCurrent = Vector2.zero;
 	private Vector2 planeOffsetTarget = Vector2.zero;
+	private float planeSizeCurrent = 1f;
+	private float planeSizeTarget = 1f;
 	private float planeRotationTarget= 0f;
 	private float planeRotationCurrent= 0f;
 
@@ -335,7 +337,16 @@ public class ExpanDialStickModel
 		set => this.planeOffsetTarget = value;
 	}
 
-
+	public float CurrentPlaneSize
+	{
+		get => this.planeSizeCurrent;
+		set => this.planeSizeCurrent = value;
+	}
+	public float TargetPlaneSize
+	{
+		get => this.planeSizeTarget;
+		set => this.planeSizeTarget = value;
+	}
 	public float TargetPlaneRotation{
 		get => this.planeRotationTarget;
 		set => this.planeRotationTarget = value;
@@ -547,22 +558,24 @@ public class ExpanDialStickModel
 		CurrentProjectorSize = textureSize;
 		CurrentProjectorChangeDuration = projectorChangeDuration;
 	}
-	public void setTextureChangeTarget(Color color, string textureName, Color textureColor, Vector2 textureOffset, float textureRotation, float textureChangeDuration )
+	public void setTextureChangeTarget(Color color, string textureName, Color textureColor, float textureSize, Vector2 textureOffset, float textureRotation, float textureChangeDuration )
 	{
 		TargetColor = color;
 		TargetPlaneTexture = textureName;
 		TargetPlaneColor = textureColor;
 		TargetPlaneOffset = textureOffset;
+		TargetPlaneSize = textureSize;
 		TargetPlaneRotation = textureRotation;
 		TargetTextureChangeDuration = textureChangeDuration;
 	}
 
-	public void setTextureChangeCurrent(Color color, string textureName, Color textureColor, Vector2 textureOffset, float textureRotation,  float textureChangeDuration )
+	public void setTextureChangeCurrent(Color color, string textureName, Color textureColor, float textureSize, Vector2 textureOffset, float textureRotation,  float textureChangeDuration )
 	{
 		CurrentColor = color;
 		CurrentPlaneTexture = textureName;
 		CurrentPlaneColor = textureColor;
 		CurrentPlaneOffset = textureOffset;
+		CurrentPlaneSize = textureSize;
 		CurrentPlaneRotation = textureRotation;
 		CurrentTextureChangeDuration = textureChangeDuration;
 	}

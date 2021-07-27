@@ -821,6 +821,7 @@ public class ExpanDialSticks : MonoBehaviour
 					modelMatrix[i, j].TargetColor,
 					modelMatrix[i, j].TargetPlaneTexture,
 					modelMatrix[i, j].TargetPlaneColor,
+					modelMatrix[i, j].TargetPlaneSize,
 					modelMatrix[i, j].TargetPlaneOffset,
 					modelMatrix[i, j].TargetPlaneRotation,
 					modelMatrix[i, j].TargetTextureChangeDuration
@@ -860,8 +861,8 @@ public class ExpanDialSticks : MonoBehaviour
 				viewMatrix[i, j].CurrentSeparationLevel = modelMatrix[i, j].CurrentSeparationLevel = currSeparationLevel;
 				viewMatrix[i, j].CurrentReaching = modelMatrix[i, j].CurrentReaching = modelMatrix[i, j].CurrentPosition != viewMatrix[i, j].CurrentPosition;
 
-				if(viewMatrix[i, j].CurrentReaching)
-				Debug.Log(modelMatrix[i, j].CurrentPosition + " " + viewMatrix[i, j].CurrentPosition);
+				/*if(viewMatrix[i, j].CurrentReaching)
+				Debug.Log(modelMatrix[i, j].CurrentPosition + " " + viewMatrix[i, j].CurrentPosition);*/
 
 				/*if (prevProximity != nextProximity)
 				{
@@ -1066,6 +1067,7 @@ public class ExpanDialSticks : MonoBehaviour
 						modelMatrix[i, j].CurrentColor,
 						modelMatrix[i, j].CurrentPlaneTexture,
 						modelMatrix[i, j].CurrentPlaneColor,
+						modelMatrix[i, j].CurrentPlaneSize,
 						modelMatrix[i, j].CurrentPlaneOffset,
 						modelMatrix[i, j].CurrentPlaneRotation,
 						modelMatrix[i, j].CurrentTextureChangeDuration
