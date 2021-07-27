@@ -153,8 +153,6 @@ public class XP1_P2 : MonoBehaviour
 		Debug.Log("GaugeInit!");
 		yield return new WaitForSeconds(0.5f);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_APPEARED"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		startGameTime = Time.time;
-		motionDuration = Random.Range(5f, gameDuration - 5f);
 		//gaugeState = GAUGE_APPEARED;
 	}
 
@@ -520,6 +518,8 @@ public class XP1_P2 : MonoBehaviour
 			{
 				msg += "USER_START_GAUGE" + prevRotation + " " + aiguilleRotation;
 				Debug.Log("UserStartGauge!");
+				startGameTime = Time.time;
+				motionDuration = Random.Range(5f, gameDuration - 5f);
 				gaugeState = GAUGE_APPEARED;
 			} else
 			{
