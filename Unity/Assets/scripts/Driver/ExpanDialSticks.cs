@@ -200,6 +200,7 @@ public class ExpanDialSticks : MonoBehaviour
 
 	private bool shapeChanging = false;
 	private bool textureChanging = false;
+	private bool safetyChanging = false;
 
 	// Shape Change
 	/*int[] positions = new int[nbRows * nbColumns];
@@ -253,7 +254,7 @@ public class ExpanDialSticks : MonoBehaviour
 	}
 	// Use this for initialization
 	void Start () {
-		shapeChanging = textureChanging = false;
+		shapeChanging = textureChanging = safetyChanging = false;
 		/*for(int i = 0; i < nbRows * nbColumns; i++) {
 			this.positions[i] = 0;
 			this.holdings[i] = 0;
@@ -423,6 +424,7 @@ public class ExpanDialSticks : MonoBehaviour
 
 		//client_MqttConnect();
 	}
+
 	void Quit()
 	{
 		#if UNITY_EDITOR
@@ -553,7 +555,7 @@ public class ExpanDialSticks : MonoBehaviour
 									{
 										if (modelMatrix[i, j].CurrentPaused == 0) // PIN IS NOT ALREADY BEING PAUSED
 										{
-											//Debug.Log("modelMatrix[" + i + "," + j + "] pause!");
+											//Debug.Log("modelMatrix[" + i + "," + j + "] pause towards " + modelMatrix[i, j].TargetPosition + "!");
 											modelMatrix[i, j].CurrentPaused = modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition;
 											positions[i * nbColumns + j] = modelMatrix[i, j].CurrentPosition;
 											holdings[i * nbColumns + j] = 0;
@@ -569,6 +571,7 @@ public class ExpanDialSticks : MonoBehaviour
 									{
 										if (modelMatrix[i, j].CurrentPaused != 0)
 										{
+											//Debug.Log("modelMatrix[" + i + "," + j + "] unpause towards " + modelMatrix[i, j].TargetPosition + "!");
 											modelMatrix[i, j].CurrentPaused = 0;
 											positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
 											holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
@@ -587,6 +590,7 @@ public class ExpanDialSticks : MonoBehaviour
 									{
 										if (nextProximity != prevProximity) // SPEED UP
 										{
+											//Debug.Log("modelMatrix[" + i + "," + j + "] change speed towards " + modelMatrix[i, j].TargetPosition  + "!");
 											positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
 											holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
 											float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
@@ -801,7 +805,23 @@ public class ExpanDialSticks : MonoBehaviour
 		}
 			publishSetRequest(positions, durations, holdings);
 	}
-	
+
+	public void triggerSafetyChange()
+	{
+		// set target texture to current
+		for (int i = 0; i < nbRows; i++)
+		{
+			for (int j = 0; j < nbColumns; j++)
+			{
+				modelMatrix[i, j].setSafetyChange(
+					modelMatrix[i, j].SafetyFeedForwardEnabled,
+					modelMatrix[i, j].SafetyFeedbackMode
+				);
+			}
+		}
+		safetyChanging = true;
+	}
+
 	public void triggerTextureChange(){
 		// set target texture to current
 		for (int i = 0; i < nbRows; i++)
@@ -1083,7 +1103,23 @@ public class ExpanDialSticks : MonoBehaviour
 				}
 			}
 			textureChanging = false;
-		}	
+		}
+
+		if (safetyChanging)
+		{
+
+			for (int i = 0; i < nbRows; i++)
+			{
+				for (int j = 0; j < nbColumns; j++)
+				{
+					viewMatrix[i, j].setSafetyChange(
+						modelMatrix[i, j].SafetyFeedForwardEnabled,
+						modelMatrix[i, j].SafetyFeedbackMode
+					);
+				}
+			}
+			safetyChanging = false;
+		}
 		/*
 		// SCAN EVENTS FROM VIEW
 		if((currEventTimeCheck += Time.deltaTime) - prevEventTimeCheck > EVENT_INTERVAL){

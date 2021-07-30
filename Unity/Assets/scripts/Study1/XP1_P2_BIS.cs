@@ -74,24 +74,17 @@ public class XP1_P2_BIS : MonoBehaviour
 	public float shapeChangeDuration = 2f;
 
 
-	private MqttClient client;
-
 	private float currentRotation = 90f;
-	private float targetRotation = 90f;
 	private float speedRotation = 1f;
-	private float currentPosX = 0f;
-	private float currentPosY = 0f;
 
 	private float directionTime = 0f;
 	private float directionDuration = 3f;
 	private float startGameTime = 0f;
 	private float gameDuration = 20f;
-	private float startMotionTime = 0f;
 	private float motionDuration = 10f;
 
 	private const float anglePerStep = 360f / 24f;
 	private float startRotation = 0f;//90f - anglePerStep;
-	private float endRotation = 270f;
 	public enum DirectionRotation { CW, CCW, IDDLE };
 	private DirectionRotation directionRotation = DirectionRotation.CW;
 

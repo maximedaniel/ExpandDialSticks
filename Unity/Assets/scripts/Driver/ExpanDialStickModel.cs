@@ -117,10 +117,25 @@ public class ExpanDialStickModel
 	private float projectorChangeDurationCurrent = 0f;
 	private float projectorChangeDurationTarget = 0f;
 
+	private ExpanDialStickView.FeedbackMode feedbackMode = ExpanDialStickView.FeedbackMode.None;
+	private bool safetyFeedForwardEnabled = false;
+
 	private bool init = false;
 
 
 	public Material transparentMaterial;
+
+	public bool SafetyFeedForwardEnabled
+	{
+		get => this.safetyFeedForwardEnabled;
+		set => this.safetyFeedForwardEnabled = value;
+	}
+
+	public ExpanDialStickView.FeedbackMode SafetyFeedbackMode
+	{
+		get => this.feedbackMode;
+		set => this.feedbackMode = value;
+	}
 
 	// Getters and Setters
 	public bool Init{
@@ -600,6 +615,11 @@ public class ExpanDialStickModel
 		CurrentTextColor = textColor;
 		CurrentText = text;
 		CurrentTextureChangeDuration = textureChangeDuration;
+	}
+	public void setSafetyChange(bool feedforwardEnabled, ExpanDialStickView.FeedbackMode feedbackMode)
+	{
+		SafetyFeedForwardEnabled = feedforwardEnabled;
+		SafetyFeedbackMode = feedbackMode;
 	}
 
 	public float[] readShapeDiffs()

@@ -27,7 +27,7 @@ public class CameraCapture : MonoBehaviour
     public const string IMAGE_FULL_PATH = "C:\\Users\\m.daniel\\Pictures\\";
     public Camera _camera;
 	private MqttClient client;
-    private bool toCapture = false;
+    //private bool toCapture = false;
     
 	public IPAddress BROKER_ADDRESS = IPAddress.Parse("127.0.0.1"); // IPAddress.Parse("192.168.0.10"); "test.mosquitto.org";
 	public int BROKER_PORT = 1883; // 8080; 
@@ -102,8 +102,9 @@ public class CameraCapture : MonoBehaviour
     {
         if (Input.GetKeyDown(screenshotKey))
         {
-            toCapture = true;
+            //this.toCapture = true;
         }
+
     }
 
     public void client_MqttConnect()

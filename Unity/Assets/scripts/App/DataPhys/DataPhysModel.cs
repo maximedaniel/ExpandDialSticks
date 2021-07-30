@@ -32,14 +32,14 @@ public class DataSet
 }
 
 [Serializable]
-public class Data
+public class DataPhys
 {
     public List<Building> buildings;
     public List<Room> rooms;
     public List<Device> devices;
     public float[,] minValues;
     public float[,] maxValues;
-    public Data(List<Building> buildings, List<Room> rooms, List<Device> devices, float[,] minValues, float [,] maxValues)
+    public DataPhys(List<Building> buildings, List<Room> rooms, List<Device> devices, float[,] minValues, float [,] maxValues)
     {
         this.buildings = buildings;
         this.rooms = rooms;
@@ -245,7 +245,7 @@ public class DataPhysModel
     private List<DateTime> days;
     private List<DateTime> hours;
 
-    private Data data;
+    private DataPhys data;
     private string dataFile = Application.persistentDataPath + "/data.dat";
     private int currentTimeScale = TIME_SCALE_MONTH;
     private int currentTimePos = 0;
@@ -295,7 +295,7 @@ public class DataPhysModel
         rooms = new List<Room>();
         devices = new List<Device>();
 
-        // Check if Data file exists
+        // Check if DataPhys file exists
        /* if (File.Exists(dataFile))
         {
             Debug.Log("Loading data to file...");
@@ -334,7 +334,7 @@ public class DataPhysModel
             /*Debug.Log("Checking coherence...");
             CheckCoherence();*/
             Debug.Log("Saving data to file...");
-            data = new Data(buildings, rooms, devices, MIN_DATA, MAX_DATA);
+            data = new DataPhys(buildings, rooms, devices, MIN_DATA, MAX_DATA);
             //SaveDataToFile();
        // }
         Debug.Log("Init scale...");
@@ -349,7 +349,7 @@ public class DataPhysModel
         BinaryFormatter bf = new BinaryFormatter();
         bf.Serialize(file, data);
         file.Close();
-        Debug.Log("Data saved to file: " + dataFile);
+        Debug.Log("DataPhys saved to file: " + dataFile);
     }
 
     public void LoadDataFromFile()
@@ -364,9 +364,9 @@ public class DataPhysModel
         }
 
         BinaryFormatter bf = new BinaryFormatter();
-        data = (Data)bf.Deserialize(file);
+        data = (DataPhys)bf.Deserialize(file);
         file.Close();
-        Debug.Log("Data loaded from file: " + dataFile);
+        Debug.Log("DataPhys loaded from file: " + dataFile);
     }
 
     private void CheckCoherence()

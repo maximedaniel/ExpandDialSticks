@@ -62,7 +62,6 @@ Shader "Custom/MyProjectorShader"
                 {
                     tex = float4(0,0,0,1);
                 }
-
                /* fixed4 texS = tex2Dproj(_MainTex, UNITY_PROJ_COORD(i.uv));
                 texS.a = 1 - texS.a;
 

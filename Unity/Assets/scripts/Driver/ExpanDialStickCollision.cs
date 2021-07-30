@@ -24,7 +24,9 @@ public class ExpanDialStickCollision: MonoBehaviour
 	private const int SEPARATION_LAYER = 10; // Safety Level 0
 	private float proximity = 0f;
 	private int separationLevel = 0;
-	private float minDistanceFromLayer = 10.0f;
+	private const float minUserBodyDistance = 3f;
+	private float maxLayerHeight = 10f;
+	private float minDistanceFromLayer = 15f;
 	//private bool collisionDetected = false;
 
 	// Getters and Setters
@@ -50,7 +52,8 @@ public class ExpanDialStickCollision: MonoBehaviour
 	{
 		get => this.height;
 		set {
-			this.minDistanceFromLayer = value;
+			this.maxLayerHeight = value;
+			//minDistanceFromLayer = maxLayerHeight + minUserBodyDistance;
 			this.height = value;
 		}
 	}
@@ -85,7 +88,7 @@ public class ExpanDialStickCollision: MonoBehaviour
 		this.GetComponent<BoxCollider>().enabled = false;
 	}
 
-	void Start() 
+	void Start()
 	{
 
 	}

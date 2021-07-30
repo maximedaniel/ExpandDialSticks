@@ -161,8 +161,8 @@ namespace Leap.Unity {
     private Material _backing_material;
 
     [SerializeField]
-    private Mesh _sphereMesh;
-    private Mesh _cylinderMesh;
+    public Mesh _sphereMesh;
+    public Mesh _cylinderMesh;
 
     [MinValue(3)]
     [SerializeField]
@@ -181,10 +181,11 @@ namespace Leap.Unity {
     private float _palmRadius = 0.015f;*/
 #pragma warning restore 0649
 
-    private Color _bodyColor = Color.black;
+    private Color _bodyColor = Color.gray; //Color.black
     public Material _quadMaterial;
+    public Material _sphereMaterial;
     private Mesh _quadMesh;
-    private Material _sphereMat;
+    //private Material _sphereMaterial;
     private Hand _hand;
     private Vector3[] _spherePositions;
     private Matrix4x4[] _sphereMatrices   = new Matrix4x4[32], 
@@ -361,17 +362,27 @@ namespace Leap.Unity {
       //Debug.Log(handedness + "InitHand()");
       if (_fillColliders== null || _fingerColliders == null ||  _handColliders == null || _forearmColliders == null) InstantiateGameObjects();
 
-      if (_material != null && (_backing_material == null || !_backing_material.enableInstancing)) {
-        _backing_material = new Material(_material);
-        _backing_material.hideFlags = HideFlags.DontSaveInEditor;
-        if(!Application.isEditor && !_backing_material.enableInstancing) {
-          Debug.LogError("Capsule Hand Material needs Instancing Enabled to render in builds!", this);
+            /*if (_material != null && (_backing_material == null || !_backing_material.enableInstancing)) {
+              _backing_material = new Material(_material);
+              _backing_material.hideFlags = HideFlags.DontSaveInEditor;
+              if(!Application.isEditor && !_backing_material.enableInstancing) {
+                Debug.LogError("Capsule Hand Material needs Instancing Enabled to render in builds!", this);
+              }
+              _backing_material.enableInstancing = true;
+              _sphereMaterial = new Material(_backing_material);
+              _sphereMaterial.hideFlags = HideFlags.DontSaveInEditor;
+            }*/
+            if (_sphereMaterial != null)
+            {
+                _sphereMaterial.enableInstancing = true;
+                _sphereMaterial.hideFlags = HideFlags.DontSaveInEditor;
+            }
+            if (_quadMaterial != null)
+            {
+                _quadMaterial.enableInstancing = true;
+                _quadMaterial.hideFlags = HideFlags.DontSaveInEditor;
+            }
         }
-        _backing_material.enableInstancing = true;
-        _sphereMat = new Material(_backing_material);
-        _sphereMat.hideFlags = HideFlags.DontSaveInEditor;
-      }
-    }
 
     #if UNITY_EDITOR
     private void OnValidate() {
@@ -392,10 +403,10 @@ namespace Leap.Unity {
       //ShowGameObjects();
       base.BeginHand();
       if (_hand.IsLeft) {
-        _sphereMat.color = _bodyColor;// _leftColorList[_leftColorIndex];
+        _sphereMaterial.color = _bodyColor;// _leftColorList[_leftColorIndex];
         _leftColorIndex = (_leftColorIndex + 1) % _leftColorList.Length;
       } else {
-        _sphereMat.color = _bodyColor;// _rightColorList[_rightColorIndex];
+        _sphereMaterial.color = _bodyColor;// _rightColorList[_rightColorIndex];
         _rightColorIndex = (_rightColorIndex + 1) % _rightColorList.Length;
       }
       setCollisionMode(true);
@@ -492,13 +503,13 @@ namespace Leap.Unity {
         _spherePositions = new Vector3[TOTAL_JOINT_COUNT];
       }
 
-      if (_material != null && (_backing_material == null || !_backing_material.enableInstancing)) {
+      /*if (_material != null && (_backing_material == null || !_backing_material.enableInstancing)) {
         _backing_material = new Material(_material);
         _backing_material.hideFlags = HideFlags.DontSaveInEditor;
         _backing_material.enableInstancing = true;
-        _sphereMat = new Material(_backing_material);
-        _sphereMat.hideFlags = HideFlags.DontSaveInEditor;
-      }
+        _sphereMaterial = new Material(_backing_material);
+        _sphereMaterial.hideFlags = HideFlags.DontSaveInEditor;
+      }*/
 
       //Update all joint spheres in the fingers
       foreach (var finger in _hand.Fingers) {
@@ -582,46 +593,46 @@ namespace Leap.Unity {
             drawSphere(armBackRight);
 
             drawCylinder(armFrontLeft, armFrontRight);
-            configureFingerColliderAt(_currFingerColliderIndex++, armFrontLeft, armFrontRight, SEPARATION_LAYER + 1);
+            configureFingerColliderAt(_currFingerColliderIndex++, armFrontLeft, armFrontRight, SEPARATION_LAYER);
             drawCylinder(armBackLeft, armBackRight);
-            configureFingerColliderAt(_currFingerColliderIndex++, armBackLeft, armBackRight, SEPARATION_LAYER + 1);
+            configureFingerColliderAt(_currFingerColliderIndex++, armBackLeft, armBackRight, SEPARATION_LAYER);
             drawCylinder(armFrontLeft, armBackLeft);
-            configureFingerColliderAt(_currFingerColliderIndex++, armFrontLeft, armBackLeft, SEPARATION_LAYER + 1);
+            configureFingerColliderAt(_currFingerColliderIndex++, armFrontLeft, armBackLeft, SEPARATION_LAYER);
             drawCylinder(armFrontRight, armBackRight);
-            configureFingerColliderAt(_currFingerColliderIndex++, armFrontRight, armBackRight, SEPARATION_LAYER + 1);
+            configureFingerColliderAt(_currFingerColliderIndex++, armFrontRight, armBackRight, SEPARATION_LAYER);
 
 			// Join arm to wirst (MD)
 			if (_hand.IsLeft)
 			{
                 drawCylinder(armFrontLeft, mockThumbJointPos);
-                configureFingerColliderAt(_currFingerColliderIndex++, armFrontLeft, mockThumbJointPos, SEPARATION_LAYER + 1);
+                configureFingerColliderAt(_currFingerColliderIndex++, armFrontLeft, mockThumbJointPos, SEPARATION_LAYER);
                 drawCylinder(armFrontRight, _spherePositions[THUMB_BASE_INDEX]);
-                configureFingerColliderAt(_currFingerColliderIndex++, armFrontRight, _spherePositions[THUMB_BASE_INDEX], SEPARATION_LAYER + 1);
+                configureFingerColliderAt(_currFingerColliderIndex++, armFrontRight, _spherePositions[THUMB_BASE_INDEX], SEPARATION_LAYER);
 			} else
 			{
                 drawCylinder(armFrontLeft, _spherePositions[THUMB_BASE_INDEX]);
-                configureFingerColliderAt(_currFingerColliderIndex++, armFrontLeft, _spherePositions[THUMB_BASE_INDEX], SEPARATION_LAYER + 1);
+                configureFingerColliderAt(_currFingerColliderIndex++, armFrontLeft, _spherePositions[THUMB_BASE_INDEX], SEPARATION_LAYER);
                 drawCylinder(armFrontRight, mockThumbJointPos);
-                configureFingerColliderAt(_currFingerColliderIndex++, armFrontRight, mockThumbJointPos, SEPARATION_LAYER + 1);
+                configureFingerColliderAt(_currFingerColliderIndex++, armFrontRight, mockThumbJointPos, SEPARATION_LAYER);
 			}
 
             // Fill Gap within arm (MD)
-            _quadMesh = getQuadMesh(armBackRight, armBackLeft, armFrontRight, armFrontLeft); 
+            _quadMesh = getQuadMesh(armBackLeft, armBackRight, armFrontRight, armFrontLeft); 
             configureFillColliderAt(_currFillColliderIndex++, _quadMesh);
             Matrix4x4[] mat1 = new Matrix4x4[] { Matrix4x4.identity };
               Vector4[] col1 = new Vector4[] { _bodyColor };
             MaterialPropertyBlock block1 = new MaterialPropertyBlock();
-            block1.SetVectorArray("_Colors", col1);
+            block1.SetVectorArray("_Color", col1);
             Graphics.DrawMeshInstanced(_quadMesh, 0, _quadMaterial, mat1, mat1.Length, block1,
             _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
 
             // Fill Gap between hand and arm (MD)
-            _quadMesh = (_hand.IsLeft) ? getQuadMesh(armFrontRight, armFrontLeft, _spherePositions[THUMB_BASE_INDEX], mockThumbJointPos): getQuadMesh(armFrontRight,  armFrontLeft, mockThumbJointPos,  _spherePositions[THUMB_BASE_INDEX]);
+            _quadMesh = (_hand.IsLeft) ? getQuadMesh(armFrontLeft, armFrontRight,  _spherePositions[THUMB_BASE_INDEX], mockThumbJointPos): getQuadMesh(armFrontLeft, armFrontRight, mockThumbJointPos,  _spherePositions[THUMB_BASE_INDEX]);
             configureFillColliderAt(_currFillColliderIndex++, _quadMesh); 
             Matrix4x4[] mat2 = new Matrix4x4[] { Matrix4x4.identity };
             Vector4[] col2 = new Vector4[] { _bodyColor };
             MaterialPropertyBlock block2 = new MaterialPropertyBlock();
-            block2.SetVectorArray("_Colors", col2);
+            block2.SetVectorArray("_Color", col2);
             Graphics.DrawMeshInstanced(_quadMesh, 0, _quadMaterial, mat2, mat2.Length, block2,
             _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
 
@@ -659,7 +670,8 @@ namespace Leap.Unity {
           Vector3 posB = _spherePositions[keyB];
 
           drawCylinder(posA, posB);
-          configureFingerColliderAt(_currFingerColliderIndex++, posA, posB, SEPARATION_LAYER + 1);
+          if(j < 2) configureFingerColliderAt(_currFingerColliderIndex++, posA, posB, SEPARATION_LAYER); // end joint of finger
+          else configureFingerColliderAt(_currFingerColliderIndex++, posA, posB, SEPARATION_LAYER); // other joints
                     // Configure capsule collider
                     
         }
@@ -679,85 +691,30 @@ namespace Leap.Unity {
 
       //Draw the rest of the hand
       drawCylinder(mockThumbJointPos, THUMB_BASE_INDEX);
-      configureFingerColliderAt(_currFingerColliderIndex++, mockThumbJointPos, _spherePositions[THUMB_BASE_INDEX], SEPARATION_LAYER + 1);
+      configureFingerColliderAt(_currFingerColliderIndex++, mockThumbJointPos, _spherePositions[THUMB_BASE_INDEX], SEPARATION_LAYER);
       drawCylinder(mockThumbJointPos, PINKY_BASE_INDEX);
-      configureFingerColliderAt(_currFingerColliderIndex++, mockThumbJointPos, _spherePositions[PINKY_BASE_INDEX], SEPARATION_LAYER + 1);
+      configureFingerColliderAt(_currFingerColliderIndex++, mockThumbJointPos, _spherePositions[PINKY_BASE_INDEX], SEPARATION_LAYER);
 
       // Fill Arm with Quad (MD)
-      _quadMesh = (_hand.IsLeft) ? getQuadMesh(_spherePositions[THUMB_BASE_INDEX], mockThumbJointPos,_spherePositions[INDEX_BASE_INDEX], _spherePositions[PINKY_BASE_INDEX]): getQuadMesh(mockThumbJointPos, _spherePositions[THUMB_BASE_INDEX], _spherePositions[PINKY_BASE_INDEX],  _spherePositions[INDEX_BASE_INDEX]);
+      _quadMesh = (_hand.IsLeft) ? getQuadMesh(mockThumbJointPos, _spherePositions[THUMB_BASE_INDEX], _spherePositions[INDEX_BASE_INDEX], _spherePositions[PINKY_BASE_INDEX]): getQuadMesh(_spherePositions[THUMB_BASE_INDEX], mockThumbJointPos, _spherePositions[PINKY_BASE_INDEX],  _spherePositions[INDEX_BASE_INDEX]);
       configureFillColliderAt(_currFillColliderIndex++, _quadMesh);
+
+     // Texture tex = Resources.Load<Texture2D>("moon");
+
+      MaterialPropertyBlock block = new MaterialPropertyBlock();
       Matrix4x4[] mat = new Matrix4x4[] { Matrix4x4.identity };
       Vector4[] col = new Vector4[] { _bodyColor };
-      MaterialPropertyBlock block = new MaterialPropertyBlock();
-      block.SetVectorArray("_Colors", col);
+      block.SetVectorArray("_Color", col);
+
       Graphics.DrawMeshInstanced(_quadMesh, 0, _quadMaterial, mat, mat.Length, block,
       _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
 
-       MaterialPropertyBlock block3 = new MaterialPropertyBlock();
-       Vector4[] colors3 = new Vector4[_curSphereIndex];
-       Vector4[] firstOutlineColors3 = new Vector4[_curSphereIndex];
-       float[] fistOutlineWidths3 = new float [_curSphereIndex];
-       Vector4[] secondOutlineColors3 = new Vector4[_curSphereIndex];
-       float[] secondOutlineWidths3 = new float[_curSphereIndex];
-       float[] angles3 = new float[_curSphereIndex];
-            for (int i = 0; i < _curSphereIndex; i++) {
-                colors3[i] = Color.black;
-                firstOutlineColors3[i] = Color.red;
-                fistOutlineWidths3[i] = 0.5f;
-                secondOutlineColors3[i] = Color.red;
-                secondOutlineWidths3[i] = 0f;
-                angles3[i] = 89.0f;
-            }
-       block3.SetVectorArray("_Color", colors3);
-        block3.SetVectorArray("_FirstOutlineColor", firstOutlineColors3);
-        block3.SetFloatArray("_FirstOutlineWidth", fistOutlineWidths3);
-        block3.SetVectorArray("_FirstOutlineColor", secondOutlineColors3);
-        block3.SetFloatArray("_FirstOutlineWidth", secondOutlineWidths3);
-        block3.SetFloatArray("_Angle", angles3);
-      /* mpb.SetVector("_Color", Color.black);
-       mpb.SetVector("_FirstOutlineColor", Color.red);
-       mpb.SetFloat("_FirstOutlineWidth", 0.5f);*/
+      Graphics.DrawMeshInstanced(_sphereMesh, 0, _sphereMaterial, _sphereMatrices, _curSphereIndex, block, 
+           _castShadows?UnityEngine.Rendering.ShadowCastingMode.On: UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
 
-       //Debug.Log("_sphereMat.shader.name: " + _sphereMat.shader.name);
-       //if (mpb.isEmpty) Debug.Log("MPB IS EMPTY!");
-
-       // Draw Spheres
-       //Vector4[] col3 = new Vector4[_curSphereIndex];
-       // for (int i = 0; i < _curSphereIndex; i++) col3[i] = _bodyColor;
-       //block3.SetVectorArray("_Colors", col3);
-       Graphics.DrawMeshInstanced(_sphereMesh, 0, _sphereMat, _sphereMatrices, _curSphereIndex, null, 
-       _castShadows?UnityEngine.Rendering.ShadowCastingMode.On: UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
-
-            // Draw Cylinders
-            //Vector4[] col4 = new Vector4[_curCylinderIndex];
-            //for (int i = 0; i < _curCylinderIndex; i++) col4[i] = _bodyColor;
-            MaterialPropertyBlock block4 = new MaterialPropertyBlock();
-            Vector4[] colors4 = new Vector4[_curCylinderIndex];
-            Vector4[] firstOutlineColors4 = new Vector4[_curCylinderIndex];
-            float[] fistOutlineWidths4 = new float[_curCylinderIndex];
-            Vector4[] secondOutlineColors4 = new Vector4[_curCylinderIndex];
-            float[] secondOutlineWidths4 = new float[_curCylinderIndex];
-            float[] angles4 = new float[_curCylinderIndex];
-            for (int i = 0; i < _curCylinderIndex; i++)
-            {
-                colors4[i] = Color.black;
-                firstOutlineColors4[i] = Color.red;
-                fistOutlineWidths4[i] = 0.5f;
-                secondOutlineColors4[i] = Color.red;
-                secondOutlineWidths4[i] = 0.5f;
-                angles4[i] = 89.0f;
-            }
-            block4.SetVectorArray("_Color", colors4);
-            block4.SetVectorArray("_FirstOutlineColor", firstOutlineColors4);
-            block4.SetFloatArray("_FirstOutlineWidth", fistOutlineWidths4);
-            block4.SetVectorArray("_FirstOutlineColor", secondOutlineColors4);
-            block4.SetFloatArray("_FirstOutlineWidth", secondOutlineWidths4);
-            block4.SetFloatArray("_Angle", angles4);
-            //block4.SetVectorArray("_Colors", col4);
-            //if(_cylinderMesh == null) { _cylinderMesh = getCylinderMesh(1f); }
-            _cylinderMesh = getCylinderMesh(1f);
-      Graphics.DrawMeshInstanced(_cylinderMesh, 0, _sphereMat, _cylinderMatrices, _curCylinderIndex, null,
+      Graphics.DrawMeshInstanced(_cylinderMesh, 0, _sphereMaterial, _cylinderMatrices, _curCylinderIndex, block,
         _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
+     
      }
 
     private void drawSphere(Vector3 position) {
@@ -774,54 +731,94 @@ namespace Leap.Unity {
 
     private void drawCylinder(Vector3 a, Vector3 b) {
       if (isNaN(a) || isNaN(b)) { return; }
-
-      float length = (a - b).magnitude;
+      
+      float length = (a - b).magnitude / 2f;
+        
+      Vector3 cylinderCenter = a + (b - a) / 2f;
+      float cylinderWidth = _cylinderRadius * 2f * transform.lossyScale.x;
+      Quaternion cylinderRotation = Quaternion.LookRotation(b - a);
+      cylinderRotation *= Quaternion.AngleAxis(90, Vector3.right);
 
       if ((a - b).magnitude > 0.001f) {
-        _cylinderMatrices[_curCylinderIndex++] = Matrix4x4.TRS(a,
-          Quaternion.LookRotation(b - a), new Vector3(transform.lossyScale.x, transform.lossyScale.x, length));
+        _cylinderMatrices[_curCylinderIndex++] = Matrix4x4.TRS(cylinderCenter,
+          cylinderRotation, new Vector3(cylinderWidth, length, cylinderWidth));
       }
     }
 
-    private Mesh getQuadMesh(Vector3 a, Vector3 b, Vector3 c, Vector3 d) {
+
+    private Mesh getQuadMesh(Vector3 a, Vector3 b, Vector3 c, Vector3 d)
+    {
         Mesh mesh = new Mesh();
         mesh.name = "GeneratedQuad";
         mesh.hideFlags = HideFlags.DontSave;
-        Vector3[] vertices = new Vector3[4]
+
+        Vector3 normal = Vector3.Cross(b - a, c - a).normalized * _cylinderRadius * transform.lossyScale.x;
+        Vector3[] vertices = new Vector3[8]
         {
-                a,//new Vector3(0, 0, 0),
-				b,//new Vector3(width, 0, 0),
-				c,//new Vector3(0, height, 0),
-				d,//new Vector3(width, height, 0)
+
+                a-normal, //new Vector3(0, 0, 0),
+				b-normal,//new Vector3(width, 0, 0),
+				c-normal,//new Vector3(0, height, 0),
+				d-normal,//new Vector3(width, height, 0)
+				d+normal,//new Vector3(width, height, 0)
+				c+normal,//new Vector3(0, height, 0),
+				b+normal,//new Vector3(width, 0, 0),
+                a+normal //new Vector3(0, 0, 0),
         };
         mesh.vertices = vertices;
 
-        int[] tris = new int[6]
+        int[] tris = new int[36]
         {
-                // lower left triangle
-                0, 2, 1,
-                // upper right triangle
-                2, 3, 1
+            0, 2, 1, //face front
+	        0, 3, 2,
+            2, 3, 4, //face top
+	        2, 4, 5,
+            1, 2, 5, //face right
+	        1, 5, 6,
+            0, 7, 4, //face left
+	        0, 4, 3,
+            5, 4, 7, //face back
+	        5, 7, 6,
+            0, 6, 7, //face bottom
+	        0, 1, 6
         };
         mesh.triangles = tris;
-
-        Vector3[] normals = new Vector3[4]
+        Vector3[] trisVector3 = new Vector3[12]
         {
-                Vector3.down,
-                Vector3.down,
-                Vector3.down,
-                Vector3.down
+                // top face
+                new Vector3(2,1,0),
+                new Vector3(2,3,1),
+                //bottom face
+                new Vector3(7, 4, 5),
+                new Vector3(7, 6, 4),
+                //front face
+                new Vector3(0, 5, 4),
+                new Vector3(0, 1, 5),
+                //back face
+                new Vector3(3, 6, 7),
+                new Vector3(3, 2, 6),
+                //left face
+                new Vector3(2, 4, 6),
+                new Vector3(2, 0, 4),
+                //right face
+                new Vector3(1, 7, 5),
+                new Vector3(1, 3, 7),
         };
-        mesh.normals = normals;
-
-        Vector2[] uv = new Vector2[4]
+        Vector2[] uv = new Vector2[8]
         {
+                new Vector2(0, 0),
+                new Vector2(1, 0),
+                new Vector2(0, 1),
+                new Vector2(1, 1),
                 new Vector2(0, 0),
                 new Vector2(1, 0),
                 new Vector2(0, 1),
                 new Vector2(1, 1)
         };
         mesh.uv = uv;
+
+        mesh.Optimize();
+		mesh.RecalculateNormals();
         return mesh;
     }
 
@@ -849,6 +846,7 @@ namespace Leap.Unity {
       if (_meshMap.TryGetValue(lengthKey, out mesh)) {
         return mesh;
       }
+
 
       mesh = new Mesh();
       mesh.name = "GeneratedCylinder";
@@ -890,7 +888,10 @@ namespace Leap.Unity {
       mesh.RecalculateBounds();
       mesh.RecalculateNormals();
       mesh.UploadMeshData(true);
-
+    
+     // GameObject capsuleGameObject = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+      //capsuleGameObject.transform.localScale = new Vector3(_cylinderRadius * 2f, length, _cylinderRadius * 2f);
+      //mesh = capsuleGameObject.GetComponent<MeshFilter>().sharedMesh;
       _meshMap[lengthKey] = mesh;
 
       return mesh;

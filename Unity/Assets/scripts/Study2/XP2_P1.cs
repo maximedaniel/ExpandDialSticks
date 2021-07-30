@@ -50,15 +50,11 @@ public class XP2_P1 : MonoBehaviour
 
 	private const int nbTrials = 9;
 
-	private Vector2[] molePositions;
 
-	private int moleIndex;
-	private const int MOLE_TO_APPEAR = 0;
-	private const int MOLE_APPEARING = 1;
-	private const int MOLE_APPEARED = 2;
-	private const int LANDSCAPE_IS_CHANGING = 3;
+	private const int SAFETY_CHANGING = 0;
+	private const int SAFETY_CHANGED = 1;
 
-	private int moleState = MOLE_TO_APPEAR;
+	private int state = SAFETY_CHANGED;
 	private bool nextMole;
 
 	//private FileLogger fileLogger;
@@ -73,130 +69,23 @@ public class XP2_P1 : MonoBehaviour
 	public const string CMD_STOP = "STOP";
 
 	public float shapeChangeDuration = 2f;
-
+	private  ExpanDialStickView.FeedbackMode[] feedbackModes = new ExpanDialStickView.FeedbackMode[] {
+	ExpanDialStickView.FeedbackMode.PulseOut,
+	ExpanDialStickView.FeedbackMode.Blink,
+	ExpanDialStickView.FeedbackMode.PulseIn,
+	ExpanDialStickView.FeedbackMode.None
+	};
+	private sbyte[] heights = new sbyte[] {
+	0,
+	20,
+	30,
+	0,
+	};
+	private int nbShownIndex = 0;
+	int[] nbPinToShow = new int[] {0, 2, 4, 1, 3 }; 
 
 	private MqttClient client;
 
-
-	IEnumerator NextMole()
-	{
-		moleState = MOLE_TO_APPEAR;
-		yield return null;
-	}
-	bool IsAllDown()
-	{
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
-		{
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-			{
-				if (expanDialSticks.viewMatrix[i, j].CurrentPosition > 0 || expanDialSticks.viewMatrix[i, j].CurrentReaching) return false;
-			}
-		}
-		return true;
-	}
-
-	void AllBlack(float duration)
-	{
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
-		{
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-			{
-				expanDialSticks.modelMatrix[i, j].TargetColor = Color.black;
-				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
-			}
-		}
-		expanDialSticks.triggerTextureChange();
-	}
-	void AllWhite(float duration)
-	{
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
-		{
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-			{
-				expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
-				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
-			}
-		}
-		expanDialSticks.triggerTextureChange();
-	}
-
-	IEnumerator ShowMole()
-	{
-
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("TRIGGER_MOLE_APPEARING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		MoleUp(shapeChangeDuration);
-		Debug.Log("MoleUp");
-		yield return new WaitForSeconds(1f);
-		// wait until all pins are down
-		while (!IsMoleUp())
-		{
-			yield return new WaitForSeconds(0.1f);
-		}
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("TRIGGER_MOLE_GREENING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		MoleGreen(0.5f);
-		Debug.Log("MoleGreen");
-		yield return new WaitForSeconds(0.5f);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("END_MOLE_APPEARING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		moleState = MOLE_APPEARED;
-	}
-	bool IsMoleUp()
-	{
-		Vector2 molePosition = molePositions[moleIndex];
-		return expanDialSticks[(int)molePosition.x, (int)molePosition.y].TargetPosition == 20;
-	}
-
-	void MoleUp(float duration)
-	{
-		Vector2 molePosition = molePositions[moleIndex];
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
-		{
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-			{
-				if (i == (int)molePosition.x && j == (int)molePosition.y)
-					expanDialSticks.modelMatrix[i, j].TargetPosition = 20;
-				else
-					expanDialSticks.modelMatrix[i, j].TargetPosition = 0;
-				expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = duration;
-			}
-		}
-		expanDialSticks.triggerShapeChange();
-	}
-
-	void MoleGreen(float duration)
-	{
-		Vector2 molePosition = molePositions[moleIndex];
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
-		{
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-			{
-				if (i == (int)molePosition.x && j == (int)molePosition.y)
-					expanDialSticks.modelMatrix[i, j].TargetColor = UnityEngine.Random.ColorHSV(0f, 1f, 1f, 1f, 0.5f, 1f);// Color.white; //Color.green;
-				else
-					expanDialSticks.modelMatrix[i, j].TargetColor = UnityEngine.Random.ColorHSV(0f, 1f, 1f, 1f, 0.5f, 1f);// Color.white;
-				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
-			}
-		}
-		string participantNumber = "<pos=0%><b>P" + numeroParticipant + "</b>";
-		string trialProgress = "<pos=90%><b>" + (moleIndex + 1) + "/" + molePositions.Length + "</b>";
-		string legend = participantNumber + trialProgress;
-		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 16, Color.black, legend, new Vector3(90f, -90f, 0f));
-		expanDialSticks.triggerTextureChange();
-
-	}
-
-	/*private bool noProximity()
-	{
-		float sumProximity = 0f;
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
-		{
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-			{
-				sumProximity += expanDialSticks[i, j].CurrentProximity;
-
-			}
-		}
-		return (Mathf.Approximately(sumProximity, 0f));
-	}*/
 
 	void Start()
 	{
@@ -218,58 +107,12 @@ public class XP2_P1 : MonoBehaviour
 		connected = false;
 
 		// init trials
-		InitTrials();
-		moleIndex = -1;
-		moleState = MOLE_TO_APPEAR;
 		//fileLogger = new FileLogger(logEnabled);
 		currTime = LOG_INTERVAL;
 		prevTime = 0f;
+		nbShownIndex = -1;
 		// Connection to MQTT Broker
 		expanDialSticks.client_MqttConnect();
-	}
-	public int[] Shuffle(int[] array)
-	{
-		for (int i = 0; i < array.Length; i++)
-		{
-			int rnd = Random.Range(0, array.Length);
-			int temp = array[rnd];
-			array[rnd] = array[i];
-			array[i] = temp;
-		}
-		return array;
-	}
-
-	private void InitTrials()
-	{
-
-		molePositions = new Vector2[engagementRows.Length * engagementRows.Length];
-
-		// Generate Squared-Latin Row Indexes
-		int[] shuffledRowIndexes = new int[engagementRows.Length * engagementRows.Length];
-		for (int i = 0; i < engagementRows.Length; i++)
-		{
-			for (int j = 0; j < engagementRows.Length; j++)
-			{
-				shuffledRowIndexes[i * engagementRows.Length + j] = engagementRows[(i + numeroParticipant + j) % engagementRows.Length];
-
-			}
-		}
-		// Generate Shuffled Column Indexes
-		int[] shuffledColumnsIndexes = new int[engagementRows.Length * engagementRows.Length];
-		for (int i = 0; i < engagementRows.Length; i++)
-		{
-			engagementColumns = Shuffle(engagementColumns);
-
-			for (int j = 0; j < engagementRows.Length; j++)
-			{
-				shuffledColumnsIndexes[i * engagementRows.Length + j] = engagementColumns[j];
-			}
-		}
-
-		for (int i = 0; i < engagementRows.Length * engagementRows.Length; i++)
-		{
-			molePositions[i] = new Vector2(shuffledRowIndexes[i], shuffledColumnsIndexes[i]);
-		}
 	}
 
 	private void OnDestroy()
@@ -324,17 +167,7 @@ public class XP2_P1 : MonoBehaviour
 
 	private void HandleRotationChanged(object sender, ExpanDialStickEventArgs e)
 	{
-		Vector2 molePosition = molePositions[moleIndex];
-		if (e.i == (int)molePosition.x && e.j == (int)molePosition.y)
-		{
-			string msg = "USER_MOLE_ROTATION " + e.i + " " + e.j;
-			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-			if (moleState == MOLE_APPEARED && moleIndex < molePositions.Length)
-			{
-				moleState = LANDSCAPE_IS_CHANGING;
-				StartCoroutine(NextMole());
-			}
-		}
+
 	}
 
 	private void HandlePositionChanged(object sender, ExpanDialStickEventArgs e)
@@ -363,80 +196,96 @@ public class XP2_P1 : MonoBehaviour
 				Application.Quit();
 #endif
 	}
-
-	void LogAllSystemData()
+	public int[] Shuffle(int[] array)
 	{
-		Vector2 molePosition = molePositions[moleIndex];
-		int moleX = (int)molePosition.x;
-		int moleY = (int)molePosition.y;
-
-		//string colorString = "SYSTEM_COLOR ";
-		string proximityString = "SYSTEM_PROXIMITY ";
-		string positionString = "SYSTEM_POSITION ";
-		string leftHandString = "USER_LEFT_HAND " + leftHand.ToString();
-		string rightHandString = "USER_RIGHT_HAND " + rightHand.ToString();
-
-		string pinOrientationString = "USER_PIN_ORIENTATION " + expanDialSticks.viewMatrix[moleX, moleY].CurrentAxisX + " " + expanDialSticks.viewMatrix[moleX, moleY].CurrentAxisY;
-		//string pinRotationString = "USER_PIN_ROTATION " + expanDialSticks.viewMatrix[moleX, moleY].CurrentRotation;
-
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
+		for (int i = 0; i < array.Length; i++)
 		{
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-			{
-				//colorString += "0x" + ColorUtility.ToHtmlStringRGB(expanDialSticks.viewMatrix[i, j].CurrentColor) + " ";
-				proximityString += expanDialSticks.viewMatrix[i, j].CurrentProximity + " ";
-				positionString += expanDialSticks.viewMatrix[i, j].CurrentPosition + " ";
-			}
+			int rnd = Random.Range(0, array.Length);
+			int temp = array[rnd];
+			array[rnd] = array[i];
+			array[i] = temp;
 		}
-
-		//expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(colorString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(proximityString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(positionString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(leftHandString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(rightHandString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(pinOrientationString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		/*fileLogger.Log(colorString);
-		fileLogger.Log(proximityString);
-		fileLogger.Log(positionString);
-		fileLogger.Log(leftHandString);
-		fileLogger.Log(rightHandString);
-		fileLogger.Log(pinOrientationString);*/
-		//fileLogger.Log(pinRotationString);
+		return array;
 	}
 
+	IEnumerator ShowDifferentSafetyFeedbackModes()
+	{
+		int[] availables = new int[] {0,1,2,3,4};
+		int[] shuffledAvailables = Shuffle(availables);
+		int nbShown = nbPinToShow[nbShownIndex];
+		int y = 4;
+		for (int i = 0; i < availables.Length; i++)
+		{
+			int x = availables[i];
+			expanDialSticks.modelMatrix[x, y].SafetyFeedForwardEnabled = false;
+			expanDialSticks.modelMatrix[x, y].SafetyFeedbackMode = ExpanDialStickView.FeedbackMode.None;
+		}
+		expanDialSticks.triggerSafetyChange();
+
+		for (int i = 0; i < availables.Length; i++)
+		{
+			int x = availables[i];
+			expanDialSticks.modelMatrix[x, y].TargetPosition = 20;
+			expanDialSticks.modelMatrix[x, y].TargetShapeChangeDuration = 2f;
+		}
+		expanDialSticks.triggerShapeChange();
+		yield return new WaitForSeconds(3f);
+		// select pin to show
+		for (int i = 0; i < nbShown; i++)
+		{
+			int x = shuffledAvailables[i];
+			expanDialSticks.modelMatrix[x, y].SafetyFeedForwardEnabled = true;
+			expanDialSticks.modelMatrix[x, y].SafetyFeedbackMode = feedbackModes[i];//ExpanDialStickView.FeedbackMode.Blink;
+		}
+		expanDialSticks.triggerSafetyChange();
+
+		/*int x = 2;
+		int y = 2;
+		Debug.Log(heights[feedbackModeIndex] + ", " + feedbackModes[feedbackModeIndex]);
+		expanDialSticks.modelMatrix[x, y].SafetyFeedForwardEnabled = false;
+		expanDialSticks.triggerSafetyChange();
+		expanDialSticks.modelMatrix[x, y].TargetPosition = heights[feedbackModeIndex];
+		expanDialSticks.modelMatrix[x, y].TargetShapeChangeDuration = 2f;
+		expanDialSticks.triggerShapeChange();
+		yield return new WaitForSeconds(2f);
+		expanDialSticks.modelMatrix[x, y].SafetyFeedForwardEnabled = true;
+		expanDialSticks.modelMatrix[x, y].SafetyFeedbackMode = feedbackModes[feedbackModeIndex];
+		expanDialSticks.triggerSafetyChange();*/
+
+		/*int y = 4;
+		int x0 = 1;
+		int x1 = 2;
+		int x2 = 3;
+
+
+		expanDialSticks.modelMatrix[x0, y].SafetyFeedForwardEnabled = true;
+		expanDialSticks.modelMatrix[x0, y].SafetyFeedbackMode = ExpanDialStickView.FeedbackMode.Blink;
+		expanDialSticks.modelMatrix[x1, y].SafetyFeedForwardEnabled = true;
+		expanDialSticks.modelMatrix[x1, y].SafetyFeedbackMode = ExpanDialStickView.FeedbackMode.Blink;
+		expanDialSticks.modelMatrix[x2, y].SafetyFeedForwardEnabled = true;
+		expanDialSticks.modelMatrix[x2, y].SafetyFeedbackMode = ExpanDialStickView.FeedbackMode.Blink;
+		expanDialSticks.triggerSafetyChange();
+		yield return new WaitForSeconds(3f);*/
+		state = SAFETY_CHANGED;
+
+	}
 	void Update()
 	{
 		// check if ExpanDialSticks is connected
 		if (connected)
 		{
-			if (Input.GetKey("escape") || (moleState == MOLE_TO_APPEAR && moleIndex >= molePositions.Length))
+			if (Input.GetKey("escape") || nbShownIndex >= nbPinToShow.Length)
 			{
 				Quit();
 			}
 
 			if (Input.GetKeyDown("n"))
 			{
-				if (moleState == MOLE_APPEARED && moleIndex < molePositions.Length)
+				if (state == SAFETY_CHANGED && ++nbShownIndex < nbPinToShow.Length)
 				{
-					Vector2 molePosition = molePositions[moleIndex];
-					string msg = "USER_MOLE_ROTATION " + molePosition.x + " " + molePosition.y;
-					expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+					state = SAFETY_CHANGING;
 
-					moleState = LANDSCAPE_IS_CHANGING;
-					StartCoroutine(NextMole());
-				}
-			}
-			if (moleState == MOLE_TO_APPEAR && ++moleIndex < molePositions.Length)
-			{
-				moleState = MOLE_APPEARING;
-				StartCoroutine(ShowMole());
-			}
-			if (moleState == LANDSCAPE_IS_CHANGING)
-			{
-				if ((currTime += Time.deltaTime) - prevTime > LOG_INTERVAL)
-				{
-					LogAllSystemData();
-					prevTime = currTime;
+					StartCoroutine(ShowDifferentSafetyFeedbackModes());
 				}
 			}
 		}

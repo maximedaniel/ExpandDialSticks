@@ -50,17 +50,11 @@ public class Test : MonoBehaviour
 
 	//private FileLogger fileLogger;
 	public const float LOG_INTERVAL = 0.25f; // 0.2f;
-	private float currTime;
-	private float prevTime;
-
 	public const string MQTT_CAMERA_RECORDER = "CAMERA_RECORDER";
 	public const string MQTT_EMPATICA_RECORDER = "EMPATICA_RECORDER";
 	public const string MQTT_SYSTEM_RECORDER = "SYSTEM_RECORDER";
 	public const string CMD_START = "START";
 	public const string CMD_STOP = "STOP";
-
-
-	private MqttClient client;
 
 
 	void Start()
@@ -83,8 +77,6 @@ public class Test : MonoBehaviour
 		// init trials
 		currentIndex = 0;
 		//fileLogger = new FileLogger(logEnabled);
-		currTime = LOG_INTERVAL;
-		prevTime = 0f;
 		// Connection to MQTT Broker
 		expanDialSticks.client_MqttConnect();
 

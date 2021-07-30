@@ -25,6 +25,8 @@ public class XP1_P2 : MonoBehaviour
 	private MyCapsuleHand rightHand;
 	public GUISkin guiSkin;
 	public int numeroParticipant = 0;
+	/*public enum Handedness {Left, Right };
+	public Handedness handednessParticipant = Handedness.Right;*/
 	public int[] engagementRows;
 	public int[] engagementColumns;
 	public bool logEnabled = true;
@@ -56,9 +58,11 @@ public class XP1_P2 : MonoBehaviour
 	private const int GAUGE_TO_APPEAR = 0;
 	private const int GAUGE_APPEARING = 1;
 	private const int GAUGE_APPEARED = 2;
-	private const int LANDSCAPE_IS_CHANGING = 3;
+	private const int GAUGE_STARTED = 3;
+	private const int LANDSCAPE_IS_CHANGING = 4;
 
 	private int gaugeState = GAUGE_TO_APPEAR;
+	private const sbyte gaugeHeight = 20;
 	private bool nextGauge;
 
 	//private FileLogger fileLogger;
@@ -78,29 +82,27 @@ public class XP1_P2 : MonoBehaviour
 
 	private float aiguilleRotation = 90f;
 	private float cadranRotation = 90f;
-	private float targetRotation = 90f;
 	private float speedRotation = 1f;
 
 	private float directionTime = 0f;
 	private float directionDuration = 3f;
 	private float startGameTime = 0f;
 	private float gameDuration = 20f;
-	private float startMotionTime = 0f;
 	private float motionDuration = 10f;
 
 	private const float anglePerStep = 360f / 24f;
 	private float startRotation = 90f - anglePerStep;
-	private float endRotation = 270f;
 	public enum DirectionRotation { CW, CCW, IDDLE };	
 	private DirectionRotation directionRotation = DirectionRotation.CW;
 
 	IEnumerator NextGauge()
 	{
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_BLACKING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		//Debug.Log("AllBlack..."); 
 		AllBlack(0.5f);
 		yield return new WaitForSeconds(0.5f);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_DESCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		Debug.Log("AllDown...");
+		//Debug.Log("AllDown...");
 		AllDown(shapeChangeDuration);
 		yield return new WaitForSeconds(1f);
 		// wait until all pins are down
@@ -118,7 +120,7 @@ public class XP1_P2 : MonoBehaviour
 				yield return new WaitForSeconds(0.1f);
 			//}
 		}
-		Debug.Log("AllIsDown!");
+		//Debug.Log("AllIsDown!");
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_TO_APPEAR"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		gaugeState = GAUGE_TO_APPEAR;
 	}
@@ -127,7 +129,7 @@ public class XP1_P2 : MonoBehaviour
 	{
 
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_APPEARING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		Debug.Log("GaugeUp...");
+		//Debug.Log("GaugeUp...");
 		GaugeUp(shapeChangeDuration);
 		yield return new WaitForSeconds(1f);
 		// wait until all pins are down
@@ -146,23 +148,26 @@ public class XP1_P2 : MonoBehaviour
 				yield return new WaitForSeconds(0.1f);
 			//}
 		}
-		Debug.Log("GaugeIsUp!");
+		//Debug.Log("GaugeIsUp!");
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_DISPLAYING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		cadranRotation = aiguilleRotation = startRotation;
+		//Debug.Log("GaugeInit!");
 		GaugeInit(0.5f);
-		Debug.Log("GaugeInit!");
 		yield return new WaitForSeconds(0.5f);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_APPEARED"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		//gaugeState = GAUGE_APPEARED;
+		gaugeState = GAUGE_APPEARED;
 	}
 
 	IEnumerator Earthquake()
 	{
 		// trigger most unsafe SC
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_ASCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+
+		//Debug.Log("AllUpExceptGauge..."); 
 		AllUpExceptGauge(shapeChangeDuration);
 		yield return new WaitForSeconds(3f);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_DESCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		//Debug.Log("AllDownExceptGauge..."); 
 		AllDownExceptGauge(shapeChangeDuration);
 		yield return new WaitForSeconds(3f);
 		/*expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("TRIGGER_LANDSCAPE_BLACKING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
@@ -172,9 +177,10 @@ public class XP1_P2 : MonoBehaviour
 		/*while (!IsAllDownExceptGauge())
 		{
 			yield return new WaitForSeconds(0.1f);
-		}*/
+		}
+		Debug.Log("AllDownExceptGauge!");*/
 		//expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("END_LANDSCAPE_CHANGING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		gaugeState = GAUGE_APPEARED;
+		gaugeState = GAUGE_STARTED;
 	}
 
 	/*void AllReset(float duration)
@@ -216,9 +222,9 @@ public class XP1_P2 : MonoBehaviour
 		{
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
-				expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
+				//expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
+				//expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
 				expanDialSticks.modelMatrix[i, j].TargetPosition = 0;
-				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
 				expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = duration;
 			}
 		}
@@ -232,8 +238,16 @@ public class XP1_P2 : MonoBehaviour
 		{
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
+				if (expanDialSticks.viewMatrix[i, j].CurrentReaching)
+				{
+					//Debug.Log("CurrentReaching (" + i + "," + j + "):" + expanDialSticks.viewMatrix[i, j].CurrentReaching);
+				}
+				if (expanDialSticks.viewMatrix[i, j].CurrentPosition != 0)
+				{
+					//Debug.Log("CurrentPosition (" + i+","+j+"):"+ expanDialSticks.viewMatrix[i, j].CurrentPosition);
+				}
 
-				if (expanDialSticks.viewMatrix[i, j].CurrentPosition > 0 || expanDialSticks.viewMatrix[i, j].CurrentReaching) return false;
+			  if (expanDialSticks.viewMatrix[i, j].CurrentPosition > 0 || expanDialSticks.viewMatrix[i, j].CurrentReaching) return false;
 			}
 		}
 		return true;
@@ -247,15 +261,15 @@ public class XP1_P2 : MonoBehaviour
 			{
 				if (i != (int)gaugePosition.x || j != (int)gaugePosition.y)
 				{
-					expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
-					expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
+					//expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
+					//expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
 					expanDialSticks.modelMatrix[i, j].TargetPosition = 40;
 					expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = duration;
 				}
 
 			}
 		}
-		expanDialSticks.triggerTextureChange();
+		//expanDialSticks.triggerTextureChange();
 		expanDialSticks.triggerShapeChange();
 	}
 	void AllDownExceptGauge(float duration)
@@ -267,17 +281,36 @@ public class XP1_P2 : MonoBehaviour
 			{
 				if (i != (int)gaugePosition.x || j != (int)gaugePosition.y)
 				{
-					expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
+					//expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
+					//expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
 					expanDialSticks.modelMatrix[i, j].TargetPosition = 0;
-					expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
 					expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = duration;
 				}
 			}
 		}
-		expanDialSticks.triggerTextureChange();
+		//expanDialSticks.triggerTextureChange();
 		expanDialSticks.triggerShapeChange();
 	}
+	bool IsAllDownExceptGauge()
+	{
+		Vector2 gaugePosition = gaugePositions[gaugeIndex];
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+		{
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+			{
 
+				if ((i != (int)gaugePosition.x || j != (int)gaugePosition.y) && expanDialSticks.viewMatrix[i, j].CurrentPosition > 0 || expanDialSticks.viewMatrix[i, j].CurrentReaching)
+				{
+					//Debug.Log("i, j:" + i + "," + j + "gi, gj:" + (int)gaugePosition.x + "," + (int)gaugePosition.y);
+
+					//Debug.Log("expanDialSticks.viewMatrix[i, j].CurrentPosition:" + expanDialSticks.viewMatrix[i, j].CurrentPosition);
+					//Debug.Log("expanDialSticks.viewMatrix[i, j].CurrentReaching:" + expanDialSticks.viewMatrix[i, j].CurrentReaching);
+					return false;
+				}
+			}
+		}
+		return true;
+	}
 	void AllBlack(float duration)
 	{
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
@@ -348,16 +381,15 @@ public class XP1_P2 : MonoBehaviour
 	bool IsGaugeUp()
 	{
 		Vector2 gaugePosition = gaugePositions[gaugeIndex];
-		Debug.Log("IsGaugeUp -> gauge Index: " + gaugePosition + " position: " + expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentPosition);
+		//Debug.Log("IsGaugeUp -> gauge Index: " + gaugePosition + " position: " + expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentPosition);
 		//Debug.Log("IsGaugeUp -> Gauge CurrentReaching: " + expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentReaching);
 		//Debug.Log("IsGaugeUp -> Gauge CurrentPosition: " + expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentPosition);
-		return !expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentReaching && expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentPosition == 20;
+		return !expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentReaching && expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentPosition == gaugeHeight;
 	}
 
 	void GaugeUp(float duration)
 	{
 		Vector2 gaugePosition = gaugePositions[gaugeIndex];
-		int count = 0;
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
 		{
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
@@ -365,8 +397,8 @@ public class XP1_P2 : MonoBehaviour
 
 				if (i == (int)gaugePosition.x && j == (int)gaugePosition.y)
 				{
-					Debug.Log("GaugeUp -> gauge Index: " + gaugePosition + " (" + (count++) + ")");
-					expanDialSticks.modelMatrix[i, j].TargetPosition = 20;
+					//Debug.Log("GaugeUp -> gauge Index: " + gaugePosition + " (" + (count++) + ")");
+					expanDialSticks.modelMatrix[i, j].TargetPosition = gaugeHeight;
 				}
 				else
 					expanDialSticks.modelMatrix[i, j].TargetPosition = 0;
@@ -385,7 +417,7 @@ public class XP1_P2 : MonoBehaviour
 				expanDialSticks.modelMatrix[i, j].TargetColor = Color.white; //Color.green;
 				if (i == (int)gaugePosition.x && j == (int)gaugePosition.y)
 				{
-					expanDialSticks.modelMatrix[i, j].TargetPlaneTexture = "cadran";
+					expanDialSticks.modelMatrix[i, j].TargetPlaneTexture = "LightCadran";
 					expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = cadranRotation;
 					expanDialSticks.modelMatrix[i, j].TargetPlaneSize = 0.6f;
 					expanDialSticks.modelMatrix[i, j].TargetPlaneColor = Color.red;
@@ -400,7 +432,7 @@ public class XP1_P2 : MonoBehaviour
 				{
 					expanDialSticks.modelMatrix[i, j].TargetPlaneTexture = "default";
 					expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = cadranRotation;
-					expanDialSticks.modelMatrix[i, j].TargetPlaneSize = 1f;
+					expanDialSticks.modelMatrix[i, j].TargetPlaneSize = 0f;
 					expanDialSticks.modelMatrix[i, j].TargetPlaneColor = Color.white;
 
 					expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "projector";
@@ -514,13 +546,13 @@ public class XP1_P2 : MonoBehaviour
 			float prevRotation = aiguilleRotation;
 			aiguilleRotation += e.diff * anglePerStep;
 			string msg = "";
-			if (gaugeState == GAUGE_APPEARING)
+			if (gaugeState == GAUGE_APPEARED)
 			{
 				msg += "USER_START_GAUGE" + prevRotation + " " + aiguilleRotation;
-				Debug.Log("UserStartGauge!");
+				//Debug.Log("UserStartGauge!");
 				startGameTime = Time.time;
 				motionDuration = Random.Range(5f, gameDuration - 5f);
-				gaugeState = GAUGE_APPEARED;
+				gaugeState = GAUGE_STARTED;
 			} else
 			{
 				msg += "USER_ROTATE_GAUGE " + prevRotation + " " + aiguilleRotation;
@@ -630,20 +662,27 @@ public class XP1_P2 : MonoBehaviour
 			}
 			if (gaugeState == GAUGE_TO_APPEAR && ++gaugeIndex < gaugePositions.Length)
 			{
+				//Debug.Log("TRIGGER StartCoroutine ShowGauge");
 				gaugeState = GAUGE_APPEARING;
 				StartCoroutine(ShowGauge());
 			}
-			if (gaugeState == GAUGE_APPEARED || gaugeState == LANDSCAPE_IS_CHANGING)
+			if (gaugeState == GAUGE_STARTED || gaugeState == LANDSCAPE_IS_CHANGING)
 			{
 
-				/*if (gaugeState == GAUGE_APPEARED && Time.time - startGameTime >= motionDuration)
+				if (gaugeState == GAUGE_STARTED && Time.time - startGameTime >= motionDuration)
 				{
+					//Debug.Log("TRIGGER StartCoroutine Earthquake");
 					gaugeState = LANDSCAPE_IS_CHANGING;
 					StartCoroutine(Earthquake());
 					motionDuration = Mathf.Infinity;
-				}*/
-				if (gaugeState == GAUGE_APPEARED && Time.time - startGameTime >= gameDuration)
+				}
+
+				if (gaugeState == GAUGE_STARTED && Time.time - startGameTime >= gameDuration)
 				{
+					/*Debug.Log("TRIGGER StartCoroutine NextGauge");
+					Debug.Log("Time.time:" + Time.time);
+					Debug.Log("startGameTime:" + startGameTime);
+					Debug.Log("gameDuration:" + gameDuration);*/
 					gaugeState = GAUGE_APPEARING;
 					StartCoroutine(NextGauge());
 				}

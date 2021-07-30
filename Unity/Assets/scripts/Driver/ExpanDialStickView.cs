@@ -136,36 +136,34 @@ public class ExpanDialStickView : MonoBehaviour
 
 
 	public enum FeedbackMode {Flash, Wave, Debug, None,
-		Blink, Pulse
+		Blink, Pulse, PulseIn, PulseOut
 	}
-	private FeedbackMode feedbackMode = FeedbackMode.Wave;
+	private FeedbackMode feedbackMode = FeedbackMode.None;
+	private bool safetyFeedForwardEnabled = false;
 
 	private string projectorTexture = "projector";
 	private float feedbackInDuration = 1f;
 	private float feedbackOutDuration = 0.250f;
-	private float feedbackRadius = 6f;
+	//private float feedbackRadius = 6f;
 	private float feedbackMinGamma = 0f;
 	private float feedbackMaxGamma = 0.8f;
 	private float feedbackMinOrthographicSize = 3.2f;
 	private float feedbackMaxOrthographicSize = 9.6f;
 	private float delayPerRow = 0f;
-	private bool feebackRepeat = false;
+
+
+	public bool SafetyFeedForwardEnabled
+	{
+		get => this.safetyFeedForwardEnabled;
+		set => this.safetyFeedForwardEnabled = value;
+	}
 
 	public FeedbackMode SafetyFeedbackMode
 	{
 		get => this.feedbackMode;
 		set => this.feedbackMode = value;
 	}
-	public float SafetyFeedbackDuration
-	{
-		get => this.feedbackInDuration;
-		set => this.feedbackInDuration = value;
-	}
-	public float SafetyFeedbackRadius
-	{
-		get => this.feedbackRadius;
-		set => this.feedbackRadius = value;
-	}
+
 	public bool Paused
 	{
 		get => this.paused;
@@ -639,7 +637,13 @@ public class ExpanDialStickView : MonoBehaviour
 		CurrentText = text;
 		CurrentTextureChangeDuration = textureChangeDuration;
 	}
-	
+
+	public void setSafetyChange(bool feedforwardEnabled, ExpanDialStickView.FeedbackMode feedbackMode)
+	{
+		SafetyFeedForwardEnabled = feedforwardEnabled;
+		SafetyFeedbackMode = feedbackMode;
+	}
+
 	public float[] readShapeDiffs()
 	{
 		return new float[]{
@@ -736,7 +740,7 @@ public class ExpanDialStickView : MonoBehaviour
 		this.transform.RotateAround(this.transform.position - new Vector3(0f, height / 2, 0f), Vector3.back, xAxisCurrentLerp);
 
 		// SAFETY CUE
-		if (this.pauseCurrent != 0f) // this.positionCurrent > 0f)//  || (this.colorCurrent != Color.white))
+		if (this.pauseCurrent != 0f || this.safetyFeedForwardEnabled) // || this.CurrentProximity >= 1f // this.positionCurrent > 0f)//  || (this.colorCurrent != Color.white))
 		{
 			if (this.projectorTextureCurrent != projectorTexture){
 				projector.material.mainTexture = Resources.Load<Texture2D>(projectorTexture);
@@ -769,10 +773,40 @@ public class ExpanDialStickView : MonoBehaviour
 					projector.material.color = (V1 > 0.5f) ? new Color(0f, 0f, 0f, alpha1) : new Color(1f, 1f, 1f, alpha1);
 					projector.orthographicSize =  Mathf.Lerp(0f, (this.separationLevelCurrent == 0) ? feedbackMaxOrthographicSize : feedbackMinOrthographicSize, pulseCoeff1);
 				break;
+
+				case FeedbackMode.PulseOut:
+					meshRenderer.material.color = this.colorCurrent;
+					float delayDuration2 = this.Row * delayPerRow;
+					float currentDuration2 = Mathf.Repeat(Time.time, feedbackInDuration + feedbackInDuration + delayDuration2);
+					currentDuration2 = Mathf.Max(0f, currentDuration2 - delayDuration2);
+					float pulseCoeff2 =  Mathf.Min(currentDuration2 / feedbackInDuration, 1f);
+					float blinkCoeff2 = 1f - Mathf.Max(0f, (currentDuration2 - feedbackInDuration) / feedbackInDuration);
+					float alpha2 = feedbackMinGamma + (feedbackMaxGamma - feedbackMinGamma) * blinkCoeff2; // from black to white
+					float H2, S2, V2;
+					Color.RGBToHSV(this.colorCurrent, out H2, out S2, out V2);
+					projector.material.color = (V2 > 0.5f) ? new Color(0f, 0f, 0f, alpha2) : new Color(1f, 1f, 1f, alpha2);
+					projector.orthographicSize = Mathf.Lerp(0f, (this.separationLevelCurrent == 0) ? feedbackMaxOrthographicSize : feedbackMinOrthographicSize, pulseCoeff2);
+					break;
+
+				case FeedbackMode.PulseIn:
+					meshRenderer.material.color = this.colorCurrent;
+					float delayDuration3 = this.Row * delayPerRow;
+					float currentDuration3 = Mathf.Repeat(Time.time, feedbackInDuration + feedbackInDuration + delayDuration3);
+					currentDuration3 = Mathf.Max(0f, currentDuration3 - delayDuration3);
+					float pulseCoeff3 =  1f - Mathf.Max(0f, (currentDuration3 - feedbackInDuration) / feedbackInDuration);
+					float blinkCoeff3 = Mathf.Min(currentDuration3 / feedbackInDuration, 1f);
+					float alpha3 = feedbackMinGamma + (feedbackMaxGamma - feedbackMinGamma) * blinkCoeff3; // from black to white
+					float H3, S3, V3;
+					Color.RGBToHSV(this.colorCurrent, out H3, out S3, out V3);
+					projector.material.color = (V3 > 0.5f) ? new Color(0f, 0f, 0f, alpha3) : new Color(1f, 1f, 1f, alpha3);
+					projector.orthographicSize = Mathf.Lerp(0f, (this.separationLevelCurrent == 0) ? feedbackMaxOrthographicSize : feedbackMinOrthographicSize, pulseCoeff3);
+				break;
+
 				default:
 					meshRenderer.material.color = this.colorCurrent;
-					projector.orthographicSize = 0f;
-				break;
+					projector.material.color = this.projectorColorCurrent;
+					projector.orthographicSize = this.projectorSizeCurrent;
+					break;
 
 			}
 		}
@@ -799,6 +833,24 @@ public class ExpanDialStickView : MonoBehaviour
 					projector.material.color = (V1 > 0.5f) ? new Color(0f, 0f, 0f, alpha1) : new Color(1f, 1f, 1f, alpha1);
 					if (Mathf.Approximately(alpha1, feedbackMinGamma)) projector.orthographicSize = this.projectorSizeCurrent;
 					break;
+				case FeedbackMode.PulseIn:
+					meshRenderer.material.color = this.colorCurrent;
+					float recoveryRate2 = (feedbackMaxGamma - feedbackMinGamma) / feedbackOutDuration;
+					float alpha2 = Mathf.MoveTowards(projector.material.color.a, feedbackMinGamma, recoveryRate2 * Time.deltaTime);
+					float H2, S2, V2;
+					Color.RGBToHSV(this.colorCurrent, out H2, out S2, out V2);
+					projector.material.color = (V2 > 0.5f) ? new Color(0f, 0f, 0f, alpha2) : new Color(1f, 1f, 1f, alpha2);
+					if (Mathf.Approximately(alpha2, feedbackMinGamma)) projector.orthographicSize = this.projectorSizeCurrent;
+					break;
+				case FeedbackMode.PulseOut:
+					meshRenderer.material.color = this.colorCurrent;
+					float recoveryRate3 = (feedbackMaxGamma - feedbackMinGamma) / feedbackOutDuration;
+					float alpha3 = Mathf.MoveTowards(projector.material.color.a, feedbackMinGamma, recoveryRate3 * Time.deltaTime);
+					float H3, S3, V3;
+					Color.RGBToHSV(this.colorCurrent, out H3, out S3, out V3);
+					projector.material.color = (V3 > 0.5f) ? new Color(0f, 0f, 0f, alpha3) : new Color(1f, 1f, 1f, alpha3);
+					if (Mathf.Approximately(alpha3, feedbackMinGamma)) projector.orthographicSize = this.projectorSizeCurrent;
+					break;
 				default:
 					meshRenderer.material.color = this.colorCurrent;
 					projector.material.color = this.projectorColorCurrent;
@@ -824,7 +876,7 @@ public class ExpanDialStickView : MonoBehaviour
 		this.textMesh.text = this.textTarget;
 
 		Vector3 targetPosition = this.transform.position - new Vector3(1f, 0f, 0f);
-		Vector3 targetDirection = targetPosition - this.transform.position;
+		//Vector3 targetDirection = targetPosition - this.transform.position;
 		//textRectTransform.rotation = Quaternion.LookRotation(targetDirection, Vector3.up);
 		//targetPosition = this.transform.position - new Vector3(0f, 1f, 0f);
 		//textRectTransform.LookAt(targetPosition, Vector3.left);
