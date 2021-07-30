@@ -748,6 +748,15 @@ public class ExpanDialStickView : MonoBehaviour
 
 			switch (feedbackMode)
 			{
+				case FeedbackMode.Flash:
+					meshRenderer.material.color = this.colorCurrent;
+					float recoveryRate4 = (feedbackMaxGamma - feedbackMinGamma) / feedbackInDuration;
+					float alpha4 = Mathf.MoveTowards(projector.material.color.a, feedbackMaxGamma, recoveryRate4 * Time.deltaTime);
+					float H4, S4, V4;
+					Color.RGBToHSV(this.colorCurrent, out H4, out S4, out V4);
+					projector.material.color = (V4 > 0.5f) ? new Color(0f, 0f, 0f, alpha4) : new Color(1f, 1f, 1f, alpha4);
+					projector.orthographicSize = (this.separationLevelCurrent == 0) ? feedbackMaxOrthographicSize : feedbackMinOrthographicSize;
+				break;
 				case FeedbackMode.Blink:
 					meshRenderer.material.color = this.colorCurrent;
 					float delayDuration0 = this.Row * delayPerRow;
@@ -815,6 +824,15 @@ public class ExpanDialStickView : MonoBehaviour
 
 			switch (feedbackMode)
 			{
+				case FeedbackMode.Flash:
+					meshRenderer.material.color = this.colorCurrent;
+					float recoveryRate4 = (feedbackMaxGamma - feedbackMinGamma) / feedbackOutDuration;
+					float alpha4 = Mathf.MoveTowards(projector.material.color.a, feedbackMinGamma, recoveryRate4 * Time.deltaTime);
+					float H4, S4, V4;
+					Color.RGBToHSV(this.colorCurrent, out H4, out S4, out V4);
+					projector.material.color = (V4 > 0.5f) ? new Color(0f, 0f, 0f, alpha4) : new Color(1f, 1f, 1f, alpha4);
+					if (Mathf.Approximately(alpha4, feedbackMinGamma)) projector.orthographicSize = this.projectorSizeCurrent;
+					break;
 				case FeedbackMode.Blink:
 					meshRenderer.material.color = this.colorCurrent;
 					float recoveryRate0 = (feedbackMaxGamma - feedbackMinGamma) / feedbackOutDuration;

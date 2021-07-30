@@ -229,13 +229,26 @@ public class XP2_P1 : MonoBehaviour
 			expanDialSticks.modelMatrix[x, y].TargetShapeChangeDuration = 2f;
 		}
 		expanDialSticks.triggerShapeChange();
+
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+		{
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+			{
+				//expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
+				//expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
+				expanDialSticks.modelMatrix[i, j].TargetColor = Random.ColorHSV(0f, 1f, 1f, 1f, 0.5f, 1f);
+				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = 0.1f;
+			}
+		}
+		expanDialSticks.triggerTextureChange();
+
 		yield return new WaitForSeconds(3f);
 		// select pin to show
 		for (int i = 0; i < nbShown; i++)
 		{
 			int x = shuffledAvailables[i];
 			expanDialSticks.modelMatrix[x, y].SafetyFeedForwardEnabled = true;
-			expanDialSticks.modelMatrix[x, y].SafetyFeedbackMode = feedbackModes[i];//ExpanDialStickView.FeedbackMode.Blink;
+			expanDialSticks.modelMatrix[x, y].SafetyFeedbackMode = feedbackModes[i];
 		}
 		expanDialSticks.triggerSafetyChange();
 

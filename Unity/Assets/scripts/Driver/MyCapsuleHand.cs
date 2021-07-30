@@ -170,11 +170,12 @@ namespace Leap.Unity {
 
     [MinValue(0)]
     [SerializeField]
-    private float _jointRadius = 0.008f;
+    private float _jointRadius = 0.006f;
 
     [MinValue(0)]
     [SerializeField]
     private float _cylinderRadius = 0.006f;
+    public float _cylinderColliderRadius = 0.012f;
 
    /* [MinValue(0)]
     [SerializeField]
@@ -201,6 +202,7 @@ namespace Leap.Unity {
     private GameObject [] _forearmColliders;
     private float handColliderOffset = 6f;
     private float forearmColliderOffset = 24f;
+    private CombineInstance[] combine;
 
     private int _curSphereIndex = 0, _curCylinderIndex = 0;
 
@@ -485,7 +487,7 @@ namespace Leap.Unity {
         _fingerColliders[index].transform.rotation = fingerRotation;
         _fingerColliders[index].gameObject.layer = separationLevel;
         CapsuleCollider capsuleCollider = _fingerColliders[index].GetComponent<CapsuleCollider>();
-        capsuleCollider.radius = transform.lossyScale.x * _cylinderRadius;
+        capsuleCollider.radius = transform.lossyScale.x * _cylinderColliderRadius;
         capsuleCollider.height = Vector3.Distance(from, to) + 2f * transform.lossyScale.x * _jointRadius;
         capsuleCollider.direction = 2;
 	}
@@ -712,9 +714,21 @@ namespace Leap.Unity {
       Graphics.DrawMeshInstanced(_sphereMesh, 0, _sphereMaterial, _sphereMatrices, _curSphereIndex, block, 
            _castShadows?UnityEngine.Rendering.ShadowCastingMode.On: UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
 
-      Graphics.DrawMeshInstanced(_cylinderMesh, 0, _sphereMaterial, _cylinderMatrices, _curCylinderIndex, block,
+            combine = new CombineInstance[_curCylinderIndex];
+            for (int i = 0; i < _curCylinderIndex; i++)
+			{
+                combine[i].mesh = _cylinderMesh;
+                combine[i].transform = _cylinderMatrices[i];
+            }
+
+            Mesh combinedCylinderMesh = new Mesh();
+            combinedCylinderMesh.CombineMeshes(combine);
+            /*Graphics.DrawMeshInstanced(_cylinderMesh, 0, _sphereMaterial, _cylinderMatrices, _curCylinderIndex, block,
         _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
-     
+     */
+             Graphics.DrawMeshInstanced(combinedCylinderMesh, 0, _sphereMaterial, mat, mat.Length, block,
+                 _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
+
      }
 
     private void drawSphere(Vector3 position) {
