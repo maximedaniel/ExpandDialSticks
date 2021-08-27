@@ -8,12 +8,16 @@ using uPLibrary.Networking.M2Mqtt.Utility;
 using uPLibrary.Networking.M2Mqtt.Exceptions;
 using TMPro;
 using System;
+using Leap.Unity;
 
 public class ExpanDialStickCollision: MonoBehaviour
 {
 	private float diameter = 4.0f;
 	private float height = 10.0f;
 	private float offset = 0.5f;
+
+	private MyCapsuleHand leftHand;
+	private MyCapsuleHand rightHand;
 
 	private int i = 0;
 	private int j = 0;
@@ -23,6 +27,7 @@ public class ExpanDialStickCollision: MonoBehaviour
 
 	private const int SEPARATION_LAYER = 10; // Safety Level 0
 	private float proximity = 0f;
+	private float distance = 0f;
 	private int separationLevel = 0;
 	private const float minUserBodyDistance = 3f;
 	private float maxLayerHeight = 10f;
@@ -46,6 +51,16 @@ public class ExpanDialStickCollision: MonoBehaviour
 	{
 		get => this.diameter;
 		set => this.diameter = value;
+	}
+	public MyCapsuleHand LeftHand
+	{
+		get => this.leftHand;
+		set => this.leftHand = value;
+	}
+	public MyCapsuleHand RightHand
+	{
+		get => this.rightHand;
+		set => this.rightHand = value;
 	}
 
 	public float Height
@@ -73,6 +88,11 @@ public class ExpanDialStickCollision: MonoBehaviour
 	{
 		return proximity;
 	}
+	public float Distance()
+	{
+		return distance;
+	}
+
 
 	public int SeparationLevel()
 	{
@@ -95,6 +115,11 @@ public class ExpanDialStickCollision: MonoBehaviour
 	void FixedUpdate()
 	{
 		Vector3 pinHeadPoint = (transform.position + transform.up * (height / 2f));
+		if (leftHand != null && rightHand != null)
+		{
+			distance = Mathf.Min(leftHand.GetDistanceFromHand(pinHeadPoint), rightHand.GetDistanceFromHand(pinHeadPoint));
+
+		}
 		/* Check user proximy level 1 */
 		for (int level = 0; level < nbSeparationLevels; level++)
 		{

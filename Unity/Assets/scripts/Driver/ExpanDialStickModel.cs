@@ -57,6 +57,10 @@ public class ExpanDialStickModel
 	private float proximityDiff = 0f;
 	private float proximityTarget = 0f;
 
+	private float distanceCurrent = 0f;
+	private float distanceDiff = 0f;
+	private float distanceTarget = 0f;
+
 	private float pauseCurrent = 0f;
 	private float pauseDiff = 0f;
 	private float pauseTarget = 0f;
@@ -292,6 +296,22 @@ public class ExpanDialStickModel
 			this.proximityCurrent = value;
 		}
 	}
+	public float TargetDistance
+	{
+		get => this.distanceTarget;
+		set => this.distanceTarget = value;
+	}
+
+	public float CurrentDistance
+	{
+		get => this.distanceCurrent;
+		set
+		{
+			this.distanceDiff += value - this.distanceCurrent;
+			this.distanceCurrent = value;
+		}
+	}
+
 	public int TargetPaused
 	{
 		get => (int)Mathf.Round(this.pauseTarget);
@@ -513,7 +533,7 @@ public class ExpanDialStickModel
 		set => this.projectorChangeDurationTarget = value;
 	}
 	
-	public void setShapeChangeTarget(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, int separationLevel, float proximity, int paused, float shapeChangeDuration)
+	public void setShapeChangeTarget(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, int separationLevel, float proximity, float distance, int paused, float shapeChangeDuration)
 	{
 		TargetAxisX = xAxis;
 		TargetAxisY = yAxis;
@@ -524,11 +544,12 @@ public class ExpanDialStickModel
 		TargetPosition = position;
 		TargetSeparationLevel = separationLevel;
 		TargetProximity = proximity;
+		TargetDistance = distance;
 		TargetPaused = paused;
 		TargetShapeChangeDuration = shapeChangeDuration;
 	}
 	
-	public void setShapeChangeCurrent(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, int separationLevel, float proximity, int paused, float shapeChangeDuration)
+	public void setShapeChangeCurrent(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, int separationLevel, float proximity, float distance, int paused, float shapeChangeDuration)
 	{
 		
 		CurrentAxisX = xAxis;
@@ -538,6 +559,7 @@ public class ExpanDialStickModel
 		CurrentHolding = holding;
 		CurrentSeparationLevel = separationLevel;
 		CurrentProximity = proximity;
+		CurrentDistance = distance;
 		CurrentPaused = paused;
 
 		if (this.reachingCurrent > 0f  && reaching == false){
@@ -634,6 +656,7 @@ public class ExpanDialStickModel
 			this.holdingDiff,
 			this.separationLevelDiff,
 			this.proximityDiff,
+			this.distanceDiff,
 			this.shapeChangeDurationDiff
 		};
 	}
@@ -658,6 +681,7 @@ public class ExpanDialStickModel
 			= this.holdingDiff
 			= this.separationLevelDiff
 			= this.proximityDiff
+			= this.distanceDiff
 			= this.shapeChangeDurationDiff
 			= 0f;
 	}

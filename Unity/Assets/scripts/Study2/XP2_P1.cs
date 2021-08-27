@@ -69,11 +69,17 @@ public class XP2_P1 : MonoBehaviour
 	public const string CMD_STOP = "STOP";
 
 	public float shapeChangeDuration = 2f;
-	private  ExpanDialStickView.FeedbackMode[] feedbackModes = new ExpanDialStickView.FeedbackMode[] {
+	/*private  ExpanDialStickView.FeedbackMode[] feedbackModes = new ExpanDialStickView.FeedbackMode[] {
 	ExpanDialStickView.FeedbackMode.PulseOut,
 	ExpanDialStickView.FeedbackMode.Blink,
 	ExpanDialStickView.FeedbackMode.PulseIn,
 	ExpanDialStickView.FeedbackMode.None
+	}; */
+	private ExpanDialStickView.FeedbackMode[] feedbackModes = new ExpanDialStickView.FeedbackMode[] {
+	ExpanDialStickView.FeedbackMode.Blink,
+	ExpanDialStickView.FeedbackMode.Blink,
+	ExpanDialStickView.FeedbackMode.Blink,
+	ExpanDialStickView.FeedbackMode.Blink
 	};
 	private sbyte[] heights = new sbyte[] {
 	0,

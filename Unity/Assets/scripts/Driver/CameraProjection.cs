@@ -17,7 +17,7 @@ public class CameraProjection : MonoBehaviour
     public float bottom = 0f;
     void LateUpdate()
     {
-        Camera cam = Camera.main;
+        Camera cam = gameObject.GetComponent<Camera>();
         Matrix4x4 m = PerspectiveOffCenter(left, right, bottom, top, cam.nearClipPlane, cam.farClipPlane);
         cam.projectionMatrix = m;
     }

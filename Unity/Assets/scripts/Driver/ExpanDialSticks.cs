@@ -10,6 +10,7 @@ using uPLibrary.Networking.M2Mqtt.Utility;
 using uPLibrary.Networking.M2Mqtt.Exceptions;
 using TMPro;
 using System;
+using Leap.Unity;
 
 public class MqttConnectionEventArgs : EventArgs
 {
@@ -122,6 +123,12 @@ public class ExpanDialSticks : MonoBehaviour
 	public float diameter = 6.0f;
 	public float height = 10.0f;
 	public float offset = 0.1f;
+
+	//public GameObject capsuleHandLeftPrefab;
+	//public GameObject capsuleHandRightPrefab;
+	public GameObject SafeGuardGo;
+	public MyCapsuleHand leftHand;
+	public MyCapsuleHand rightHand;
 	public enum SafetyMotionMode {SafetyRatedMonitoredStop, SpeedAndSeparationMonitoring};
 	public SafetyMotionMode safetyMotionMode = SafetyMotionMode.SafetyRatedMonitoredStop;
 	private int nbSeparationLevels = 1;
@@ -165,7 +172,7 @@ public class ExpanDialSticks : MonoBehaviour
 	public ExpanDialStickCollision[,] collisionMatrix = new ExpanDialStickCollision [nbRows, nbColumns];
 	public ExpanDialStickView[,] viewMatrix = new ExpanDialStickView[nbRows, nbColumns];
 	public ExpanDialStickModel[,] modelMatrix = new ExpanDialStickModel[nbRows, nbColumns];
-	
+
     private GameObject topBorderText;
 	private Vector3 textRotationTop;
 	private TextMeshPro textMeshTop;
@@ -254,6 +261,11 @@ public class ExpanDialSticks : MonoBehaviour
 	}
 	// Use this for initialization
 	void Start () {
+		if(leftHand == null || rightHand == null)
+		{
+			Debug.Log("Could not found left and/or right hand capsule.");
+			Quit();
+		}
 		shapeChanging = textureChanging = safetyChanging = false;
 		/*for(int i = 0; i < nbRows * nbColumns; i++) {
 			this.positions[i] = 0;
@@ -313,9 +325,10 @@ public class ExpanDialSticks : MonoBehaviour
 				collisionMatrix[i, j].Height = height;
 				collisionMatrix[i, j].Offset = offset;
 				collisionMatrix[i, j].NbSeparationLevels = nbSeparationLevels;
+				collisionMatrix[i, j].RightHand = rightHand;
+				collisionMatrix[i, j].LeftHand = leftHand;
 				//collisionMatrix[i, j].EnableCollision();
 			}
-
 		// Set camera
 		mainCamera = Camera.main;
 		mainCamera.enabled = true;
@@ -327,6 +340,19 @@ public class ExpanDialSticks : MonoBehaviour
 		Vector3 cameraLookAtPosition = cameraPosition - new Vector3(0f, cameraDistanceFromMatrix, 0f);
 		mainCamera.transform.LookAt(cameraLookAtPosition);
 		mainCamera.transform.eulerAngles += new Vector3(0f, 90f, 0f);
+
+		// Safety Camera Initialization
+		SafeGuardGo.transform.position = new Vector3(((nbRows - 1) * (diameter + offset)) / 2f + (diameter - borderOffset)/2f, cameraDistanceFromMatrix, ((nbColumns - 1) * (diameter + offset))/2f);
+		Vector3 safeCameraLookAtPosition = SafeGuardGo.transform.position - new Vector3(0f, cameraDistanceFromMatrix, 0f);
+		SafeGuardGo.transform.LookAt(safeCameraLookAtPosition);
+		SafeGuardGo.transform.eulerAngles += new Vector3(0f, 90f, 0f);
+		Camera safeCamera = SafeGuardGo.GetComponent<Camera>();
+		safeCamera.orthographic = true;
+		safeCamera.orthographicSize = (nbRows * (diameter + offset) + 2 * offset + 2 * borderOffset + (diameter - borderOffset))/2f;
+		// Add projector
+		Projector safeGuardProjector = SafeGuardGo.GetComponent<Projector>();
+		safeGuardProjector.orthographic = true;
+		safeGuardProjector.orthographicSize = safeCamera.orthographicSize;
 		/*Vector3 targetOrientationPosition = new Vector3(0, cameraDistanceFromMatrix, (nbColumns - 1) * (diameter + offset) / 2);
 		Vector3 targetOrientationDir = targetOrientationPosition - cameraPosition;
 		float zAngle = Vector3.Angle(targetOrientationDir, Vector3.up);
@@ -528,6 +554,7 @@ public class ExpanDialSticks : MonoBehaviour
 							{
 								float prevProximity = modelMatrix[i, j].CurrentProximity;
 								float nextProximity = collisionMatrix[i, j].Proximity();
+								float distanceFromBody = collisionMatrix[i, j].Distance();
 								int currSeparationLevel = collisionMatrix[i, j].SeparationLevel();
 
 								modelMatrix[i, j].setShapeChangeCurrent(
@@ -540,6 +567,7 @@ public class ExpanDialSticks : MonoBehaviour
 									(bool)(gans.ANS.content.holdingValue[i * nbColumns + j] == 1 ? true : false), // holdingValue (0, 1)
 									currSeparationLevel,
 									nextProximity,
+									distanceFromBody,
 									modelMatrix[i, j].CurrentPaused,
 									MQTT_INTERVAL
 									); ;
@@ -728,6 +756,7 @@ public class ExpanDialSticks : MonoBehaviour
 						modelMatrix[i, j].TargetHolding,
 						modelMatrix[i, j].TargetSeparationLevel,
 						modelMatrix[i, j].TargetProximity,
+						modelMatrix[i, j].TargetDistance,
 						0,
 						modelMatrix[i, j].TargetShapeChangeDuration
 					);
@@ -876,8 +905,10 @@ public class ExpanDialSticks : MonoBehaviour
 
 				float prevProximity = modelMatrix[i, j].CurrentProximity;
 				float nextProximity = collisionMatrix[i, j].Proximity();
+				float currDistance = collisionMatrix[i, j].Distance();
 				int currSeparationLevel = collisionMatrix[i, j].SeparationLevel();
 				viewMatrix[i, j].CurrentProximity = modelMatrix[i, j].CurrentProximity = nextProximity;
+				viewMatrix[i, j].CurrentDistance = modelMatrix[i, j].CurrentDistance = currDistance;
 				viewMatrix[i, j].CurrentSeparationLevel = modelMatrix[i, j].CurrentSeparationLevel = currSeparationLevel;
 				viewMatrix[i, j].CurrentReaching = modelMatrix[i, j].CurrentReaching = modelMatrix[i, j].CurrentPosition != viewMatrix[i, j].CurrentPosition;
 
@@ -908,6 +939,7 @@ public class ExpanDialSticks : MonoBehaviour
 								modelMatrix[i, j].CurrentHolding,
 								modelMatrix[i, j].CurrentSeparationLevel,
 								modelMatrix[i, j].CurrentProximity,
+								modelMatrix[i, j].CurrentDistance,
 								modelMatrix[i, j].CurrentPosition-viewMatrix[i, j].CurrentPosition,
 								0.1f // very fast
 							);
@@ -940,6 +972,7 @@ public class ExpanDialSticks : MonoBehaviour
 									modelMatrix[i, j].TargetHolding,
 									modelMatrix[i, j].CurrentSeparationLevel,
 									modelMatrix[i, j].CurrentProximity,
+									modelMatrix[i, j].CurrentDistance,
 									0,
 									safetyDuration //  fast
 								);
@@ -967,6 +1000,7 @@ public class ExpanDialSticks : MonoBehaviour
 								modelMatrix[i, j].TargetHolding,
 								modelMatrix[i, j].CurrentSeparationLevel,
 								modelMatrix[i, j].CurrentProximity,
+								modelMatrix[i, j].CurrentDistance,
 								modelMatrix[i, j].CurrentPaused,
 								safetyDuration //  fast
 							);
@@ -1003,6 +1037,7 @@ public class ExpanDialSticks : MonoBehaviour
 						modelMatrix[i, j].CurrentHolding,
 						modelMatrix[i, j].CurrentSeparationLevel,
 						modelMatrix[i, j].CurrentProximity,
+						modelMatrix[i, j].CurrentDistance,
 						modelMatrix[i, j].CurrentPaused,
 						modelMatrix[i, j].CurrentShapeChangeDuration
 					);
