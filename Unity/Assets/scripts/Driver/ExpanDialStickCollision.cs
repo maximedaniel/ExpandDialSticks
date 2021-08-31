@@ -114,106 +114,149 @@ public class ExpanDialStickCollision: MonoBehaviour
 	}
 	void FixedUpdate()
 	{
+		this.distance = float.PositiveInfinity;
 		Vector3 pinHeadPoint = (transform.position + transform.up * (height / 2f));
-		if (leftHand != null && rightHand != null)
+		Vector3 pinTailPoint = (transform.position - transform.up * (height / 2f));
+		Vector3 pinPoint = transform.position;
+		float distanceToLeftBody, distanceToRightBody;
+		distanceToLeftBody = distanceToRightBody = float.PositiveInfinity;
+		Vector3 pinPointToLeftBody, pinPointToRightBody;
+		pinPointToLeftBody = pinPointToRightBody = pinPoint;
+		if (leftHand != null && leftHand.IsActive())
 		{
-			distance = Mathf.Min(leftHand.GetDistanceFromHand(pinHeadPoint), rightHand.GetDistanceFromHand(pinHeadPoint));
+				// Left hand
+				GameObject handCollider = leftHand.GetHandCollider();
+				SphereCollider sc = handCollider.GetComponent<SphereCollider>();
+				Vector3 handColliderPosition = handCollider.transform.position;
+				// head
+				handColliderPosition.y = pinHeadPoint.y;
+				float distanceHeadToLeftHand = Vector3.Magnitude(handColliderPosition - pinHeadPoint);
+				Vector3 headToLeftHand = Vector3.Normalize(handColliderPosition - pinHeadPoint); 
+				if(distanceHeadToLeftHand < distanceToLeftBody)
+				{
+					pinPointToLeftBody = pinHeadPoint + headToLeftHand * diameter / 2f;
+					distanceToLeftBody = distanceHeadToLeftHand;
+				}
+				// tail
+				handColliderPosition.y = pinTailPoint.y;
+				float distanceTailToLeftHand = Vector3.Magnitude(handColliderPosition - pinTailPoint);
+				Vector3 tailToLeftHand = Vector3.Normalize(handColliderPosition - pinTailPoint); 
+				if (distanceTailToLeftHand < distanceToLeftBody)
+				{
+					pinPointToLeftBody = pinTailPoint + tailToLeftHand * diameter / 2f;
+					distanceToLeftBody = distanceTailToLeftHand;
+				}
+				// Left Arm 
+				GameObject armCollider = leftHand.GetArmCollider();
+				CapsuleCollider capsuleCollider1 = armCollider.GetComponent<CapsuleCollider>();
+				Vector3 forwardArmColliderPosition = armCollider.transform.position + armCollider.transform.forward * (capsuleCollider1.height / 2.0f);
+				Vector3 backwardArmColliderPosition = armCollider.transform.position - armCollider.transform.forward * (capsuleCollider1.height / 2.0f);
+				// head
+				forwardArmColliderPosition.y = pinHeadPoint.y;
+				backwardArmColliderPosition.y = pinHeadPoint.y;
+				Vector3 projectHeadLeftArm = SafeGuard.ProjectPointLine(pinHeadPoint, backwardArmColliderPosition, forwardArmColliderPosition);
+				float distanceHeadToLeftArm = Vector3.Magnitude(projectHeadLeftArm - pinHeadPoint);
+				Vector3 headToLeftArm = Vector3.Normalize(projectHeadLeftArm - pinHeadPoint);
+
+				if (distanceHeadToLeftArm < distanceToLeftBody)
+				{
+					pinPointToLeftBody = pinHeadPoint + headToLeftArm * diameter / 2f;
+					distanceToLeftBody = distanceHeadToLeftArm;
+				}
+				// tail
+				forwardArmColliderPosition.y = pinTailPoint.y;
+				backwardArmColliderPosition.y = pinTailPoint.y;
+				Vector3 projectTailLeftArm = SafeGuard.ProjectPointLine(pinTailPoint, backwardArmColliderPosition, forwardArmColliderPosition);
+				float distanceTailToLeftArm = Vector3.Magnitude(projectTailLeftArm - pinTailPoint);
+				Vector3 tailToLeftArm = Vector3.Normalize(projectTailLeftArm - pinTailPoint);
+
+				if (distanceTailToLeftArm < distanceToLeftBody)
+				{
+					pinPointToLeftBody = pinTailPoint + tailToLeftArm * diameter / 2f;
+					distanceToLeftBody = distanceTailToLeftArm;
+				}
 
 		}
-		/* Check user proximy level 1 */
-		for (int level = 0; level < nbSeparationLevels; level++)
+		if (rightHand != null && rightHand.IsActive())
 		{
-			RaycastHit hit;
-			bool touched = Physics.Raycast(transform.position - transform.up * 100, transform.up, out hit, Mathf.Infinity, 1 << (SEPARATION_LAYER + level));
-			if (touched)
+			// Left hand
+			GameObject handCollider = rightHand.GetHandCollider();
+			SphereCollider sc = handCollider.GetComponent<SphereCollider>();
+			Vector3 handColliderPosition = handCollider.transform.position;
+			// head
+			handColliderPosition.y = pinHeadPoint.y;
+			float distanceHeadToRightHand = Vector3.Magnitude(handColliderPosition - pinHeadPoint);
+			Vector3 headToRightHand = Vector3.Normalize(handColliderPosition - pinHeadPoint);
+			if (distanceHeadToRightHand < distanceToRightBody)
 			{
-				Vector3 hitPoint = hit.point;
-				if ((hitPoint.y - pinHeadPoint.y) <= minDistanceFromLayer)
+				pinPointToRightBody = pinHeadPoint + headToRightHand * diameter / 2f;
+				distanceToRightBody = distanceHeadToRightHand;
+			}
+			// tail
+			handColliderPosition.y = pinTailPoint.y;
+			float distanceTailToRightHand = Vector3.Magnitude(handColliderPosition - pinTailPoint);
+			Vector3 tailToRightHand = Vector3.Normalize(handColliderPosition - pinTailPoint);
+			if (distanceTailToRightHand < distanceToRightBody)
+			{
+				pinPointToRightBody = pinTailPoint + tailToRightHand * diameter / 2f;
+				distanceToRightBody = distanceTailToRightHand;
+			}
+			// Right Arm 
+			GameObject armCollider = RightHand.GetArmCollider();
+			CapsuleCollider capsuleCollider1 = armCollider.GetComponent<CapsuleCollider>();
+			Vector3 forwardArmColliderPosition = armCollider.transform.position + armCollider.transform.forward * (capsuleCollider1.height / 2.0f);
+			Vector3 backwardArmColliderPosition = armCollider.transform.position - armCollider.transform.forward * (capsuleCollider1.height / 2.0f);
+			// head
+			forwardArmColliderPosition.y = pinHeadPoint.y;
+			backwardArmColliderPosition.y = pinHeadPoint.y;
+			Vector3 projectHeadRightArm = SafeGuard.ProjectPointLine(pinHeadPoint, backwardArmColliderPosition, forwardArmColliderPosition);
+			float distanceHeadToRightArm = Vector3.Magnitude(projectHeadRightArm - pinHeadPoint);
+			Vector3 headToRightArm = Vector3.Normalize(projectHeadRightArm - pinHeadPoint);
+
+			if (distanceHeadToRightArm < distanceToRightBody)
+			{
+				pinPointToRightBody = pinHeadPoint + headToRightArm * diameter / 2f;
+				distanceToRightBody = distanceHeadToRightArm;
+			}
+			// tail
+			forwardArmColliderPosition.y = pinTailPoint.y;
+			backwardArmColliderPosition.y = pinTailPoint.y;
+			Vector3 projectTailRightArm = SafeGuard.ProjectPointLine(pinTailPoint, backwardArmColliderPosition, forwardArmColliderPosition);
+			float distanceTailToRightArm = Vector3.Magnitude(projectTailRightArm - pinTailPoint);
+			Vector3 tailToRightArm = Vector3.Normalize(projectTailRightArm - pinTailPoint);
+
+			if (distanceTailToRightArm < distanceToRightBody)
+			{
+				pinPointToRightBody = pinTailPoint + tailToRightArm * diameter / 2f;
+				distanceToRightBody = distanceTailToRightArm;
+			}
+		}
+
+		if (distanceToLeftBody != float.PositiveInfinity || distanceToRightBody != float.PositiveInfinity) {
+
+			pinPoint = (distanceToLeftBody < distanceToRightBody) ? pinPointToLeftBody : pinPointToRightBody;
+			this.distance = Mathf.Min(distanceToLeftBody, distanceToRightBody);
+			/* Check user proximy level 1 */
+			for (int level = 0; level < nbSeparationLevels; level++)
+			{
+				RaycastHit hit;
+				bool touched = Physics.Raycast(pinPoint - Vector3.up * 100, Vector3.up, out hit, Mathf.Infinity, 1 << (SEPARATION_LAYER + level));
+				if (touched)
 				{
-					separationLevel = level;
-					float coeff = Mathf.Max(0, level - 1)/(float)nbSeparationLevels;
-					proximity = 1f - coeff;
-					Debug.DrawLine(transform.position - transform.up * 100, hitPoint, Color.HSVToRGB(coeff, 1f, 1f));
-					return;
+					Vector3 hitPoint = hit.point;
+					if ((hitPoint.y - pinPoint.y) <= minDistanceFromLayer)
+					{
+						separationLevel = level;
+						float coeff = Mathf.Max(0, level - 1)/(float)nbSeparationLevels;
+						proximity = 1f - coeff;
+						Debug.DrawLine(pinPoint - Vector3.up * 100, hitPoint, Color.HSVToRGB(coeff, 1f, 1f));
+						return;
+					}
 				}
 			}
 		}
 		separationLevel = nbSeparationLevels;
 		proximity = 0f;
-		/*
-		RaycastHit hitLevel0;
-		RaycastHit hitLevel1;
-		RaycastHit hitLevel2;
-		bool touchedLevel0 = Physics.Raycast(transform.position - transform.up * 100, transform.up, out hitLevel0, Mathf.Infinity, 1 << SEPARATION_LAYER_0);
-		bool touchedLevel1 = Physics.Raycast(transform.position - transform.up * 100, transform.up, out hitLevel1, Mathf.Infinity, 1 << SEPARATION_LAYER_1);
-		bool touchedLevel2 = Physics.Raycast(transform.position - transform.up * 100, transform.up, out hitLevel2, Mathf.Infinity, 1 << SEPARATION_LAYER_2);
-
-		Vector3 pinHeadPoint = (transform.position + transform.up * (height / 2f));
-		if (touchedLevel0)
-		{
-			Vector3 hitLevel0Point = hitLevel0.point;
-			if ((hitLevel0Point.y - pinHeadPoint.y) <= minDistanceFromLayer)
-			{
-				proximity = 1f;
-				Debug.DrawLine(transform.position - transform.up * 100, hitLevel0.point, Color.red);
-				return;
-			}
-		}
-		else if (touchedLevel1)
-		{
-			Vector3 hitLevel1Point = hitLevel1.point;
-			if ((hitLevel1Point.y - pinHeadPoint.y) <= minDistanceFromLayer)
-			{
-				proximity = 0.66f;
-				Debug.DrawLine(transform.position - transform.up * 100, hitLevel1.point, Color.yellow);
-				return;
-			}
-		}
-		else if (touchedLevel2)
-		{
-			Vector3 hitLevel2Point = hitLevel2.point;
-			if ((hitLevel2Point.y - pinHeadPoint.y) <= minDistanceFromLayer)
-			{
-				proximity = 0.33f;
-				Debug.DrawLine(transform.position - transform.up * 100, hitLevel2.point, Color.white);
-				return;
-			}
-		} else
-		{
-			proximity = 0f;
-		}*/
-		/*if (touchedLevel0)
-		{
-			Vector3 hitLevel0Point = hitLevel0.point;
-			Vector3 pinHeadPoint = (transform.position + transform.up * (height/2f));
-			float distanceBetweenPoints = Vector3.Distance(hitLevel0Point, pinHeadPoint);
-
-			Color color = new Color(1f, 0f, 0f, isColliding);
-			if (hitLevel0Point.y > pinHeadPoint.y) // pin under collider
-			{
-				if(distanceBetweenPoints >= minDistanceFromUserBody)
-				{
-					color.a = isColliding = 1f - (distanceBetweenPoints - minDistanceFromUserBody) / height;
-					color.a = isColliding;
-					Debug.DrawLine(transform.position - transform.up * 100, hitLevel0.point, color);
-				} else
-				{
-					isColliding = 1f;
-					color.a = isColliding;
-					Debug.DrawLine(transform.position - transform.up * 100, hitLevel0.point, color);
-				}
-
-			} else // pin  inside collider
-			{
-				isColliding = 1f;
-				color.a = isColliding;
-				Debug.DrawLine(transform.position - transform.up * 100, hitStop.point, color);
-			}
-		}
-		else
-		{
-			isColliding = 0f;
-		}*/
 	}
 
 	private void OnTriggerStay(Collider other)
@@ -223,27 +266,10 @@ public class ExpanDialStickCollision: MonoBehaviour
 
 	private void OnTriggerEnter(Collider other)
 	{
-		/*goList.Add(other.gameObject);
-		Debug.Log("["+ i + ", " + j +"] entered -> " + other.gameObject.name);
 
-		if (goList.Count == 1)
-		{
-			isColliding = true;
-			Debug.Log("["+ i + ", " + j +"] colliding...");
-		}*/
-		//isColliding = true;
 	}
 	private void OnTriggerExit(Collider other)
 	{
-		/*goList.Remove(other.gameObject);
-		Debug.Log("[" + i + ", " + j + "] exited -> " + other.gameObject.name);
-		if (goList.Count == 0)
-		{
-			isColliding = false;
-			Debug.Log("[" + i + ", " + j + "] ...collision ended.");
-		}*/
-		//isColliding = false;
-
 
 	}
 }

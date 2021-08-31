@@ -231,6 +231,18 @@ namespace Leap.Unity {
     public override Hand GetLeapHand() {
       return _hand;
     }
+    
+    public  bool IsActive() {
+      return (_handColliders != null && _handColliders[0].GetComponent<SphereCollider>().enabled);
+    }
+
+    public  GameObject GetHandCollider() {
+      return _handColliders[0];
+    }
+
+    public  GameObject GetArmCollider() {
+      return _forearmColliders[0];
+    }
 
     public override void SetLeapHand(Hand hand) {
       _hand = hand;
@@ -734,15 +746,15 @@ namespace Leap.Unity {
                 capsuleCollider.direction = 2;
             }
                 // Prepare Hand Collider drawing
-                SphereCollider sc = _handColliders[0].GetComponent<SphereCollider>();
+               /* SphereCollider sc = _handColliders[0].GetComponent<SphereCollider>();
                 Vector3 handColliderPosition = _handColliders[0].transform.position;
                 handColliderPosition.y = 15f;
                 Vector3 handColliderScale = new Vector3(sc.radius * 2.0f, sc.radius * 2.0f, sc.radius * 2.0f);
                 _colliderMatrices[_curColliderIndex] = Matrix4x4.TRS(handColliderPosition, Quaternion.identity, handColliderScale);
                 _colliderMeshes[_curColliderIndex] = _sphereMesh;
-                _curColliderIndex++;
+                _curColliderIndex++;*/
                 // Prepare Arm Collider drawing
-                CapsuleCollider capsuleCollider1 = _forearmColliders[0].GetComponent<CapsuleCollider>();
+                /*CapsuleCollider capsuleCollider1 = _forearmColliders[0].GetComponent<CapsuleCollider>();
                 Vector3 forwardArmColliderPosition = _forearmColliders[0].transform.position + _forearmColliders[0].transform.forward * (capsuleCollider1.height/2.0f);
                 Vector3 backwardArmColliderPosition = _forearmColliders[0].transform.position - _forearmColliders[0].transform.forward * (capsuleCollider1.height / 2.0f);
                 forwardArmColliderPosition.y = 15f;
@@ -756,7 +768,7 @@ namespace Leap.Unity {
                     colliderScale
                     );
                 _colliderMeshes[_curColliderIndex] = _cylinderMesh;
-                _curColliderIndex++;
+                _curColliderIndex++;*/
 
             }
 
@@ -821,7 +833,8 @@ namespace Leap.Unity {
       Graphics.DrawMeshInstanced(_cylinderMesh, 0, _sphereMaterial, _cylinderMatrices, _curCylinderIndex, block, 
            _castShadows?UnityEngine.Rendering.ShadowCastingMode.On: UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
       
-            combine = new CombineInstance[_curColliderIndex];
+            /*
+             combine = new CombineInstance[_curColliderIndex];
             for (int i = 0; i < _curColliderIndex; i++)
             {
                 combine[i].mesh = _colliderMeshes[i];
@@ -846,7 +859,7 @@ namespace Leap.Unity {
 
             Graphics.DrawMeshInstanced(combinedCylinderMesh, 0, _colliderMaterial, mat40, mat40.Length, block40,
                  _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, SEPARATION_LAYER);
-             
+            */
      }
 
     private void drawSphere(Vector3 position) {
