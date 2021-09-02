@@ -2,8 +2,10 @@
 
 Shader "Outlined/SilhouetteShader" {
 	Properties{
+		 _MainTex("Main Color", 2d) = "white" {}
 		 _Color("Main Color", Color) = (0.5,0.5,0.5,1)
-		 _MainTex("Texture", 2D) = "white" {}
+		_Textures("Textures", 2DArray) = "" {}
+		_TextureIndex("Texture Index", Range(0, 32)) = 0
 		_OutlineColor("Outline Color", Color) = (0,0,0,1)
 		_Outline("Outline width", Range(0.0, 100.00)) = 50
 		_SecondOutlineColor("Second Outline Color", Color) = (1,1,1,1)
@@ -64,11 +66,17 @@ Shader "Outlined/SilhouetteShader" {
 
 			UNITY_VERTEX_INPUT_INSTANCE_ID
 		};
-
-
 		uniform sampler2D _MainTex;
 		float4 _MainTex_ST;
+		// sampler2D _MainTex;
+		// sampler2D _TextureIndex_ST;
+		//sampler2D _TextureIndex_ST;
+		//float4 _TextureIndex_ST;
+
+		UNITY_DECLARE_TEX2DARRAY(_Textures);
+
 		UNITY_INSTANCING_BUFFER_START(Props)
+			UNITY_DEFINE_INSTANCED_PROP(float, _TextureIndex)
 			UNITY_DEFINE_INSTANCED_PROP(float4, _Color)
 			UNITY_DEFINE_INSTANCED_PROP(float, _Outline)
 			UNITY_DEFINE_INSTANCED_PROP(float4, _OutlineColor)
@@ -111,28 +119,47 @@ Shader "Outlined/SilhouetteShader" {
 			#pragma multi_compile_instancing
 			#pragma vertex vert
 			#pragma fragment frag
+			#pragma target 3.0
 
-			v2f vert(appdata v) {
-				v2f o;
-				UNITY_SETUP_INSTANCE_ID(v);
-				UNITY_TRANSFER_INSTANCE_ID(v, o);
-				o.worldPos = mul(unity_ObjectToWorld, v.vertex);
-				o.pos = UnityObjectToClipPos(v.vertex);
-				o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-				return o;
+			v2f vert(appdata IN) {
+				v2f OUT;
+				UNITY_SETUP_INSTANCE_ID(IN);
+
+				OUT.worldPos = mul(unity_ObjectToWorld, IN.vertex);
+				OUT.pos = UnityObjectToClipPos(IN.vertex);
+				OUT.uv = IN.uv;
+
+				UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
+				//fixed sliceIdx = 3;
+
+				//_MainTex = UNITY_SAMPLE_TEX2DARRAY(_Textures, float3(v.uv, UNITY_ACCESS_INSTANCED_PROP(Props, _TextureIndex)));
+				//fixed3 uv = fixed3(v.uv.x, v.uv.y, UNITY_ACCESS_INSTANCED_PROP(Props, _TextureIndex));
+				//o.uv = TRANSFORM_TEX(v.uv, _MainTex);  
+
+				//fixed4 col = UNITY_SAMPLE_TEX2DARRAY(_MainTex, uv);
+
+				//o.uv = v.uv;
+				//o.uv = UNITY_SAMPLE_TEX2DARRAY(_Textures, v.uv);
+				//o.uv = TRANSFORM_TEX(v.uv, UNITY_ACCESS_INSTANCED_PROP(_TextureIndex_arr, _TextureIndex));
+				//UNITY_SAMPLE_TEX2DARRAY(_Textures, float3(v.uv, UNITY_ACCESS_INSTANCED_PROP(_TextureIndex_arr, _TextureIndex)));
+				return OUT;
 			}
 
-			fixed4 frag(v2f i) : SV_TARGET{
-				UNITY_SETUP_INSTANCE_ID(i);
-				fixed4 col = tex2D(_MainTex, i.uv) * UNITY_ACCESS_INSTANCED_PROP(Props, _Color);
+			fixed4 frag(v2f IN) : SV_TARGET{
+				UNITY_SETUP_INSTANCE_ID(IN);
+				//fixed4 col = tex2D(_MainTex, i.uv) * UNITY_ACCESS_INSTANCED_PROP(Props, _Color);
+				//fixed4 col = UNITY_ACCESS_INSTANCED_PROP(Props, _Color);
+				fixed4 col = UNITY_SAMPLE_TEX2DARRAY(_Textures, float3(IN.uv, UNITY_ACCESS_INSTANCED_PROP(Props, _TextureIndex))) * UNITY_ACCESS_INSTANCED_PROP(Props, _Color);
+				//fixed4 col = UNITY_SAMPLE_TEX2DARRAY(_Textures, float3(IN.uv, UNITY_ACCESS_INSTANCED_PROP(Props, _TextureIndex))) * UNITY_ACCESS_INSTANCED_PROP(Props, _Color);
+
 				bool toShow = false;
 				// compute distance to both hand
 				float3 leftHandPos = UNITY_ACCESS_INSTANCED_PROP(Props, _LeftHandCenter);
 				float leftHandRadius = UNITY_ACCESS_INSTANCED_PROP(Props, _LeftHandRadius);
 				float3 rightHandPos = UNITY_ACCESS_INSTANCED_PROP(Props, _RightHandCenter);
 				float rightHandRadius = UNITY_ACCESS_INSTANCED_PROP(Props, _RightHandRadius);
-				float distanceToLeftHand = DistancePointLine(i.worldPos, leftHandPos - float3(0, 100, 0), leftHandPos + float3(0, 100, 0));
-				float distanceToRightHand = DistancePointLine(i.worldPos, rightHandPos - float3(0, 100, 0), rightHandPos + float3(0, 100, 0));
+				float distanceToLeftHand = DistancePointLine(IN.worldPos, leftHandPos - float3(0, 100, 0), leftHandPos + float3(0, 100, 0));
+				float distanceToRightHand = DistancePointLine(IN.worldPos, rightHandPos - float3(0, 100, 0), rightHandPos + float3(0, 100, 0));
 				toShow = toShow || distanceToLeftHand < leftHandRadius || distanceToRightHand < rightHandRadius;
 				// compute distance to both arm
 				float3 leftBackArmPos = UNITY_ACCESS_INSTANCED_PROP(Props, _LeftBackArmCenter);
@@ -142,13 +169,12 @@ Shader "Outlined/SilhouetteShader" {
 				float3 rightFrontArmPos = UNITY_ACCESS_INSTANCED_PROP(Props, _RightFrontArmCenter);
 				float rightArmRadius = UNITY_ACCESS_INSTANCED_PROP(Props, _RightArmRadius);
 
-				leftBackArmPos.y = leftFrontArmPos.y = rightBackArmPos.y = rightFrontArmPos.y = i.worldPos.y;
+				leftBackArmPos.y = leftFrontArmPos.y = rightBackArmPos.y = rightFrontArmPos.y = IN.worldPos.y;
 
-				float distanceToLeftArm = DistancePointLine(i.worldPos, leftBackArmPos, leftFrontArmPos);
-				float distanceToRightArm = DistancePointLine(i.worldPos, rightBackArmPos, rightFrontArmPos);
+				float distanceToLeftArm = DistancePointLine(IN.worldPos, leftBackArmPos, leftFrontArmPos);
+				float distanceToRightArm = DistancePointLine(IN.worldPos, rightBackArmPos, rightFrontArmPos);
 				toShow = toShow || distanceToLeftArm < leftArmRadius || distanceToRightArm < rightArmRadius;
-
-				col.a = toShow;
+				col.a = (toShow)? col.a : toShow;
 				return col;
 			}
 		ENDCG
@@ -185,7 +211,8 @@ Shader "Outlined/SilhouetteShader" {
 			CGPROGRAM
 			#pragma multi_compile_instancing
 			#pragma vertex vert
-			#pragma fragment frag			
+			#pragma fragment frag		
+			#pragma target 3.0	
 
 			v2f vert(appdata v) {
 				// just make a copy of incoming vertex data but scaled according to normal direction
@@ -239,7 +266,7 @@ Shader "Outlined/SilhouetteShader" {
 				Name "OUTLINE 2"
 				Tags { "LightMode" = "Always" }
 				Cull Front
-				Offset 64,64
+				Offset 124,124
 
 				// you can choose what kind of blending mode you want for the outline
 				Blend SrcAlpha OneMinusSrcAlpha // Normal
@@ -251,7 +278,8 @@ Shader "Outlined/SilhouetteShader" {
 				CGPROGRAM
 				#pragma multi_compile_instancing
 				#pragma vertex vert
-				#pragma fragment frag			
+				#pragma fragment frag		
+				#pragma target 3.0	
 
 				v2f vert(appdata v) {
 				// just make a copy of incoming vertex data but scaled according to normal direction
