@@ -126,7 +126,8 @@ public class ExpanDialSticks : MonoBehaviour
 
 	//public GameObject capsuleHandLeftPrefab;
 	//public GameObject capsuleHandRightPrefab;
-	public GameObject SafeGuardGo;
+	public GameObject safeGuardPrefab;
+	private GameObject safeGuardObj;
 	public MyCapsuleHand leftHand;
 	public MyCapsuleHand rightHand;
 	public enum SafetyMotionMode {SafetyRatedMonitoredStop, SpeedAndSeparationMonitoring};
@@ -155,7 +156,6 @@ public class ExpanDialSticks : MonoBehaviour
 	public float EVENT_INTERVAL = 0.25f; // 0.2f;
 	public const int nbColumns = 6;
 	public const int nbRows = 5;
-	public ExpanDialStickView.FeedbackMode safetyFeedbackMode = ExpanDialStickView.FeedbackMode.Flash;
 	float cameraDistanceFromMatrix = 70f;
 	private const float maxSpeed = 20f; // 40f; 20f; 13.33f; // pos/seconds 1s, 2s, 3s
 
@@ -246,6 +246,14 @@ public class ExpanDialSticks : MonoBehaviour
 	public int NbColumns{
 		get => nbColumns;
 	}
+	public float CameraDistanceFromPins
+	{
+		get => cameraDistanceFromMatrix;
+	}
+	public float BorderOffset
+	{
+		get => borderOffset;
+	}
 	void OnGUI()
 	{
 		/*if (GUI.Button(new Rect(10, 10, 50, 50), buttonTexture))
@@ -314,7 +322,6 @@ public class ExpanDialSticks : MonoBehaviour
 				viewMatrix[i, j].Diameter = diameter;
 				viewMatrix[i, j].Height = height;
 				viewMatrix[i, j].Offset = offset;
-				viewMatrix[i, j].SafetyFeedbackMode = safetyFeedbackMode;
 				viewMatrix[i, j].NbSeparationLevels = nbSeparationLevels;
 
 				// collision
@@ -341,8 +348,9 @@ public class ExpanDialSticks : MonoBehaviour
 		mainCamera.transform.LookAt(cameraLookAtPosition);
 		mainCamera.transform.eulerAngles += new Vector3(0f, 90f, 0f);
 
-		// Safety Camera Initialization
-		SafeGuardGo.transform.position = new Vector3(((nbRows - 1) * (diameter + offset)) / 2f + (diameter - borderOffset)/2f, cameraDistanceFromMatrix, ((nbColumns - 1) * (diameter + offset))/2f);
+		// Safety Guardian Initialization
+
+		/*SafeGuardGo.transform.position = new Vector3(((nbRows - 1) * (diameter + offset)) / 2f + (diameter - borderOffset)/2f, cameraDistanceFromMatrix, ((nbColumns - 1) * (diameter + offset))/2f);
 		Vector3 safeCameraLookAtPosition = SafeGuardGo.transform.position - new Vector3(0f, cameraDistanceFromMatrix, 0f);
 		SafeGuardGo.transform.LookAt(safeCameraLookAtPosition);
 		SafeGuardGo.transform.eulerAngles += new Vector3(0f, 90f, 0f);
@@ -352,7 +360,8 @@ public class ExpanDialSticks : MonoBehaviour
 		// Add projector
 		Projector safeGuardProjector = SafeGuardGo.GetComponent<Projector>();
 		safeGuardProjector.orthographic = true;
-		safeGuardProjector.orthographicSize = safeCamera.orthographicSize;
+		safeGuardProjector.orthographicSize = safeCamera.orthographicSize;*/
+
 		/*Vector3 targetOrientationPosition = new Vector3(0, cameraDistanceFromMatrix, (nbColumns - 1) * (diameter + offset) / 2);
 		Vector3 targetOrientationDir = targetOrientationPosition - cameraPosition;
 		float zAngle = Vector3.Angle(targetOrientationDir, Vector3.up);
@@ -842,10 +851,7 @@ public class ExpanDialSticks : MonoBehaviour
 		{
 			for (int j = 0; j < nbColumns; j++)
 			{
-				modelMatrix[i, j].setSafetyChange(
-					modelMatrix[i, j].SafetyFeedForwardEnabled,
-					modelMatrix[i, j].SafetyFeedbackMode
-				);
+				modelMatrix[i, j].setSafetyChange(modelMatrix[i, j].CurrentFeedForwarded);
 			}
 		}
 		safetyChanging = true;
@@ -1148,8 +1154,7 @@ public class ExpanDialSticks : MonoBehaviour
 				for (int j = 0; j < nbColumns; j++)
 				{
 					viewMatrix[i, j].setSafetyChange(
-						modelMatrix[i, j].SafetyFeedForwardEnabled,
-						modelMatrix[i, j].SafetyFeedbackMode
+						modelMatrix[i, j].CurrentFeedForwarded
 					);
 				}
 			}

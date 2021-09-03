@@ -8,7 +8,6 @@ public class SafeGuard : MonoBehaviour
 {
 	Projector projector;
 
-
 	public ExpanDialSticks pins;
 
 	private const float bodyOutlineWidth = 0.4f;
@@ -29,6 +28,10 @@ public class SafeGuard : MonoBehaviour
 	private int _armIndex = 0;
 
 
+	private const int textureSize = 512;
+	private Texture2D _upTexture;
+	private Texture2D _downTexture;
+	private Texture2D _emptyTexture;
 	private Texture2D[] _noTextures;
 	private Texture2DArray _noTextureArray;
 	private float[] _noTextureIndexes;
@@ -74,11 +77,14 @@ public class SafeGuard : MonoBehaviour
 	private float[] _lineLeftArmRadius, _lineRightArmRadius;
 	private int _lineIndex = 0;
 
-	public enum SafetyOverlayMode {Dot, Line, Zone};
+	public enum SafetyOverlayMode {None, Dot, Line, Zone};
 	public SafetyOverlayMode overlayMode = SafetyOverlayMode.Line;
 
 	private const int SEPARATION_LAYER = 10; // Safety Level 0
 
+	private Color _leftDivergingColor = Color.white;
+	private Color _middleDivergingColor = Color.white;
+	private Color _rightDivergingColor = Color.white;
 
 	public static Vector3 ProjectPointLine(Vector3 point, Vector3 lineStart, Vector3 lineEnd)
 	{
@@ -102,15 +108,23 @@ public class SafeGuard : MonoBehaviour
 	}
 
 
-	public SafeGuard(ExpanDialSticks expanDialSticks)
-	{
-		this.pins = expanDialSticks;
-	}
-
-
 	// Start is called before the first frame update
 	void Start()
 	{
+		// Configure transform
+		this.transform.position = new Vector3(((pins.NbRows - 1) * (pins.diameter + pins.offset)) / 2f + (pins.diameter - pins.BorderOffset) / 2f, pins.CameraDistanceFromPins, ((pins.NbColumns - 1) * (pins.diameter + pins.offset)) / 2f);
+		Vector3 safeCameraLookAtPosition = this.transform.position - new Vector3(0f, pins.CameraDistanceFromPins, 0f);
+		this.transform.LookAt(safeCameraLookAtPosition);
+		this.transform.eulerAngles += new Vector3(0f, 90f, 0f);
+
+		// Configure camera
+		Camera cam = this.GetComponent<Camera>();
+		cam.orthographicSize = (pins.NbRows * (pins.diameter + pins.offset) + 2 * pins.offset + 2 * pins.BorderOffset + (pins.diameter - pins.BorderOffset)) / 2f;
+		
+		// Configure projector
+		projector = this.GetComponent<Projector>();
+		projector.orthographicSize = cam.orthographicSize;
+
 		_handMatrices = new Matrix4x4[32];
 		_handColors = new Vector4[32];
 		_handOutlineColors = new Vector4[32];
@@ -125,35 +139,36 @@ public class SafeGuard : MonoBehaviour
 		_armSecondOutlineColors = new Vector4[32];
 		_armSecondOutlineWidths = new float[32];
 
+		// load used textures
+		_emptyTexture = Resources.Load<Texture2D>("white");
+		_upTexture = Resources.Load<Texture2D>("up");
+		_downTexture = Resources.Load<Texture2D>("down");
+
 		_noTextures = new Texture2D[32];
 		_noTextureIndexes = new float[32];
+		_noTextureArray = new Texture2DArray(textureSize, textureSize, _noTextures.Length, TextureFormat.DXT1Crunched, false);
+
+
 		for (int i = 0; i < _noTextures.Length; i++)
 		{
-			_noTextures[i] = Resources.Load<Texture2D>("white");
+			_noTextures[i] = _emptyTexture;
 			_noTextureIndexes[i] = i;
 		}
-		int textureWidth = 512;
-		int textureHeight = 512;
-		_noTextureArray = new Texture2DArray(textureWidth, textureHeight, _noTextures.Length, TextureFormat.DXT1Crunched, false);
+
 		for (int i = 0; i < _noTextures.Length; i++)
 		{
 			Graphics.CopyTexture(_noTextures[i], 0, 0, _noTextureArray, i, 0); // i is the index of the texture
 		}
 		_dotMat.SetTexture("_Textures", _noTextureArray);
 		_lineMat.SetTexture("_Textures", _noTextureArray);
-		Texture2D[] _iconTextures = new Texture2D[32];
+
+		_iconTextures = new Texture2D[32];
 		_iconTextureIndexes = new float[32];
-		for (int i = 0; i < _iconTextures.Length; i++)
-		{
-			_iconTextures[i] = Resources.Load<Texture2D>("moon");
-			_iconTextureIndexes[i] = i;
-		}
-		_iconTextureArray = new Texture2DArray(textureWidth, textureHeight, _iconTextures.Length, TextureFormat.DXT5Crunched, false);
-		for (int i = 0; i < _iconTextures.Length; i++)
-		{
-			Graphics.CopyTexture(_iconTextures[i], 0, 0, _iconTextureArray, i, 0); // i is the index of the texture
-		}
-		_planeMat.SetTexture("_Textures", _iconTextureArray);
+		_iconTextureArray = new Texture2DArray(textureSize, textureSize, _iconTextures.Length, TextureFormat.DXT5Crunched, false);
+
+
+
+
 
 		/* 
 		Resources.Load<Texture2D>(projectorTexture);
@@ -216,18 +231,76 @@ public class SafeGuard : MonoBehaviour
 		_lineRightFrontArmCenters = new Vector4[32];
 		_lineLeftArmRadius = new float[32];
 		_lineRightArmRadius = new float[32];
+		/*
+		// Generate color mapping
+		Gradient gradient = new Gradient();
 
-		projector = this.GetComponent<Projector>();
+		// Populate the color keys at the relative time 0 and 1 (0 and 100%)
+		GradientColorKey[] colorKey = new GradientColorKey[11];
+
+		ColorUtility.TryParseHtmlString("#364B9A", out colorKey[0].color);
+		colorKey[0].time = 0 / 10f;
+		ColorUtility.TryParseHtmlString("#4A7BB7", out colorKey[1].color);
+		colorKey[1].time = 1 / 10f;
+		ColorUtility.TryParseHtmlString("#6EA6CD", out colorKey[2].color);
+		colorKey[2].time = 2 / 10f;
+		ColorUtility.TryParseHtmlString("#98CAE1", out colorKey[3].color);
+		colorKey[3].time = 3 / 10f;
+		ColorUtility.TryParseHtmlString("#C2E4EF", out colorKey[4].color);
+		colorKey[4].time = 4 / 10f;
+		ColorUtility.TryParseHtmlString("#EAECCC", out colorKey[5].color);
+		colorKey[5].time = 5 / 10f;
+		ColorUtility.TryParseHtmlString("#FEDA8B", out colorKey[6].color);
+		colorKey[6].time = 6 / 10f;
+		ColorUtility.TryParseHtmlString("#FDB366", out colorKey[7].color);
+		colorKey[7].time = 7 / 10f;
+		ColorUtility.TryParseHtmlString("#F67E4B", out colorKey[8].color);
+		colorKey[8].time = 8 / 10f;
+		ColorUtility.TryParseHtmlString("#DD3D2D", out colorKey[9].color);
+		colorKey[9].time = 9 / 10f;
+		ColorUtility.TryParseHtmlString("#A50026", out colorKey[10].color);
+		colorKey[10].time = 10 / 10f;
+
+
+
+		// Populate the alpha  keys at relative time 0 and 1  (0 and 100%)
+		GradientAlphaKey [] alphaKey = new GradientAlphaKey[11];
+		for (int i = 0; i < 11; i++)
+		{
+			alphaKey[i].alpha = 1f;
+			alphaKey[i].time = i / 10f;
+		}
+
+		gradient.SetKeys(colorKey, alphaKey);*/
+
+		// What's the color at the relative time 0.25 (25 %) ?
+		//Debug.Log(gradient.Evaluate(0.25f));
+
+		ColorUtility.TryParseHtmlString("#384bc1", out _leftDivergingColor);
+		ColorUtility.TryParseHtmlString("#ffffff", out _middleDivergingColor);
+		ColorUtility.TryParseHtmlString("#b50021", out _rightDivergingColor);
+
+
 	}
 
-    // Update is called once per frame
-    void Update()
+	// Update is called once per frame
+	void Update()
     {
 		_handIndex = _armIndex = _planeIndex = _dotIndex = _lineIndex = 0;
 
 		bool toDraw = false;
 
 		float backgroundDistance = 0f;
+
+		float minOrthographicSize = pins.diameter - 1.2f;
+		float maxOrthographicSize = minOrthographicSize * 3f;
+		float minOutlineWidth = 1.2f;
+		float maxOutlineWidth = minOutlineWidth * 3f;
+		float minSecondOutlineWidth = 2.6f;
+		float maxSecondOutlineWidth = minSecondOutlineWidth * 3f;
+
+		float minScaleDistance = 0f;
+		float maxScaleDistance = minOrthographicSize;
 
 
 		Vector3 leftHandPos, leftBackArmPos, leftFrontArmPos;
@@ -256,6 +329,7 @@ public class SafeGuard : MonoBehaviour
 			_handSecondOutlineColors[_handIndex] = new Vector4(1f, 1f, 1f, 1f);
 			_handSecondOutlineWidths[_handIndex] = bodySecondOutlineWidth; 
 			_handIndex++;
+
 			// Left Arm Zone
 			GameObject armCollider = pins.leftHand.GetArmCollider();
 			CapsuleCollider capsuleCollider1 = armCollider.GetComponent<CapsuleCollider>();
@@ -312,6 +386,7 @@ public class SafeGuard : MonoBehaviour
 			_handSecondOutlineColors[_handIndex] = new Vector4(1f, 1f, 1f, 1f);
 			_handSecondOutlineWidths[_handIndex] = 2f;
 			_handIndex++;
+
 			// Right Arm Zone
 			GameObject armCollider = pins.rightHand.GetArmCollider();
 			CapsuleCollider capsuleCollider1 = armCollider.GetComponent<CapsuleCollider>();
@@ -348,26 +423,17 @@ public class SafeGuard : MonoBehaviour
 		{
 			for (int column = 0; column < pins.NbColumns; column++)
 			{
-				int displacement = pins.viewMatrix[row, column].CurrentPaused;
+				int paused = pins.viewMatrix[row, column].CurrentPaused;
+				int feedforwarded = pins.viewMatrix[row, column].CurrentFeedForwarded;
+				int displacement = (paused != 0) ? paused : feedforwarded;
 				Transform pin = pins.viewMatrix[row, column].transform;
 				if (displacement != 0)
 				{
 					toDraw = true;
 					// Generate dots adjust dot diameter under body
-
 					Vector3 dotPos = pin.position;
 					Quaternion dotRot = pin.rotation;
 					float distance = pins.viewMatrix[row, column].CurrentDistance;
-					
-					float minOrthographicSize = pins.diameter - 1f; 
-					float maxOrthographicSize = minOrthographicSize * 3f;
-					float minOutlineWidth = 1.2f;
-					float maxOutlineWidth = minOutlineWidth * 3f;
-					float minSecondOutlineWidth = 2.6f;
-					float maxSecondOutlineWidth = minSecondOutlineWidth * 3f;
-
-					float minScaleDistance = 0f;
-					float maxScaleDistance = minOrthographicSize;
 					float scaleDistanceCoeff = 1f - (Mathf.Clamp(distance, minScaleDistance, maxScaleDistance) - minScaleDistance) / (maxScaleDistance - minScaleDistance);
 					float dotDiameter = Mathf.Lerp(minOrthographicSize, maxOrthographicSize, scaleDistanceCoeff);
 					Vector3 dotScale = new Vector3(dotDiameter, dotDiameter, dotDiameter);
@@ -376,7 +442,8 @@ public class SafeGuard : MonoBehaviour
 						dotRot,
 						dotScale
 					);
-					Color dotColor = (displacement > 0f) ? Color.Lerp(Color.white, Color.red, displacement/40f) : Color.Lerp(Color.blue, Color.white, (40f - displacement) / 40f);
+
+					Color dotColor = (displacement > 0) ? Color.Lerp(_middleDivergingColor, _rightDivergingColor, displacement/40f) : Color.Lerp(_middleDivergingColor, _leftDivergingColor, -displacement/40f);
 					_dotColors[_dotIndex] = dotColor;
 					_dotOutlineColors[_dotIndex] = new Vector4(0f, 0f, 0f, 1f);
 					_dotOutlineWidths[_dotIndex] = Mathf.Lerp(minOutlineWidth, maxOutlineWidth, scaleDistanceCoeff);
@@ -399,17 +466,17 @@ public class SafeGuard : MonoBehaviour
 					_dotIndex++;
 
 					// Generate Plane
-
-
 					Vector3 planePos = pin.position + pin.up * ((dotDiameter - minOrthographicSize + 0.1f) + pins.height / 2.0f);
-					Quaternion planeRot = pin.rotation; // * Quaternion.AngleAxis(90, pin.right);
-					Vector3 planeScale = new Vector3(dotDiameter, 0.1f, dotDiameter);
+					Quaternion planeRot = pin.rotation * Quaternion.AngleAxis(90, pin.up);
+					Vector3 planeScale = new Vector3(minOrthographicSize + 0.1f, 0.1f, minOrthographicSize + 0.1f);
 					_planeMatrices[_planeIndex] = Matrix4x4.TRS(
 						 planePos,
 						 planeRot,
 						 planeScale
 					);
-					_planeColors[_planeIndex] = dotColor;
+					Graphics.CopyTexture((displacement > 0f) ? _upTexture : _downTexture, 0, 0, _iconTextureArray, _planeIndex, 0); // i is the index of the texture
+					_iconTextureIndexes[_planeIndex] = _planeIndex;
+					_planeColors[_planeIndex] = Vector4.one;
 					_planeOutlineColors[_planeIndex] = Vector4.zero;
 					_planeOutlineWidths[_planeIndex] = 0;
 					_planeSecondOutlineColors[_planeIndex] = Vector4.zero;
@@ -557,6 +624,8 @@ public class SafeGuard : MonoBehaviour
 					_dotSecondOutlineColors[i] = new Vector4(1f, 1f, 1f, 0f);
 				}
 				break;
+			case SafetyOverlayMode.None:
+				return;
 		}
 
 		CombineInstance[] combine = new CombineInstance[_handIndex + _armIndex];
@@ -603,26 +672,7 @@ public class SafeGuard : MonoBehaviour
 		dotBlock.SetVectorArray("_RightFrontArmCenter", _dotRightFrontArmCenters);
 		dotBlock.SetFloatArray("_RightArmRadius", _dotRightArmRadius);
 		Graphics.DrawMeshInstanced(_dotMesh, 0, _dotMat, _dotMatrices, _dotIndex, dotBlock, UnityEngine.Rendering.ShadowCastingMode.Off, false, SEPARATION_LAYER);
-		// Draw planes
-		MaterialPropertyBlock planeBlock = new MaterialPropertyBlock();
-		planeBlock.SetFloatArray("_TextureIndex", _iconTextureIndexes);
-		planeBlock.SetVectorArray("_Color", _planeColors);
-		planeBlock.SetVectorArray("_OutlineColor", _planeOutlineColors);
-		planeBlock.SetFloatArray("_Outline", _planeOutlineWidths);
-		planeBlock.SetVectorArray("_SecondOutlineColor", _planeSecondOutlineColors);
-		planeBlock.SetFloatArray("_SecondOutline", _planeSecondOutlineWidths);
-		planeBlock.SetVectorArray("_LeftHandCenter", _planeLeftHandCenters);
-		planeBlock.SetFloatArray("_LeftHandRadius", _planeLeftHandRadius);
-		planeBlock.SetVectorArray("_LeftBackArmCenter", _planeLeftBackArmCenters);
-		planeBlock.SetVectorArray("_LeftFrontArmCenter", _planeLeftFrontArmCenters);
-		planeBlock.SetFloatArray("_LeftArmRadius", _planeLeftArmRadius);
-		planeBlock.SetVectorArray("_RightHandCenter", _planeRightHandCenters);
-		planeBlock.SetFloatArray("_RightHandRadius", _planeRightHandRadius);
-		planeBlock.SetVectorArray("_RightBackArmCenter", _planeRightBackArmCenters);
-		planeBlock.SetVectorArray("_RightFrontArmCenter", _planeRightFrontArmCenters);
-		planeBlock.SetFloatArray("_RightArmRadius", _planeRightArmRadius);
-		Graphics.DrawMeshInstanced(_planeMesh, 0, _planeMat, _planeMatrices, _planeIndex, planeBlock, UnityEngine.Rendering.ShadowCastingMode.Off, false, SEPARATION_LAYER);
-
+		
 		// Draw lines
 		MaterialPropertyBlock lineBlock = new MaterialPropertyBlock();
 		lineBlock.SetFloatArray("_TextureIndex", _noTextureIndexes);
@@ -642,6 +692,28 @@ public class SafeGuard : MonoBehaviour
 		lineBlock.SetVectorArray("_RightFrontArmCenter", _lineRightFrontArmCenters);
 		lineBlock.SetFloatArray("_RightArmRadius", _lineRightArmRadius);
 		Graphics.DrawMeshInstanced(_lineMesh, 0, _lineMat, _lineMatrices, _lineIndex, lineBlock, UnityEngine.Rendering.ShadowCastingMode.Off, false, SEPARATION_LAYER);
+
+
+		// Draw planes
+		_planeMat.SetTexture("_Textures", _iconTextureArray);
+		MaterialPropertyBlock planeBlock = new MaterialPropertyBlock();
+		planeBlock.SetFloatArray("_TextureIndex", _iconTextureIndexes);
+		planeBlock.SetVectorArray("_Color", _planeColors);
+		planeBlock.SetVectorArray("_OutlineColor", _planeOutlineColors);
+		planeBlock.SetFloatArray("_Outline", _planeOutlineWidths);
+		planeBlock.SetVectorArray("_SecondOutlineColor", _planeSecondOutlineColors);
+		planeBlock.SetFloatArray("_SecondOutline", _planeSecondOutlineWidths);
+		planeBlock.SetVectorArray("_LeftHandCenter", _planeLeftHandCenters);
+		planeBlock.SetFloatArray("_LeftHandRadius", _planeLeftHandRadius);
+		planeBlock.SetVectorArray("_LeftBackArmCenter", _planeLeftBackArmCenters);
+		planeBlock.SetVectorArray("_LeftFrontArmCenter", _planeLeftFrontArmCenters);
+		planeBlock.SetFloatArray("_LeftArmRadius", _planeLeftArmRadius);
+		planeBlock.SetVectorArray("_RightHandCenter", _planeRightHandCenters);
+		planeBlock.SetFloatArray("_RightHandRadius", _planeRightHandRadius);
+		planeBlock.SetVectorArray("_RightBackArmCenter", _planeRightBackArmCenters);
+		planeBlock.SetVectorArray("_RightFrontArmCenter", _planeRightFrontArmCenters);
+		planeBlock.SetFloatArray("_RightArmRadius", _planeRightArmRadius);
+		Graphics.DrawMeshInstanced(_planeMesh, 0, _planeMat, _planeMatrices, _planeIndex, planeBlock, UnityEngine.Rendering.ShadowCastingMode.Off, false, SEPARATION_LAYER);
 
 
 		// Combine and Draw hand & arm zones

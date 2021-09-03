@@ -75,12 +75,6 @@ public class XP2_P1 : MonoBehaviour
 	ExpanDialStickView.FeedbackMode.PulseIn,
 	ExpanDialStickView.FeedbackMode.None
 	}; */
-	private ExpanDialStickView.FeedbackMode[] feedbackModes = new ExpanDialStickView.FeedbackMode[] {
-	ExpanDialStickView.FeedbackMode.Blink,
-	ExpanDialStickView.FeedbackMode.Blink,
-	ExpanDialStickView.FeedbackMode.Blink,
-	ExpanDialStickView.FeedbackMode.Blink
-	};
 	private sbyte[] heights = new sbyte[] {
 	0,
 	20,
@@ -147,7 +141,7 @@ public class XP2_P1 : MonoBehaviour
 		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		connected = true;
-
+		InvokeRepeating("RandomTexture", 2.0f, 2.0f);
 	}
 
 	private void HandleDisconnected(object sender, MqttConnectionEventArgs e)
@@ -220,41 +214,37 @@ public class XP2_P1 : MonoBehaviour
 		int[] shuffledAvailables = Shuffle(availables);
 		int nbShown = nbPinToShow[nbShownIndex];
 		int y = 4;
-		for (int i = 0; i < availables.Length; i++)
+		/*for (int i = 0; i < availables.Length; i++)
 		{
 			int x = availables[i];
-			expanDialSticks.modelMatrix[x, y].SafetyFeedForwardEnabled = false;
-			expanDialSticks.modelMatrix[x, y].SafetyFeedbackMode = ExpanDialStickView.FeedbackMode.None;
+			expanDialSticks.modelMatrix[x, y].CurrentFeedForwarded = Random.Range(-40,40);
 		}
-		expanDialSticks.triggerSafetyChange();
+		expanDialSticks.triggerSafetyChange();*/
 
-		for (int i = 0; i < availables.Length; i++)
+		/*for (int i = 0; i < availables.Length; i++)
 		{
 			int x = availables[i];
 			expanDialSticks.modelMatrix[x, y].TargetPosition = 20;
 			expanDialSticks.modelMatrix[x, y].TargetShapeChangeDuration = 2f;
 		}
-		expanDialSticks.triggerShapeChange();
+		expanDialSticks.triggerShapeChange();*/
 
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
+		/*for (int i = 0; i < expanDialSticks.NbRows; i++)
 		{
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
-				//expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
-				//expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
-				expanDialSticks.modelMatrix[i, j].TargetColor = Random.ColorHSV(0f, 1f, 1f, 1f, 0.5f, 1f);
+				expanDialSticks.modelMatrix[i, j].TargetColor = Random.ColorHSV(0f, 1f, 0f, 1f, 0f, 1f);
 				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = 0.1f;
 			}
 		}
-		expanDialSticks.triggerTextureChange();
+		expanDialSticks.triggerTextureChange();*/
 
 		yield return new WaitForSeconds(3f);
 		// select pin to show
 		for (int i = 0; i < nbShown; i++)
 		{
 			int x = shuffledAvailables[i];
-			expanDialSticks.modelMatrix[x, y].SafetyFeedForwardEnabled = true;
-			expanDialSticks.modelMatrix[x, y].SafetyFeedbackMode = feedbackModes[i];
+			expanDialSticks.modelMatrix[x, y].CurrentFeedForwarded = Random.Range(0, 40);
 		}
 		expanDialSticks.triggerSafetyChange();
 
@@ -287,6 +277,25 @@ public class XP2_P1 : MonoBehaviour
 		yield return new WaitForSeconds(3f);*/
 		state = SAFETY_CHANGED;
 
+	}
+	void RandomTexture()
+	{
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+		{
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+			{
+				float indexCoeff = (i * expanDialSticks.NbColumns + j) / (float)(expanDialSticks.NbRows * expanDialSticks.NbColumns);
+				int feedforward = Mathf.RoundToInt(Mathf.Lerp(-40, 40, indexCoeff)); 
+				expanDialSticks.modelMatrix[i, j].CurrentFeedForwarded = feedforward;
+
+				//expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
+				//expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
+				expanDialSticks.modelMatrix[i, j].TargetColor = Random.ColorHSV(0f, 1f, 0f, 1f, 0f, 1f);
+				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = Random.Range(0.250f, 5f);
+			}
+		}
+		expanDialSticks.triggerSafetyChange();
+		expanDialSticks.triggerTextureChange();
 	}
 	void Update()
 	{

@@ -65,6 +65,10 @@ public class ExpanDialStickModel
 	private float pauseDiff = 0f;
 	private float pauseTarget = 0f;
 
+	private float feedforwardCurrent = 0f;
+	private float feedforwardDiff = 0f;
+	private float feedforwardTarget = 0f;
+
 	private float shapeChangeDurationCurrent = 0f;
 	private float shapeChangeDurationDiff = 0f;
 	private float shapeChangeDurationTarget = 0f;
@@ -121,24 +125,26 @@ public class ExpanDialStickModel
 	private float projectorChangeDurationCurrent = 0f;
 	private float projectorChangeDurationTarget = 0f;
 
-	private ExpanDialStickView.FeedbackMode feedbackMode = ExpanDialStickView.FeedbackMode.None;
-	private bool safetyFeedForwardEnabled = false;
 
 	private bool init = false;
 
 
 	public Material transparentMaterial;
 
-	public bool SafetyFeedForwardEnabled
+	public int TargetFeedForwarded
 	{
-		get => this.safetyFeedForwardEnabled;
-		set => this.safetyFeedForwardEnabled = value;
+		get => (int)Mathf.Round(this.feedforwardTarget);
+		set => this.feedforwardTarget = value;
 	}
 
-	public ExpanDialStickView.FeedbackMode SafetyFeedbackMode
+	public int CurrentFeedForwarded
 	{
-		get => this.feedbackMode;
-		set => this.feedbackMode = value;
+		get => (int)Mathf.Round(this.feedforwardCurrent);
+		set
+		{
+			this.feedforwardDiff += value - this.feedforwardCurrent;
+			this.feedforwardCurrent = value;
+		}
 	}
 
 	// Getters and Setters
@@ -638,10 +644,9 @@ public class ExpanDialStickModel
 		CurrentText = text;
 		CurrentTextureChangeDuration = textureChangeDuration;
 	}
-	public void setSafetyChange(bool feedforwardEnabled, ExpanDialStickView.FeedbackMode feedbackMode)
+	public void setSafetyChange(int feedForwarded)
 	{
-		SafetyFeedForwardEnabled = feedforwardEnabled;
-		SafetyFeedbackMode = feedbackMode;
+		CurrentFeedForwarded = feedForwarded;
 	}
 
 	public float[] readShapeDiffs()
