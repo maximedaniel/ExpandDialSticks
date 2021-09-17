@@ -1,5 +1,4 @@
-﻿#define DEBUG
-
+﻿#define _DEBUG_
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
@@ -31,24 +30,6 @@ public class XP1_P1 : MonoBehaviour
 	private ExpanDialSticks expanDialSticks;
 	private bool connected = false;
 
-	private CultureInfo en = CultureInfo.CreateSpecificCulture("en-US");
-
-	private IEnumerator coroutine;
-
-	private const string LEFT_BENDING = "LEFT_BENDING";
-	private const string RIGHT_BENDING = "RIGHT_BENDING";
-	private const string TOP_BENDING = "TOP_BENDING";
-	private const string BOTTOM_BENDING = "BOTTOM_BENDING";
-	private const string LEFT_ROTATION = "LEFT_ROTATION";
-	private const string RIGHT_ROTATION = "RIGHT_ROTATION";
-	private const string PULL = "PULL";
-	private const string PUSH = "PUSH";
-	private const string CLICK = "CLICK";
-	private const string NONE = "NONE";
-
-	private const float JOYSTICK_THRESHOLD = 10f;
-
-	private const int  nbTrials = 9;
 
 	private  Vector2 [] molePositions;
 
@@ -59,7 +40,6 @@ public class XP1_P1 : MonoBehaviour
 	private const int LANDSCAPE_IS_CHANGING = 3;
 
 	private int moleState = MOLE_TO_APPEAR;
-	private bool nextMole;
 
 	//private FileLogger fileLogger;
 	public float LOG_INTERVAL = 0.2f; // 0.2f;
@@ -74,25 +54,39 @@ public class XP1_P1 : MonoBehaviour
 
 	public float shapeChangeDuration = 2f;
 
-
-	private MqttClient client;
-
+	public void DebugLog(string msg)
+	{
+	#if _DEBUG_
+		Debug.Log(msg);
+	#endif
+	}
 
 	IEnumerator NextMole()
 	{
+		// wait for one hand presence
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("WAIT_FOR_HAND_PRESENCE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		DebugLog("WaitForHandPresence..."); 
+		while (!leftHand.IsActive() && !rightHand.IsActive())
+			yield return new WaitForSeconds(0.1f);
+		DebugLog("HandIsPresent!");
 		// trigger most unsafe SC
-
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("TRIGGER_LANDSCAPE_ASCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		AllUp(shapeChangeDuration);
-		Debug.Log("AllUp");
+		DebugLog("AllUp");
 		yield return new WaitForSeconds(3f);
+		// wait for one hand presence
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("WAIT_FOR_HAND_PRESENCE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		DebugLog("WaitForHandPresence..."); 
+		while (!leftHand.IsActive() && !rightHand.IsActive())
+			yield return new WaitForSeconds(0.1f);
+		DebugLog("HandIsPresent!");
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("TRIGGER_LANDSCAPE_DESCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		AllDown(shapeChangeDuration);
-		Debug.Log("AllDown");
+		DebugLog("AllDown");
 		yield return new WaitForSeconds(3f); 
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("TRIGGER_LANDSCAPE_BLACKING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		AllBlack(0.5f);
-		Debug.Log("AllBlack");
+		DebugLog("AllBlack");
 		yield return new WaitForSeconds(0.5f);
 		// wait until all pins are down
 		while (!IsAllDown())
@@ -100,7 +94,7 @@ public class XP1_P1 : MonoBehaviour
 			yield return new WaitForSeconds(0.1f);
 		}
 
-		Debug.Log("AreAllDown");
+		DebugLog("AreAllDown");
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("END_LANDSCAPE_CHANGING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 
 		//fileLogger.Log("END_LANDSCAPE_CHANGING");
@@ -201,7 +195,7 @@ public class XP1_P1 : MonoBehaviour
 
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("TRIGGER_MOLE_APPEARING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		MoleUp(shapeChangeDuration);
-		Debug.Log("MoleUp");
+		DebugLog("MoleUp");
 		yield return new WaitForSeconds(1f);
 		// wait until all pins are down
 		while (!IsMoleUp())
@@ -210,7 +204,7 @@ public class XP1_P1 : MonoBehaviour
 		}
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("TRIGGER_MOLE_GREENING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		MoleGreen(0.5f);
-		Debug.Log("MoleGreen");
+		DebugLog("MoleGreen");
 		yield return new WaitForSeconds(0.5f);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("END_MOLE_APPEARING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		moleState = MOLE_APPEARED;
@@ -482,6 +476,7 @@ public class XP1_P1 : MonoBehaviour
 	void Update () {
 		// check if ExpanDialSticks is connected
 		if(connected){
+
 			 if (Input.GetKey("escape") || (moleState == MOLE_TO_APPEAR && moleIndex >= molePositions.Length))
             {
 				Quit();

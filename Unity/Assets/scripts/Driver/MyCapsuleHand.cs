@@ -205,11 +205,10 @@ namespace Leap.Unity {
     private const int _fingerCollidersSize = 27;
     private GameObject[] _handColliders;
     private GameObject [] _forearmColliders;
-    private float handColliderOffset = 6f;
+    private float handColliderOffset = 2.5f; //6f
     private float forearmColliderOffset = 24f;
     private CombineInstance[] combine;
-
-    private int _curSphereIndex = 0, _curCylinderIndex = 0, _curColliderIndex = 0;
+    private int _curSphereIndex, _curCylinderIndex;
 
     public override ModelType HandModelType {
       get {
@@ -422,7 +421,6 @@ namespace Leap.Unity {
 
     #if UNITY_EDITOR
     private void OnValidate() {
-      _meshMap.Clear();
       if (_material == null || !_material.enableInstancing) {
         Debug.LogWarning("CapsuleHand's Material must have " +
           "instancing enabled in order to work in builds! Replacing " +
@@ -498,7 +496,7 @@ namespace Leap.Unity {
 
   public override string ToString(){
 
-    if(_hand == null || (_hand.IsLeft && handedness != Chirality.Left) || (!_hand.IsLeft && handedness != Chirality.Right)) return "NULL";
+    if(_hand == null || (_hand.IsLeft && handedness != Chirality.Left) || (!_hand.IsLeft && handedness != Chirality.Right)) return null;
     string s = "";
     //Get finger position
     for(int f = 0; f < _hand.Fingers.Count; f++) {
@@ -575,7 +573,6 @@ namespace Leap.Unity {
       int _currFillColliderIndex = 0;
       _curSphereIndex = 0;
       _curCylinderIndex = 0;
-      _curColliderIndex = 0;
 
       if (_spherePositions == null || _spherePositions.Length != TOTAL_JOINT_COUNT) {
         _spherePositions = new Vector3[TOTAL_JOINT_COUNT];
@@ -660,131 +657,107 @@ namespace Leap.Unity {
 
             //If we want to show the arm, do the calculations and display the meshes
             if (_showArm)
-        {
-            var arm = _hand.Arm;
-
-            Vector3 right = arm.Basis.xBasis.ToVector3() * arm.Width * 0.7f * 0.5f;
-            Vector3 wrist = arm.WristPosition.ToVector3();
-            Vector3 elbow = arm.ElbowPosition.ToVector3();
-
-            float armLength = Vector3.Distance(wrist, elbow);
-            wrist -= arm.Direction.ToVector3() * armLength * 0.05f;
-
-            Vector3 armFrontRight = wrist + right;
-            Vector3 armFrontLeft = wrist - right;
-            Vector3 armBackRight = elbow + right;
-            Vector3 armBackLeft = elbow - right;
-
-            drawSphere(armFrontRight);
-            drawSphere(armFrontLeft);
-            drawSphere(armBackLeft);
-            drawSphere(armBackRight);
-
-            drawCylinder(armFrontLeft, armFrontRight);
-            configureFingerColliderAt(_currFingerColliderIndex++, armFrontLeft, armFrontRight, SEPARATION_LAYER);
-            drawCylinder(armBackLeft, armBackRight);
-            configureFingerColliderAt(_currFingerColliderIndex++, armBackLeft, armBackRight, SEPARATION_LAYER);
-            drawCylinder(armFrontLeft, armBackLeft);
-            configureFingerColliderAt(_currFingerColliderIndex++, armFrontLeft, armBackLeft, SEPARATION_LAYER);
-            drawCylinder(armFrontRight, armBackRight);
-            configureFingerColliderAt(_currFingerColliderIndex++, armFrontRight, armBackRight, SEPARATION_LAYER);
-
-			// Join arm to wirst (MD)
-			if (_hand.IsLeft)
-			{
-                drawCylinder(armFrontLeft, mockThumbJointPos);
-                configureFingerColliderAt(_currFingerColliderIndex++, armFrontLeft, mockThumbJointPos, SEPARATION_LAYER);
-                drawCylinder(armFrontRight, _spherePositions[THUMB_BASE_INDEX]);
-                configureFingerColliderAt(_currFingerColliderIndex++, armFrontRight, _spherePositions[THUMB_BASE_INDEX], SEPARATION_LAYER);
-			} else
-			{
-                drawCylinder(armFrontLeft, _spherePositions[THUMB_BASE_INDEX]);
-                configureFingerColliderAt(_currFingerColliderIndex++, armFrontLeft, _spherePositions[THUMB_BASE_INDEX], SEPARATION_LAYER);
-                drawCylinder(armFrontRight, mockThumbJointPos);
-                configureFingerColliderAt(_currFingerColliderIndex++, armFrontRight, mockThumbJointPos, SEPARATION_LAYER);
-			}
-
-            // Fill Gap within arm (MD)
-            _quadMesh = getQuadMesh(armBackLeft, armBackRight, armFrontRight, armFrontLeft); 
-            configureFillColliderAt(_currFillColliderIndex++, _quadMesh);
-            Matrix4x4[] mat1 = new Matrix4x4[] { Matrix4x4.identity };
-              Vector4[] col1 = new Vector4[] { _bodyColor };
-            MaterialPropertyBlock block1 = new MaterialPropertyBlock();
-            block1.SetVectorArray("_Color", col1);
-            Graphics.DrawMeshInstanced(_quadMesh, 0, _quadMaterial, mat1, mat1.Length, block1,
-            _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
-
-            // Fill Gap between hand and arm (MD)
-            _quadMesh = (_hand.IsLeft) ? getQuadMesh(armFrontLeft, armFrontRight,  _spherePositions[THUMB_BASE_INDEX], mockThumbJointPos): getQuadMesh(armFrontLeft, armFrontRight, mockThumbJointPos,  _spherePositions[THUMB_BASE_INDEX]);
-            configureFillColliderAt(_currFillColliderIndex++, _quadMesh); 
-            Matrix4x4[] mat2 = new Matrix4x4[] { Matrix4x4.identity };
-            Vector4[] col2 = new Vector4[] { _bodyColor };
-            MaterialPropertyBlock block2 = new MaterialPropertyBlock();
-            block2.SetVectorArray("_Color", col2);
-            Graphics.DrawMeshInstanced(_quadMesh, 0, _quadMaterial, mat2, mat2.Length, block2,
-            _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
-
-
-            Vector3 centered = (armFrontLeft + armFrontRight + armBackLeft + armBackRight) / 4f;
-            Vector3 dirForward = Vector3.Normalize(armFrontLeft - armBackLeft);
-            Vector3 dirUpward = Vector3.Normalize(armFrontRight - armFrontLeft);
-            Quaternion rotationForearm = Quaternion.LookRotation(dirForward, dirUpward);
-            var offsetExtends = ExtractScaleFromMatrix(ref _sphereMatrices[0]);
-            Vector3 extended = new Vector3(offsetExtends.x * 2.0f, Vector3.Distance(armBackLeft, armBackRight) +
-                offsetExtends.x * 2.0f, Vector3.Distance(armBackLeft, armFrontLeft) +
-                offsetExtends.x * 2.0f);
-            Bounds bounds = new Bounds(new Vector3(0, 0, 0), extended);
-
-            for (var i = 0; i < SEPARATION_LEVEL; i++)
             {
-                _forearmColliders[i].transform.position = centered;
-                _forearmColliders[i].transform.rotation = rotationForearm;
-                CapsuleCollider capsuleCollider = _forearmColliders[i].GetComponent<CapsuleCollider>();
-                capsuleCollider.radius = (Vector3.Distance(armFrontRight, armFrontLeft) + offsetExtends.x) / 2.0f + forearmColliderOffset / 4.0f;
-                capsuleCollider.radius += capsuleCollider.radius * (i * 0.5f);
-                capsuleCollider.height = Vector3.Distance(armBackLeft, armFrontLeft) + offsetExtends.x + forearmColliderOffset;
-                capsuleCollider.direction = 2;
-            }
-                // Prepare Hand Collider drawing
-               /* SphereCollider sc = _handColliders[0].GetComponent<SphereCollider>();
-                Vector3 handColliderPosition = _handColliders[0].transform.position;
-                handColliderPosition.y = 15f;
-                Vector3 handColliderScale = new Vector3(sc.radius * 2.0f, sc.radius * 2.0f, sc.radius * 2.0f);
-                _colliderMatrices[_curColliderIndex] = Matrix4x4.TRS(handColliderPosition, Quaternion.identity, handColliderScale);
-                _colliderMeshes[_curColliderIndex] = _sphereMesh;
-                _curColliderIndex++;*/
-                // Prepare Arm Collider drawing
-                /*CapsuleCollider capsuleCollider1 = _forearmColliders[0].GetComponent<CapsuleCollider>();
-                Vector3 forwardArmColliderPosition = _forearmColliders[0].transform.position + _forearmColliders[0].transform.forward * (capsuleCollider1.height/2.0f);
-                Vector3 backwardArmColliderPosition = _forearmColliders[0].transform.position - _forearmColliders[0].transform.forward * (capsuleCollider1.height / 2.0f);
-                forwardArmColliderPosition.y = 15f;
-                backwardArmColliderPosition.y = 15f;
-                Vector3 armColliderPosition =  backwardArmColliderPosition + (forwardArmColliderPosition- backwardArmColliderPosition)/2.0f;
-                Quaternion armColliderRotation = Quaternion.LookRotation(forwardArmColliderPosition - backwardArmColliderPosition) * Quaternion.AngleAxis(90, Vector3.right); ; // Quaternion.Euler(_forearmColliders[0].transform.rotation.eulerAngles.x, _forearmColliders[0].transform.rotation.eulerAngles.y, _forearmColliders[0].transform.rotation.eulerAngles.z);
-                Vector3 colliderScale = new Vector3(capsuleCollider1.radius*2f, capsuleCollider1.height / 2.0f, capsuleCollider1.radius * 2f);
-                _colliderMatrices[_curColliderIndex] = Matrix4x4.TRS(
-                    armColliderPosition,
-                    armColliderRotation,
-                    colliderScale
-                    );
-                _colliderMeshes[_curColliderIndex] = _cylinderMesh;
-                _curColliderIndex++;*/
+                var arm = _hand.Arm;
+
+                Vector3 right = arm.Basis.xBasis.ToVector3() * arm.Width * 0.7f * 0.5f;
+                Vector3 wrist = arm.WristPosition.ToVector3();
+                Vector3 elbow = arm.ElbowPosition.ToVector3();
+
+                float armLength = Vector3.Distance(wrist, elbow);
+                wrist -= arm.Direction.ToVector3() * armLength * 0.05f;
+
+                Vector3 armFrontRight = wrist + right;
+                Vector3 armFrontLeft = wrist - right;
+                Vector3 armBackRight = elbow + right;
+                Vector3 armBackLeft = elbow - right;
+
+                drawSphere(armFrontRight);
+                drawSphere(armFrontLeft);
+                drawSphere(armBackLeft);
+                drawSphere(armBackRight);
+
+                drawCylinder(armFrontLeft, armFrontRight);
+                configureFingerColliderAt(_currFingerColliderIndex++, armFrontLeft, armFrontRight, SEPARATION_LAYER);
+                drawCylinder(armBackLeft, armBackRight);
+                configureFingerColliderAt(_currFingerColliderIndex++, armBackLeft, armBackRight, SEPARATION_LAYER);
+                drawCylinder(armFrontLeft, armBackLeft);
+                configureFingerColliderAt(_currFingerColliderIndex++, armFrontLeft, armBackLeft, SEPARATION_LAYER);
+                drawCylinder(armFrontRight, armBackRight);
+                configureFingerColliderAt(_currFingerColliderIndex++, armFrontRight, armBackRight, SEPARATION_LAYER);
+
+			    // Join arm to wirst (MD)
+			    if (_hand.IsLeft)
+			    {
+                    drawCylinder(armFrontLeft, mockThumbJointPos);
+                    configureFingerColliderAt(_currFingerColliderIndex++, armFrontLeft, mockThumbJointPos, SEPARATION_LAYER);
+                    drawCylinder(armFrontRight, _spherePositions[THUMB_BASE_INDEX]);
+                    configureFingerColliderAt(_currFingerColliderIndex++, armFrontRight, _spherePositions[THUMB_BASE_INDEX], SEPARATION_LAYER);
+			    } else
+			    {
+                    drawCylinder(armFrontLeft, _spherePositions[THUMB_BASE_INDEX]);
+                    configureFingerColliderAt(_currFingerColliderIndex++, armFrontLeft, _spherePositions[THUMB_BASE_INDEX], SEPARATION_LAYER);
+                    drawCylinder(armFrontRight, mockThumbJointPos);
+                    configureFingerColliderAt(_currFingerColliderIndex++, armFrontRight, mockThumbJointPos, SEPARATION_LAYER);
+			    }
+
+                // Fill Gap within arm (MD)
+                _quadMesh = getQuadMesh(armBackLeft, armBackRight, armFrontRight, armFrontLeft); 
+                configureFillColliderAt(_currFillColliderIndex++, _quadMesh);
+                Matrix4x4[] mat1 = new Matrix4x4[] { Matrix4x4.identity };
+                  Vector4[] col1 = new Vector4[] { _bodyColor };
+                MaterialPropertyBlock block1 = new MaterialPropertyBlock();
+                block1.SetVectorArray("_Color", col1);
+                Graphics.DrawMeshInstanced(_quadMesh, 0, _quadMaterial, mat1, mat1.Length, block1,
+                _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
+
+                // Fill Gap between hand and arm (MD)
+                _quadMesh = (_hand.IsLeft) ? getQuadMesh(armFrontLeft, armFrontRight,  _spherePositions[THUMB_BASE_INDEX], mockThumbJointPos): getQuadMesh(armFrontLeft, armFrontRight, mockThumbJointPos,  _spherePositions[THUMB_BASE_INDEX]);
+                configureFillColliderAt(_currFillColliderIndex++, _quadMesh); 
+                Matrix4x4[] mat2 = new Matrix4x4[] { Matrix4x4.identity };
+                Vector4[] col2 = new Vector4[] { _bodyColor };
+                MaterialPropertyBlock block2 = new MaterialPropertyBlock();
+                block2.SetVectorArray("_Color", col2);
+                Graphics.DrawMeshInstanced(_quadMesh, 0, _quadMaterial, mat2, mat2.Length, block2,
+                _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
+
+
+                Vector3 centered = (armFrontLeft + armFrontRight + armBackLeft + armBackRight) / 4f;
+                Vector3 dirForward = Vector3.Normalize(armFrontLeft - armBackLeft);
+                Vector3 dirUpward = Vector3.Normalize(armFrontRight - armFrontLeft);
+                Quaternion rotationForearm = Quaternion.LookRotation(dirForward, dirUpward);
+                var offsetExtends = ExtractScaleFromMatrix(ref _sphereMatrices[0]);
+                Vector3 extended = new Vector3(offsetExtends.x * 2.0f, Vector3.Distance(armBackLeft, armBackRight) +
+                    offsetExtends.x * 2.0f, Vector3.Distance(armBackLeft, armFrontLeft) +
+                    offsetExtends.x * 2.0f);
+                Bounds bounds = new Bounds(new Vector3(0, 0, 0), extended);
+
+                for (var i = 0; i < SEPARATION_LEVEL; i++)
+                {
+                    _forearmColliders[i].transform.position = centered;
+                    _forearmColliders[i].transform.rotation = rotationForearm;
+                    CapsuleCollider capsuleCollider = _forearmColliders[i].GetComponent<CapsuleCollider>();
+                    capsuleCollider.radius = (Vector3.Distance(armFrontRight, armFrontLeft) + offsetExtends.x) / 2.0f + forearmColliderOffset / 4.0f;
+                    capsuleCollider.radius += capsuleCollider.radius * (i * 0.5f);
+                    capsuleCollider.height = Vector3.Distance(armBackLeft, armFrontLeft) + offsetExtends.x + forearmColliderOffset;
+                    capsuleCollider.direction = 2;
+                }
 
             }
 
 
-            //Draw cylinders between finger joints
-            for (int i = 0; i < 5; i++) {
+       //Draw cylinders between finger joints
+       for (int i = 0; i < 5; i++) {
         for (int j = 0; j < 3; j++) {
-          int keyA = getFingerJointIndex(i, j);
-          int keyB = getFingerJointIndex(i, j + 1);
+            int keyA = getFingerJointIndex(i, j);
+            int keyB = getFingerJointIndex(i, j + 1);
 
-          Vector3 posA = _spherePositions[keyA];
-          Vector3 posB = _spherePositions[keyB];
+            Vector3 posA = _spherePositions[keyA];
+            Vector3 posB = _spherePositions[keyB];
 
-          drawCylinder(posA, posB);
-          if(j < 2) configureFingerColliderAt(_currFingerColliderIndex++, posA, posB, SEPARATION_LAYER); // end joint of finger
-          else configureFingerColliderAt(_currFingerColliderIndex++, posA, posB, SEPARATION_LAYER); // other joints
+            drawCylinder(posA, posB);
+            if(j < 2) configureFingerColliderAt(_currFingerColliderIndex++, posA, posB, SEPARATION_LAYER); // end joint of finger
+            else configureFingerColliderAt(_currFingerColliderIndex++, posA, posB, SEPARATION_LAYER); // other joints
                     // Configure capsule collider
                     
         }
@@ -812,16 +785,10 @@ namespace Leap.Unity {
       _quadMesh = (_hand.IsLeft) ? getQuadMesh(mockThumbJointPos, _spherePositions[THUMB_BASE_INDEX], _spherePositions[INDEX_BASE_INDEX], _spherePositions[PINKY_BASE_INDEX]): getQuadMesh(_spherePositions[THUMB_BASE_INDEX], mockThumbJointPos, _spherePositions[PINKY_BASE_INDEX],  _spherePositions[INDEX_BASE_INDEX]);
       configureFillColliderAt(_currFillColliderIndex++, _quadMesh);
 
-     // Texture tex = Resources.Load<Texture2D>("moon");
-
       MaterialPropertyBlock block = new MaterialPropertyBlock();
       Matrix4x4[] mat = new Matrix4x4[] { Matrix4x4.identity };
       Vector4[] col = new Vector4[] { _bodyColor };
       block.SetVectorArray("_Color", col);
-      /*Vector4[] outlineColor = new Vector4[] { new Vector4(0f, 0f, 0f, 0f) };
-      block.SetVectorArray("_OutlineColor", outlineColor);
-      float[] outlineWidth = new float[] {0.0f};
-      block.SetFloatArray("_Outline", outlineWidth);*/
 
       
       Graphics.DrawMeshInstanced(_quadMesh, 0, _quadMaterial, mat, mat.Length, block,
@@ -833,33 +800,6 @@ namespace Leap.Unity {
       Graphics.DrawMeshInstanced(_cylinderMesh, 0, _sphereMaterial, _cylinderMatrices, _curCylinderIndex, block, 
            _castShadows?UnityEngine.Rendering.ShadowCastingMode.On: UnityEngine.Rendering.ShadowCastingMode.Off, true, gameObject.layer);
       
-            /*
-             combine = new CombineInstance[_curColliderIndex];
-            for (int i = 0; i < _curColliderIndex; i++)
-            {
-                combine[i].mesh = _colliderMeshes[i];
-                combine[i].transform = _colliderMatrices[i];
-            }
-
-            Mesh combinedCylinderMesh = new Mesh();
-            combinedCylinderMesh.CombineMeshes(combine);
-
-            MaterialPropertyBlock block40 = new MaterialPropertyBlock();
-            Matrix4x4[] mat40 = new Matrix4x4[] { Matrix4x4.identity };
-            Vector4[] col40 = new Vector4[] { new Vector4(0f,0f,0f,0f) };
-            block40.SetVectorArray("_Color", col40);
-            Vector4[] outlineColor40 = new Vector4[] { new Vector4(1f, 1f, 1f, 1f) };
-            block40.SetVectorArray("_OutlineColor", outlineColor40);
-            float[] outlineWidth40 = new float[] {0.5f};
-            block40.SetFloatArray("_Outline", outlineWidth40);
-            Vector4[] secondOutlineColor40 = new Vector4[] { new Vector4(0f, 0f, 0f, 1f) };
-            block40.SetVectorArray("_SecondOutlineColor", secondOutlineColor40);
-            float[] secondOutlineWidth40 = new float[] { 1.0f };
-            block40.SetFloatArray("_SecondOutline", secondOutlineWidth40);
-
-            Graphics.DrawMeshInstanced(combinedCylinderMesh, 0, _colliderMaterial, mat40, mat40.Length, block40,
-                 _castShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, true, SEPARATION_LAYER);
-            */
      }
 
     private void drawSphere(Vector3 position) {
@@ -942,7 +882,7 @@ namespace Leap.Unity {
         mesh.uv = uv;
 
         mesh.Optimize();
-		mesh.RecalculateNormals();
+        mesh.RecalculateNormals();
         return mesh;
     }
 
@@ -960,65 +900,6 @@ namespace Leap.Unity {
 
     private int getFingerJointIndex(int fingerIndex, int jointIndex) {
       return fingerIndex * 4 + jointIndex;
-    }
-
-    private Dictionary<int, Mesh> _meshMap = new Dictionary<int, Mesh>();
-    private Mesh getCylinderMesh(float length) {
-      int lengthKey = Mathf.RoundToInt(length * 100 / CYLINDER_MESH_RESOLUTION);
-
-      Mesh mesh;
-      if (_meshMap.TryGetValue(lengthKey, out mesh)) {
-        return mesh;
-      }
-
-
-      mesh = new Mesh();
-      mesh.name = "GeneratedCylinder";
-      mesh.hideFlags = HideFlags.DontSave;
-
-      List<Vector3> verts = new List<Vector3>();
-      List<Color> colors = new List<Color>();
-      List<int> tris = new List<int>();
-
-      Vector3 p0 = Vector3.zero;
-      Vector3 p1 = Vector3.forward * length;
-      for (int i = 0; i < _cylinderResolution; i++) {
-        float angle = (Mathf.PI * 2.0f * i) / _cylinderResolution;
-        float dx = _cylinderRadius * Mathf.Cos(angle);
-        float dy = _cylinderRadius * Mathf.Sin(angle);
-
-        Vector3 spoke = new Vector3(dx, dy, 0);
-
-        verts.Add(p0 + spoke);
-        verts.Add(p1 + spoke);
-
-        colors.Add(Color.white);
-        colors.Add(Color.white);
-
-        int triStart = verts.Count;
-        int triCap = _cylinderResolution * 2;
-
-        tris.Add((triStart + 0) % triCap);
-        tris.Add((triStart + 2) % triCap);
-        tris.Add((triStart + 1) % triCap);
-
-        tris.Add((triStart + 2) % triCap);
-        tris.Add((triStart + 3) % triCap);
-        tris.Add((triStart + 1) % triCap);
-      }
-
-      mesh.SetVertices(verts);
-      mesh.SetIndices(tris.ToArray(), MeshTopology.Triangles, 0);
-      mesh.RecalculateBounds();
-      mesh.RecalculateNormals();
-      mesh.UploadMeshData(true);
-    
-     // GameObject capsuleGameObject = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-      //capsuleGameObject.transform.localScale = new Vector3(_cylinderRadius * 2f, length, _cylinderRadius * 2f);
-      //mesh = capsuleGameObject.GetComponent<MeshFilter>().sharedMesh;
-      _meshMap[lengthKey] = mesh;
-
-      return mesh;
     }
   }
 }

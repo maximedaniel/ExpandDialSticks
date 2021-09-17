@@ -146,15 +146,14 @@ public class ExpanDialStickView : MonoBehaviour
 
 
 
-	private string projectorTexture = "projector";
+	/*private string projectorTexture = "projector";
 	private float feedbackInDuration = 1f;
 	private float feedbackOutDuration = 0.250f;
-	//private float feedbackRadius = 6f;
 	private float feedbackMinGamma = 0f;
 	private float feedbackMaxGamma = 1f;
-	private float feedbackMinOrthographicSize =  3.2f; // 2.9f;
+	private float feedbackMinOrthographicSize =  3.2f; 
 	private float feedbackMaxOrthographicSize = 9.6f;
-	private float delayPerRow = 0f;
+	private float delayPerRow = 0f;*/
 	public int TargetFeedForwarded
 	{
 		get => (int)Mathf.Round(this.feedforwardTarget);

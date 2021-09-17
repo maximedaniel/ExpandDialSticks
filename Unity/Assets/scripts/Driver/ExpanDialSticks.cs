@@ -126,8 +126,6 @@ public class ExpanDialSticks : MonoBehaviour
 
 	//public GameObject capsuleHandLeftPrefab;
 	//public GameObject capsuleHandRightPrefab;
-	public GameObject safeGuardPrefab;
-	private GameObject safeGuardObj;
 	public MyCapsuleHand leftHand;
 	public MyCapsuleHand rightHand;
 	public enum SafetyMotionMode {SafetyRatedMonitoredStop, SpeedAndSeparationMonitoring};
