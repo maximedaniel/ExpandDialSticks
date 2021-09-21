@@ -210,6 +210,8 @@ namespace Leap.Unity {
     private CombineInstance[] combine;
     private int _curSphereIndex, _curCylinderIndex;
 
+    private string _toString = "";
+
     public override ModelType HandModelType {
       get {
         return ModelType.Graphics;
@@ -495,47 +497,27 @@ namespace Leap.Unity {
     }
 
   public override string ToString(){
-
     if(_hand == null || (_hand.IsLeft && handedness != Chirality.Left) || (!_hand.IsLeft && handedness != Chirality.Right)) return null;
     string s = "";
-    //Get finger position
-    for(int f = 0; f < _hand.Fingers.Count; f++) {
-      var finger = _hand.Fingers[f];
-      s += "F" + f + " ";
-      for (int j = 0; j < 4; j++) {
-        int key = getFingerJointIndex((int)finger.Type, j);
-        Vector3 position = finger.Bone((Bone.BoneType)j).NextJoint.ToVector3();
-        s += position.ToString("F3") + " ";
-      }
-    }
-    // Get palm et thumb position
-    Vector3 palmPosition = _hand.PalmPosition.ToVector3();
-    Vector3 thumbBaseToPalm = _spherePositions[THUMB_BASE_INDEX] - _hand.PalmPosition.ToVector3();
-    Vector3 mockThumbJointPos = _hand.PalmPosition.ToVector3() + Vector3.Reflect(thumbBaseToPalm, _hand.Basis.xBasis.ToVector3());
-    s += "T " + mockThumbJointPos.ToString("F3") + " ";
-    s += "P " + palmPosition.ToString("F3") + " ";
-    // Get arm position
-    if (_showArm){
-      var arm = _hand.Arm;
-      Vector3 right = arm.Basis.xBasis.ToVector3() * arm.Width * 0.7f * 0.5f;
-      Vector3 wrist = arm.WristPosition.ToVector3();
-      Vector3 elbow = arm.ElbowPosition.ToVector3();
+    for (var i = 0; i < SEPARATION_LEVEL; i++)
+    {
+        s += "HAND_LEVEL " + i 
+                    + " POSITION " + _handColliders[i].transform.position 
+                    + " RADIUS " + _handColliders[i].GetComponent<SphereCollider>().radius 
+                    + " ";
 
-      float armLength = Vector3.Distance(wrist, elbow);
-      wrist -= arm.Direction.ToVector3() * armLength * 0.05f;
-
-      Vector3 armFrontRight = wrist + right;
-      Vector3 armFrontLeft = wrist - right;
-      Vector3 armBackRight = elbow + right;
-      Vector3 armBackLeft = elbow - right;
-
-      s += "AFR " + armFrontRight.ToString("F3") + " ";
-      s += "AFL " + armFrontLeft.ToString("F3") + " ";
-      s += "ABR " + armBackRight.ToString("F3") + " ";
-      s += "ABL " + armBackLeft.ToString("F3") + " ";
+        CapsuleCollider capsuleCollider = _forearmColliders[i].GetComponent<CapsuleCollider>();
+        s += "ARM_LEVEL " + i 
+            + " POSITION " + _forearmColliders[i].transform.position
+            + " ROTATION " + _forearmColliders[i].transform.rotation
+            + " RADIUS " + capsuleCollider.radius
+            + " HEIGHT " + capsuleCollider.height
+            + " DIRECTION " + capsuleCollider.direction
+            + " ";
     }
     return s;
   }
+
     private void configureFillColliderAt(int index, Mesh mesh)
 	{
             

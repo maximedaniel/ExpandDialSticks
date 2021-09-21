@@ -166,13 +166,14 @@ public class Test : MonoBehaviour
 
 			if (Input.GetKeyDown("n"))
 			{
-				int i = 4;//currentIndex / expanDialSticks.NbColumns;
-				int j = 3; //currentIndex % expanDialSticks.NbColumns;
+				int i = currentIndex / expanDialSticks.NbColumns;// int i = 4;
+				int j  = currentIndex % expanDialSticks.NbColumns; // int j = 3;
 
 				expanDialSticks.modelMatrix[i, j].TargetPosition = 30;
 				expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = 1f;
 				expanDialSticks.triggerShapeChange();
 				currentIndex++;
+				Debug.Log(i + " " + j + " " + 30);
 			}
 		}
 	}
