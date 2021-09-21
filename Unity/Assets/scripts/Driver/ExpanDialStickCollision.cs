@@ -31,7 +31,7 @@ public class ExpanDialStickCollision: MonoBehaviour
 	private int separationLevel = 0;
 	private const float minUserBodyDistance = 3f;
 	private float maxLayerHeight = 10f;
-	private float minDistanceFromLayer = 15f;
+	private float minDistanceFromLayer = float.PositiveInfinity;// 15f;
 	//private bool collisionDetected = false;
 
 	// Getters and Setters
@@ -249,7 +249,7 @@ public class ExpanDialStickCollision: MonoBehaviour
 						separationLevel = level;
 						float coeff = Mathf.Max(0, level - 1)/(float)nbSeparationLevels;
 						proximity = 1f - coeff;
-						Debug.DrawLine(pinPoint - Vector3.up * 100, hitPoint, Color.HSVToRGB(coeff, 1f, 1f));
+						//Debug.DrawLine(pinPoint - Vector3.up * 100, hitPoint, Color.HSVToRGB(coeff, 1f, 1f));
 						return;
 					}
 				}

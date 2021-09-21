@@ -1,5 +1,4 @@
-﻿#define _DEBUG_
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
@@ -22,11 +21,8 @@ public class XP1_P2 : MonoBehaviour
 	public GameObject capsuleHandRightPrefab;
 	private MyCapsuleHand leftHand;
 	private MyCapsuleHand rightHand;
-	public GUISkin guiSkin;
-	public int numeroParticipant = 0;
-	public int[] engagementRows;
-	public int[] engagementColumns;
-	public bool logEnabled = true;
+	private int[] engagementRows = new int[] { 4, 2, 0 };
+	private int[] engagementColumns = new int[] { 1, 2, 3, 4 };
 	private ExpanDialSticks expanDialSticks;
 	private bool connected = false;
 
@@ -43,16 +39,17 @@ public class XP1_P2 : MonoBehaviour
 	private const sbyte gaugeHeight = 20;
 
 	//private FileLogger fileLogger;
-	public const float LOG_INTERVAL = 0.2f; // 0.2f;
+	private const float LOG_INTERVAL = 0.2f; // 0.2f;
 	private float currTime;
 	private float prevTime;
 
-	public const string MQTT_CAMERA_RECORDER = "CAMERA_RECORDER";
+	//public const string MQTT_CAMERA_RECORDER = "CAMERA_RECORDER";
 	public const string MQTT_EMPATICA_RECORDER = "EMPATICA_RECORDER";
 	public const string MQTT_SYSTEM_RECORDER = "SYSTEM_RECORDER";
 	public const string CMD_START = "START";
 	public const string CMD_STOP = "STOP";
-	public float shapeChangeDuration = 2f;
+
+	private float shapeChangeDuration = 2f;
 
 	private float aiguilleRotation = 90f;
 	private float cadranRotation = 90f;
@@ -69,38 +66,39 @@ public class XP1_P2 : MonoBehaviour
 	public enum DirectionRotation { CW, CCW, IDDLE };	
 	private DirectionRotation directionRotation = DirectionRotation.CW;
 
-	public void DebugLog(string msg)
-	{
-		#if _DEBUG_
-				Debug.Log(msg);
-		#endif
-	}
+	private bool training = false;
+
+	private string stringParticipant = "";
+	private int numeroParticipant = 0;
+	private bool unknownParticipant = true;
+
 	IEnumerator NextGauge()
 	{
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_BLACKING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		DebugLog("AllBlack..."); 
+		Debug.Log("AllBlack..."); 
 		AllBlack(0.5f);
 		yield return new WaitForSeconds(0.5f);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_DESCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		DebugLog("AllDown...");
+		Debug.Log("AllDown...");
 		AllDown(shapeChangeDuration);
 		yield return new WaitForSeconds(1f);
 		// wait until all pins are down
-		//float waitingSince = 0f;
+		float waitingSince = 0f;
 		while (!IsAllDown())
 		{
-			/*if (waitingSince >= 2f)
+			if (waitingSince >= 3f)
 			{
 				waitingSince = 0f;
+				Debug.Log("AllDown again");
 				AllDown(shapeChangeDuration);
 			}
 			else
 			{
-				waitingSince += 0.1f;*/
+				waitingSince += 0.1f;
 				yield return new WaitForSeconds(0.1f);
-			//}
+			}
 		}
-		DebugLog("AllIsDown!");
+		Debug.Log("AllIsDown!");
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_TO_APPEAR"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		gaugeState = GAUGE_TO_APPEAR;
 	}
@@ -109,68 +107,64 @@ public class XP1_P2 : MonoBehaviour
 	{
 
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_APPEARING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		DebugLog("GaugeUp...");
+		Debug.Log("GaugeUp...");
 		GaugeUp(shapeChangeDuration);
 		yield return new WaitForSeconds(1f);
-		// wait until all pins are down
-		//float waitingSince = 0f;
+		// wait until gauge is u^p
+		float waitingSince = 0f;
 		while (!IsGaugeUp())
 		{
 
-			/*if (waitingSince >= 2f)
+			if (waitingSince >= 3f)
 			{
 				waitingSince = 0f;
+				Debug.Log("GaugeUp..."); 
 				GaugeUp(shapeChangeDuration);
 			}
 			else
 			{
-				waitingSince += 0.1f;*/
+				waitingSince += 0.1f;
 				yield return new WaitForSeconds(0.1f);
-			//}
+			}
 		}
-		DebugLog("GaugeIsUp!");
+		Debug.Log("GaugeIsUp!");
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_DISPLAYING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		cadranRotation = aiguilleRotation = startRotation;
-		DebugLog("GaugeInit!");
+		Debug.Log("GaugeInit!");
 		GaugeInit(0.5f);
 		yield return new WaitForSeconds(0.5f);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_APPEARED"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		gaugeState = GAUGE_APPEARED;
+	}
+	IEnumerator FakeEarthquake()
+	{
+		yield return new WaitForSeconds(3f);
+		gaugeState = GAUGE_STARTED;
 	}
 
 	IEnumerator Earthquake()
 	{
 		// wait for one hand presence
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("WAIT_FOR_HAND_PRESENCE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		DebugLog("WaitForHandPresence...");
+		Debug.Log("WaitForHandPresence...");
 		while (!leftHand.IsActive() && !rightHand.IsActive())
 			yield return new WaitForSeconds(0.1f);
-		DebugLog("HandIsPresent!");
+		Debug.Log("HandIsPresent!");
 		// trigger most unsafe SC
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_ASCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		DebugLog("AllUpExceptGauge..."); 
+		Debug.Log("AllUpExceptGauge..."); 
 		AllUpExceptGauge(shapeChangeDuration);
 		yield return new WaitForSeconds(3f);
 		// wait for one hand presence
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("WAIT_FOR_HAND_PRESENCE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		DebugLog("WaitForHandPresence..."); 
+		Debug.Log("WaitForHandPresence..."); 
 		while (!leftHand.IsActive() && !rightHand.IsActive())
 			yield return new WaitForSeconds(0.1f);
-		DebugLog("HandIsPresent!");
+		Debug.Log("HandIsPresent!");
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_DESCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		DebugLog("AllDownExceptGauge..."); 
+		Debug.Log("AllDownExceptGauge..."); 
 		AllDownExceptGauge(shapeChangeDuration);
 		yield return new WaitForSeconds(3f);
-		/*expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("TRIGGER_LANDSCAPE_BLACKING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		AllBlack(0.5f);
-		yield return new WaitForSeconds(0.5f);*/
-		// wait until all pins are down
-		/*while (!IsAllDownExceptGauge())
-		{
-			yield return new WaitForSeconds(0.1f);
-		}
-		Debug.Log("AllDownExceptGauge!");*/
-		//expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("END_LANDSCAPE_CHANGING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		gaugeState = GAUGE_STARTED;
 	}
 
@@ -462,20 +456,11 @@ public class XP1_P2 : MonoBehaviour
 		expanDialSticks.onReachingChanged += HandleReachingChanged;
 
 		connected = false;
-
-		// init trials
-		InitTrials();
-		gaugeIndex = -1;
-		gaugeState = GAUGE_TO_APPEAR;
-		//fileLogger = new FileLogger(logEnabled);
-		currTime = LOG_INTERVAL;
-		prevTime = 0f;
-		// Connection to MQTT Broker
 		expanDialSticks.client_MqttConnect();
 	}
 	private void OnDestroy()
 	{
-		expanDialSticks.client.Publish(MQTT_CAMERA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		//expanDialSticks.client.Publish(MQTT_CAMERA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 
@@ -490,7 +475,7 @@ public class XP1_P2 : MonoBehaviour
 	private void HandleConnected(object sender, MqttConnectionEventArgs e)
 	{
 		Debug.Log("Application connected.");
-		expanDialSticks.client.Publish(MQTT_CAMERA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		//expanDialSticks.client.Publish(MQTT_CAMERA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		connected = true;
@@ -537,16 +522,12 @@ public class XP1_P2 : MonoBehaviour
 			float prevRotation = aiguilleRotation;
 			aiguilleRotation += e.diff * anglePerStep;
 			string msg = "";
+			msg += "USER_ROTATION " + prevRotation + " " + aiguilleRotation;
 			if (gaugeState == GAUGE_APPEARED)
 			{
-				msg += "USER_START_GAUGE" + prevRotation + " " + aiguilleRotation;
-				DebugLog("UserStartGauge!");
 				startGameTime = Time.time;
 				motionDuration = Random.Range(5f, gameDuration - 5f);
 				gaugeState = GAUGE_STARTED;
-			} else
-			{
-				msg += "USER_ROTATE_GAUGE " + prevRotation + " " + aiguilleRotation;
 			}
 			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		}
@@ -629,10 +610,69 @@ public class XP1_P2 : MonoBehaviour
 		expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
 		expanDialSticks.triggerTextureChange();
 	}
+	void OnGUI()
+	{
+		if (unknownParticipant)
+		{
+			// Make a text field that modifies stringToEdit.
+			float midX = Screen.width / 2.0f;
+			float midY = Screen.height / 2.0f;
+			float componentHeight = 20;
+			//GUI.Label(new Rect(midX - 50 - , midY, 100, 20), "Hello World!");
+
+			stringParticipant = GUI.TextField(new Rect(midX - 25, midY, 50, componentHeight), stringParticipant, 25);
+			if (GUI.Button(new Rect(midX + 25, midY, 50, componentHeight), "TRAINING"))
+			{
+				numeroParticipant = int.Parse(stringParticipant);
+				// init trials
+				InitTrials();
+				gaugeIndex = -1;
+				gaugeState = GAUGE_TO_APPEAR;
+
+				currTime = LOG_INTERVAL;
+				prevTime = 0f;
+
+				string identity = "USER_IDENTITY " + numeroParticipant + " SYSTEM_TRIGGERED TRAINING";
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+				unknownParticipant = false;
+			}
+			if (GUI.Button(new Rect(midX + 75, midY+25, 50, componentHeight), "SMS"))
+			{
+				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
+				numeroParticipant = int.Parse(stringParticipant);
+				// init trials
+				InitTrials();
+				gaugeIndex = -1;
+				gaugeState = GAUGE_TO_APPEAR;
+
+				currTime = LOG_INTERVAL;
+				prevTime = 0f;
+				string identity = "USER_IDENTITY " + numeroParticipant + " SYSTEM_TRIGGERED SMS TRIAL";
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+				unknownParticipant = false;
+			}
+			if (GUI.Button(new Rect(midX + 75, midY - 25, 50, componentHeight), "SSM"))
+			{
+				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SpeedAndSeparationMonitoring);
+				numeroParticipant = int.Parse(stringParticipant);
+				// init trials
+				InitTrials();
+				gaugeIndex = -1;
+				gaugeState = GAUGE_TO_APPEAR;
+
+				currTime = LOG_INTERVAL;
+				prevTime = 0f;
+				string identity = "USER_IDENTITY " + numeroParticipant + " SYSTEM_TRIGGERED SSM TRIAL";
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+				unknownParticipant = false;
+			}
+		}
+	}
+
 	void Update()
 	{
 		// check if ExpanDialSticks is connected
-		if (connected)
+		if (connected && !unknownParticipant)
 		{
 			if (Input.GetKey("escape") || (gaugeState == GAUGE_TO_APPEAR && gaugeIndex >= gaugePositions.Length))
 			{
@@ -664,7 +704,14 @@ public class XP1_P2 : MonoBehaviour
 				{
 					//Debug.Log("TRIGGER StartCoroutine Earthquake");
 					gaugeState = LANDSCAPE_IS_CHANGING;
-					StartCoroutine(Earthquake());
+					if(training)
+					{ 
+						StartCoroutine(FakeEarthquake());
+
+					} else
+					{
+						StartCoroutine(Earthquake());
+					}
 					motionDuration = Mathf.Infinity;
 				}
 
@@ -692,7 +739,7 @@ public class XP1_P2 : MonoBehaviour
 						default:
 							break;
 					}
-					string msg = "SYSTEM_ROTATE_GAUGE " + prevRotation + " " + cadranRotation;
+					string msg = "SYSTEM_ROTATION " + prevRotation + " " + cadranRotation;
 					expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 
 					if (Time.time - directionTime >= directionDuration)

@@ -252,6 +252,31 @@ public class ExpanDialSticks : MonoBehaviour
 	{
 		get => borderOffset;
 	}
+	public void SetSafetyMode(SafetyMotionMode motionMode)
+	{
+		safetyMotionMode = motionMode;
+		switch (safetyMotionMode)
+		{
+			case SafetyMotionMode.SafetyRatedMonitoredStop:
+				nbSeparationLevels = 2;
+				break;
+			case SafetyMotionMode.SpeedAndSeparationMonitoring:
+				nbSeparationLevels = 4;
+				break;
+			default:
+				break;
+		}
+		for (int i = 0; i < nbRows; i++)
+			for (int j = 0; j < nbColumns; j++)
+			{
+				// view
+				viewMatrix[i, j].NbSeparationLevels = nbSeparationLevels;
+
+				// collision
+				collisionMatrix[i, j].NbSeparationLevels = nbSeparationLevels;
+			}
+	}
+
 	void OnGUI()
 	{
 		/*if (GUI.Button(new Rect(10, 10, 50, 50), buttonTexture))
@@ -577,7 +602,8 @@ public class ExpanDialSticks : MonoBehaviour
 									distanceFromBody,
 									modelMatrix[i, j].CurrentPaused,
 									MQTT_INTERVAL
-									); ;
+									);
+
 								// doing nothing for each pin
 								positions[i * nbColumns + j] = modelMatrix[i, j].CurrentPosition;
 								holdings[i * nbColumns + j] = modelMatrix[i, j].CurrentHolding ? 1 : 0;
@@ -590,7 +616,7 @@ public class ExpanDialSticks : MonoBehaviour
 									{
 										if (modelMatrix[i, j].CurrentPaused == 0) // PIN IS NOT ALREADY BEING PAUSED
 										{
-											//Debug.Log("modelMatrix[" + i + "," + j + "] pause towards " + modelMatrix[i, j].TargetPosition + "!");
+											Debug.Log("modelMatrix[" + i + "," + j + "] pause towards " + modelMatrix[i, j].TargetPosition + "!");
 											modelMatrix[i, j].CurrentPaused = modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition;
 											positions[i * nbColumns + j] = modelMatrix[i, j].CurrentPosition;
 											holdings[i * nbColumns + j] = 0;
@@ -606,7 +632,7 @@ public class ExpanDialSticks : MonoBehaviour
 									{
 										if (modelMatrix[i, j].CurrentPaused != 0)
 										{
-											//Debug.Log("modelMatrix[" + i + "," + j + "] unpause towards " + modelMatrix[i, j].TargetPosition + "!");
+											Debug.Log("modelMatrix[" + i + "," + j + "] unpause towards " + modelMatrix[i, j].TargetPosition + "!");
 											modelMatrix[i, j].CurrentPaused = 0;
 											positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
 											holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
@@ -625,7 +651,7 @@ public class ExpanDialSticks : MonoBehaviour
 									{
 										if (nextProximity != prevProximity) // SPEED UP
 										{
-											//Debug.Log("modelMatrix[" + i + "," + j + "] change speed towards " + modelMatrix[i, j].TargetPosition  + "!");
+											Debug.Log("modelMatrix[" + i + "," + j + "] change speed towards " + modelMatrix[i, j].TargetPosition  + "!");
 											positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
 											holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
 											float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
@@ -640,7 +666,6 @@ public class ExpanDialSticks : MonoBehaviour
 									}
 								}
 							}
-
 						}
 						shapeChanging = true;
 					}
@@ -804,16 +829,17 @@ public class ExpanDialSticks : MonoBehaviour
 					}
 					else
 					{*/
-						positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
-						holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
-					    if(modelMatrix[i, j].CurrentProximity < 1f)
+					positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
+					holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
+					modelMatrix[i, j].CurrentProximity = collisionMatrix[i, j].Proximity();
+					if (modelMatrix[i, j].CurrentProximity < 1f)
 						{
 							float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
 							float distance = Math.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition);
 							float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
 							durations[i * nbColumns + j] = Math.Max(safetyDuration, modelMatrix[i, j].TargetShapeChangeDuration);
 						} else {
-							//Debug.Log("modelMatrix[" + i + "," + j + "] pause at start!");
+							Debug.Log("modelMatrix[" + i + "," + j + "] pause at start!");
 							modelMatrix[i, j].CurrentPaused = modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition;
 							durations[i * nbColumns + j] = 0f;
 						}
