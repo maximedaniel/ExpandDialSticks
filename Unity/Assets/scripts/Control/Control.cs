@@ -49,7 +49,7 @@ public class Control : MonoBehaviour
 
         // Set the video to play. URL supports local absolute or relative paths.
         // Here, using absolute.
-        UnityEngine.Video.VideoClip clip = Resources.Load<UnityEngine.Video.VideoClip>("relaxing");
+        UnityEngine.Video.VideoClip clip = Resources.Load<UnityEngine.Video.VideoClip>("relaxing-3min");
 
         videoPlayer.clip = clip;
 
@@ -178,7 +178,15 @@ public class Control : MonoBehaviour
     {
         if (connected)
         {
-            if (Input.GetKey("escape"))
+            if (videoReady && !videoPlayer.isPlaying && Input.GetKey(KeyCode.Space))
+                {
+                    Debug.Log(CMD_START);
+                    expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+                    videoPlayer.Play();
+                    videoStarted = true;
+                }
+
+                if (Input.GetKey(KeyCode.Escape))
             {
                 Quit();
             }

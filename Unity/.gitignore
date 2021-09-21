@@ -6,6 +6,7 @@ Obj/
 UnityGenerated/
 Library/
 test/
+Bin/
  
 # ===================================== #
 # Visual Studio / MonoDevelop generated #
@@ -20,6 +21,7 @@ ExportedObj/
 *.user
 *.unityproj
 *.booproj
+*.mov
  
 # ============ #
 # OS generated #
