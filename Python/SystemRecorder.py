@@ -39,6 +39,8 @@ class SystemRecorder():
         
   def write(self, msg):
     try: 
+        if not self.f:
+          self.start()
         timestamp = datetime.datetime.utcnow().isoformat()
         self.f.write(timestamp + "|" + msg + "\n")
     except Exception as e:

@@ -2,7 +2,7 @@
 # 2. python34 .\LoggerMQTT.py
 # 3. [DEBUG] mosquitto_pub -h 127.0.0.1 -p 1883 -m <CMD> -t <TOPIC>
 
-from CameraRecorder import CameraRecorder
+#from CameraRecorder import CameraRecorder
 from SystemRecorder import SystemRecorder
 from EmpaticaRecorder import EmpaticaRecorder
 import paho.mqtt.client as mqtt
@@ -30,9 +30,9 @@ def on_disconnect(client, userdata, rc):
     client.connected_flag=False
     client.disconnect_flag=True
 
-    if not cameraRecorder.stopped():
-        cameraRecorder.stop()
-        cameraRecorder.join()
+    # if not cameraRecorder.stopped():
+    #     cameraRecorder.stop()
+    #     cameraRecorder.join()
 
     if not empaticaRecorder.stopped():
         empaticaRecorder.stop()
@@ -43,29 +43,28 @@ def on_disconnect(client, userdata, rc):
     quit()
 
 def on_message(client, userdata, msg):
-    global cameraRecorder
     global empaticaRecorder
     command = str(msg.payload.decode("utf-8"))
-    # VideoRecorder Topic
-    if msg.topic == MQTT_CAMERA_RECORDER:
-      if command == CMD_START:
-          print("[%s] %s|%s" %(datetime.datetime.utcnow().isoformat(), MQTT_CAMERA_RECORDER, CMD_START))
-          if not cameraRecorder.stopped():
-              cameraRecorder.stop()
-              cameraRecorder.join()
-          cameraRecorder = CameraRecorder()
-          cameraRecorder.start()
+    # # VideoRecorder Topic
+    # if msg.topic == MQTT_CAMERA_RECORDER:
+    #   if command == CMD_START:
+    #       print("[%s] %s|%s" %(datetime.datetime.utcnow().isoformat(), MQTT_CAMERA_RECORDER, CMD_START))
+    #       if not cameraRecorder.stopped():
+    #           cameraRecorder.stop()
+    #           cameraRecorder.join()
+    #       cameraRecorder = CameraRecorder()
+    #       cameraRecorder.start()
 
-      elif command == CMD_STOP:
-          print("[%s] %s|%s" %(datetime.datetime.utcnow().isoformat(), MQTT_CAMERA_RECORDER, CMD_STOP))
-          if not cameraRecorder.stopped():
-              cameraRecorder.stop()
-              cameraRecorder.join()
+    #   elif command == CMD_STOP:
+    #       print("[%s] %s|%s" %(datetime.datetime.utcnow().isoformat(), MQTT_CAMERA_RECORDER, CMD_STOP))
+    #       if not cameraRecorder.stopped():
+    #           cameraRecorder.stop()
+    #           cameraRecorder.join()
 
-      else:
-          print("[%s] %s|%s" %(datetime.datetime.utcnow().isoformat(), MQTT_CAMERA_RECORDER, CMD_UNKNOWN))
+    #   else:
+    #       print("[%s] %s|%s" %(datetime.datetime.utcnow().isoformat(), MQTT_CAMERA_RECORDER, CMD_UNKNOWN))
 
-    elif msg.topic == MQTT_EMPATICA_RECORDER:
+    if msg.topic == MQTT_EMPATICA_RECORDER:
       if command == CMD_START:
           print("[%s] %s|%s" %(datetime.datetime.utcnow().isoformat(), MQTT_EMPATICA_RECORDER, CMD_START))
           if not empaticaRecorder.stopped():
@@ -100,7 +99,7 @@ def on_message(client, userdata, msg):
     else:
       print(MQTT_UNKNOWN_TOPIC)
 
-cameraRecorder = CameraRecorder()
+# cameraRecorder = CameraRecorder()
 systemRecorder = SystemRecorder()
 empaticaRecorder = EmpaticaRecorder()
 client = mqtt.Client()
