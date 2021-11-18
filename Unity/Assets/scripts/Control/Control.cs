@@ -11,6 +11,7 @@ public class Control : MonoBehaviour
 {
 	// Start is called before the first frame update
 	private UnityEngine.Video.VideoPlayer videoPlayer;
+    private bool videoChosen = false;
     private bool videoReady = false;
     private bool videoStarted = false;
     private GUIStyle currentStyle = null;
@@ -18,11 +19,13 @@ public class Control : MonoBehaviour
     public GameObject expanDialSticksPrefab;
     private ExpanDialSticks expanDialSticks;
     private bool connected = false;
+    private int buttonHeight = 50;
+    private int buttonWidth = 100;
+    private int buttonWidthOffset = 10;
     private int progressBarHeight = 5;
     private int progressBarWidth = 0;
     private Color progressBarColor = new Color(1f, 1f, 1f, 0.2f);
 
-    public const string MQTT_CAMERA_RECORDER = "CAMERA_RECORDER";
     public const string MQTT_EMPATICA_RECORDER = "EMPATICA_RECORDER";
     public const string MQTT_SYSTEM_RECORDER = "SYSTEM_RECORDER";
     public const string CMD_START = "START";
@@ -47,12 +50,6 @@ public class Control : MonoBehaviour
         // This will cause our Scene to be visible through the video being played.
         videoPlayer.targetCameraAlpha = 1F;
 
-        // Set the video to play. URL supports local absolute or relative paths.
-        // Here, using absolute.
-        UnityEngine.Video.VideoClip clip = Resources.Load<UnityEngine.Video.VideoClip>("relaxing-3min");
-
-        videoPlayer.clip = clip;
-
         // Skip the first 100 frames.
         videoPlayer.frame = 0;
 
@@ -67,10 +64,9 @@ public class Control : MonoBehaviour
         // resources, pre-load a few frames, etc.). To better control the delays
         // associated with this preparation one can use videoPlayer.Prepare() along with
         // its prepareCompleted event.
+        videoChosen = false;
         videoReady = false;
-        videoPlayer.Prepare();
         // Preparing MQTT broker
-
         expanDialSticks = expanDialSticksPrefab.GetComponent<ExpanDialSticks>();
         // Listen to events
         expanDialSticks.OnConnecting += HandleConnecting;
@@ -104,50 +100,79 @@ public class Control : MonoBehaviour
 
     void PrepareCompleted(UnityEngine.Video.VideoPlayer vp)
     {
-        //Debug.Log("PrepareCompleted");
         videoReady = true;
     }
     void EndReached(UnityEngine.Video.VideoPlayer vp)
     {
-        //Debug.Log("EndReached");
         Quit();
-        //Debug.Log(CMD_STOP);
-        //expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-        // STOP RECORDING
-        //vp.playbackSpeed = vp.playbackSpeed / 10.0F;
     }
-    private void OnDestroy()
-    {
-        Debug.Log(CMD_STOP);
-        expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-    }
+  
 
 
     private void OnGUI()
     {
-        if (connected && videoReady)
-        {
-			if (!videoPlayer.isPlaying)
-            {
-                GUI.color = Color.white;
-                if (!videoStarted && GUI.Button(new Rect(Screen.width / 2 - 50, Screen.height / 2 - 25, 100, 50), "START"))
-                {
-
-                    Debug.Log(CMD_START);
-                    expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-                    videoPlayer.Play();
-                    videoStarted = true;
-                }
-            } else
-            {
-                InitStyles();
-                progressBarWidth = (int)((videoPlayer.frame / (double)videoPlayer.frameCount) * Screen.width);
-                GUI.Box(new Rect(0, Screen.height - progressBarHeight, progressBarWidth, progressBarHeight), "", currentStyle);
-            }
-        } else
+		if (connected)
 		{
-            GUI.color = new Color(1f, 1f, 1f, Mathf.PingPong(Time.time, 1f));
-            GUI.Label(new Rect(Screen.width / 2 - 50, Screen.height / 2 - 25, 100, 50), "LOADING...");
+
+            // choose video
+            if (!videoChosen)
+            {
+                if (GUI.Button(new Rect(Screen.width / 2 - (2*buttonWidth) - 1.5f * buttonWidthOffset, Screen.height / 2 -(buttonHeight / 2.0f), buttonWidth, buttonHeight), "SESSION1"))
+                {
+                    videoPlayer.clip = Resources.Load<UnityEngine.Video.VideoClip>("relaxing-3min");
+                    videoPlayer.Prepare();
+                    videoChosen = true;
+                }
+                if (GUI.Button(new Rect(Screen.width / 2 - buttonWidth - 0.5f * buttonWidthOffset, Screen.height / 2 - (buttonHeight / 2.0f), buttonWidth, buttonHeight), "SESSION2"))
+                {
+                    videoPlayer.clip = Resources.Load<UnityEngine.Video.VideoClip>("relaxing-6min");
+                    videoPlayer.Prepare();
+                    videoChosen = true;
+                }
+                if (GUI.Button(new Rect(Screen.width / 2 + 0.5f * buttonWidthOffset, Screen.height / 2 - (buttonHeight / 2.0f), buttonWidth, buttonHeight), "SESSION3"))
+                {
+                    videoPlayer.clip = Resources.Load<UnityEngine.Video.VideoClip>("relaxing-9min");
+                    videoPlayer.Prepare();
+                    videoChosen = true;
+
+                }
+                if (GUI.Button(new Rect(Screen.width / 2 + buttonWidth + 1.5f * buttonWidthOffset, Screen.height / 2- (buttonHeight / 2.0f), buttonWidth, buttonHeight), "SESSION4"))
+                {
+                    videoPlayer.clip = Resources.Load<UnityEngine.Video.VideoClip>("relaxing-12min");
+                    videoPlayer.Prepare();
+                    videoChosen = true;
+                }
+			}
+			else
+			{
+                // Video is loading...
+				if (!videoReady)
+                {
+                    GUI.color = new Color(1f, 1f, 1f, Mathf.PingPong(Time.time, 1f));
+                    GUI.Label(new Rect(Screen.width / 2 - 50, Screen.height / 2 - 25, 100, 50), "LOADING...");
+                } else
+				{
+                    // Video is not playing...
+                    if (!videoPlayer.isPlaying)
+                    {
+                        GUI.color = Color.white;
+                        if (!videoStarted && GUI.Button(new Rect(Screen.width / 2 - (buttonWidth/2.0f), Screen.height / 2 - (buttonHeight/2.0f), buttonWidth, buttonHeight), "START"))
+                        {
+
+                            Debug.Log(CMD_START);
+                            expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+                            videoPlayer.Play();
+                            videoStarted = true;
+                        }
+                    }
+                    else
+                    {// Video is playing
+                        InitStyles();
+                        progressBarWidth = (int)((videoPlayer.frame / (double)videoPlayer.frameCount) * Screen.width);
+                        GUI.Box(new Rect(0, Screen.height - progressBarHeight, progressBarWidth, progressBarHeight), "", currentStyle);
+                    }
+                }
+			}
         }
     }
     private void InitStyles()
@@ -181,7 +206,7 @@ public class Control : MonoBehaviour
             if (videoReady && !videoPlayer.isPlaying && Input.GetKey(KeyCode.Space))
                 {
                     Debug.Log(CMD_START);
-                    expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+                    expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
                     videoPlayer.Play();
                     videoStarted = true;
                 }
@@ -195,10 +220,12 @@ public class Control : MonoBehaviour
 
     void Quit()
     {
-    #if UNITY_EDITOR
-            // Application.Quit() does not work in the editor so
-            // UnityEditor.EditorApplication.isPlaying need to be set to false to end the game
-            UnityEditor.EditorApplication.isPlaying = false;
+        Debug.Log(CMD_STOP);
+        expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+#if UNITY_EDITOR
+        // Application.Quit() does not work in the editor so
+        // UnityEditor.EditorApplication.isPlaying need to be set to false to end the game
+        UnityEditor.EditorApplication.isPlaying = false;
     #else
 						    Application.Quit();
     #endif
