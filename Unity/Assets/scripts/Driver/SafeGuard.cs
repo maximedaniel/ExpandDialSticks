@@ -14,6 +14,7 @@ public class SafeGuard : MonoBehaviour
 
 	private const float bodyOutlineWidth = 0.4f;
 	private const float bodySecondOutlineWidth = 0.8f;
+	private Color bodyOutlineColor = new Color(0f, 0f, 0f, 1f);
 
 	public Mesh _handMesh;
 	public Material _handMat;
@@ -491,6 +492,7 @@ public class SafeGuard : MonoBehaviour
 		planeBlock.SetVectorArray("_RightFrontArmCenter", _planeRightFrontArmCenters);
 		planeBlock.SetFloatArray("_RightArmRadius", _planeRightArmRadius);
 		Graphics.DrawMeshInstanced(_planeMesh, 0, _planeMat, _planeMatrices, _planeIndex, planeBlock, UnityEngine.Rendering.ShadowCastingMode.Off, false, SEPARATION_LAYER);
+
 	}
 
 	void ProjectorEaseIn()
@@ -677,6 +679,7 @@ public class SafeGuard : MonoBehaviour
 				int paused = pins.viewMatrix[row, column].CurrentPaused;
 				int feedforwarded = pins.viewMatrix[row, column].CurrentFeedForwarded;
 				int displacement = (paused != 0) ? paused : feedforwarded;
+				Debug.Log("displacement : " + displacement);
 				Transform pin = pins.viewMatrix[row, column].transform;
 				if (displacement != 0)
 				{

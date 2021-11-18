@@ -247,7 +247,7 @@ public class ExpanDialStickCollision: MonoBehaviour
 					if ((hitPoint.y - pinPoint.y) <= minDistanceFromLayer)
 					{
 						separationLevel = level;
-						float coeff = Mathf.Max(0, level - 1)/(float)nbSeparationLevels;
+						float coeff = Mathf.Max(0, level - 1)/(float)(nbSeparationLevels - 1f);
 						proximity = 1f - coeff;
 						//Debug.DrawLine(pinPoint - Vector3.up * 100, hitPoint, Color.HSVToRGB(coeff, 1f, 1f));
 						return;

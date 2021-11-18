@@ -205,7 +205,8 @@ namespace Leap.Unity {
     private const int _fingerCollidersSize = 27;
     private GameObject[] _handColliders;
     private GameObject [] _forearmColliders;
-    private float handColliderOffset = 2.5f; //6f
+   // private float handColliderOffset = 2.5f; //6f
+    private float pinHalfWidth = 3f; //6f
     private float forearmColliderOffset = 24f;
     private CombineInstance[] combine;
     private int _curSphereIndex, _curCylinderIndex;
@@ -234,7 +235,8 @@ namespace Leap.Unity {
     }
     
     public  bool IsActive() {
-      return (_handColliders != null && _handColliders[0].GetComponent<SphereCollider>().enabled);
+        return _handObject != null && _handObject.activeSelf;
+        //return (_handColliders != null && _handColliders[0].GetComponent<SphereCollider>().enabled);
     }
 
     public  GameObject GetHandCollider() {
@@ -435,8 +437,7 @@ namespace Leap.Unity {
     #endif
 
     public override void BeginHand() {
-      //Debug.Log(handedness + "BeginHand()");
-      //ShowGameObjects();
+      Debug.Log(handedness + "BeginHand()");
       base.BeginHand();
       if (_hand.IsLeft) {
         _sphereMaterial.color = _bodyColor;// _leftColorList[_leftColorIndex];
@@ -445,13 +446,14 @@ namespace Leap.Unity {
         _sphereMaterial.color = _bodyColor;// _rightColorList[_rightColorIndex];
         _rightColorIndex = (_rightColorIndex + 1) % _rightColorList.Length;
       }
-      setCollisionMode(true);
+      ShowGameObjects();
+     // setCollisionMode(true);
     }
     public override void FinishHand()
     {
-      //Debug.Log(handedness + "FinishHand()");
-      //HideGameObjects();
-      setCollisionMode(false);
+      Debug.Log(handedness + "FinishHand()");
+      HideGameObjects();
+      //setCollisionMode(false);
       base.FinishHand();
 
     }
@@ -620,8 +622,8 @@ namespace Leap.Unity {
 		{
             _handColliders[i].transform.position = centerPoint;
             SphereCollider sc = _handColliders[i].GetComponent<SphereCollider>();
-            sc.radius = maxDistPoint + handColliderOffset;
-            sc.radius += sc.radius * (i * 0.5f);
+            sc.radius = maxDistPoint; // + pinHalfWidth;
+            sc.radius += i * pinHalfWidth;// sc.radius * (i * 0.5f);
         }
             // drawing hand collider
             /*MaterialPropertyBlock block10 = new MaterialPropertyBlock();

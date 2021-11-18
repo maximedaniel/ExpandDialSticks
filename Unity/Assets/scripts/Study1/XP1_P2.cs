@@ -43,13 +43,13 @@ public class XP1_P2 : MonoBehaviour
 	private float currTime;
 	private float prevTime;
 
-	//public const string MQTT_CAMERA_RECORDER = "CAMERA_RECORDER";
 	public const string MQTT_EMPATICA_RECORDER = "EMPATICA_RECORDER";
 	public const string MQTT_SYSTEM_RECORDER = "SYSTEM_RECORDER";
 	public const string CMD_START = "START";
 	public const string CMD_STOP = "STOP";
 
 	private float shapeChangeDuration = 2f;
+	private float shapeChangeWaitFor = 3f;
 
 	private float aiguilleRotation = 90f;
 	private float cadranRotation = 90f;
@@ -58,7 +58,9 @@ public class XP1_P2 : MonoBehaviour
 	private float directionTime = 0f;
 	private float directionDuration = 3f;
 	private float startGameTime = 0f;
-	private float gameDuration = 20f;
+
+	private const float initGameDuration = 20f;
+	private float gameDuration = Mathf.Infinity;
 	private float motionDuration = 10f;
 
 	private const float anglePerStep = 360f / 24f;
@@ -71,23 +73,61 @@ public class XP1_P2 : MonoBehaviour
 	private string stringParticipant = "";
 	private int numeroParticipant = 0;
 	private bool unknownParticipant = true;
+	private const float maxSpeed = 20f;
 
 	IEnumerator NextGauge()
 	{
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_BLACKING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_BLACKING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		Debug.Log("AllBlack..."); 
 		AllBlack(0.5f);
 		yield return new WaitForSeconds(0.5f);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_DESCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		// wait for no hand presence
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("WAIT_FOR_NO_HAND_PRESENCE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		Debug.Log("WaitForNoHandPresence...");
+		List<Vector3> safePositionAndSpeeds = new List<Vector3>();
+		Vector2 gaugePosition = gaugePositions[gaugeIndex];
+		bool gaugeIsPresent = false;
+		float waitingSince = 0f;
+		int waitingCount = 1;
+		while (!gaugeIsPresent)
+		{
+			if (!leftHand.IsActive() && !rightHand.IsActive())
+			{
+				safePositionAndSpeeds = FindAll();
+				if (safePositionAndSpeeds.Count > 0)
+				{
+					foreach (Vector3 safePosAndSpeed in safePositionAndSpeeds)
+					{
+						if (safePosAndSpeed.x == gaugePosition.x && safePosAndSpeed.y == gaugePosition.y) gaugeIsPresent = true;
+					}
+				}
+			}
+			if (waitingSince >= shapeChangeWaitFor)
+			{
+				if (--waitingCount <= 0) break;
+				waitingSince = 0f;
+			}
+			else
+			{
+				waitingSince += 0.1f;
+				yield return new WaitForSeconds(0.1f);
+
+			}
+		}
+		Debug.Log("HandIsNoPresent!");
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_DESCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		Debug.Log("AllDown...");
 		AllDown(shapeChangeDuration);
-		yield return new WaitForSeconds(1f);
+		yield return new WaitForSeconds(shapeChangeWaitFor);
 		// wait until all pins are down
-		float waitingSince = 0f;
+		waitingSince = 0f;
+		waitingCount = 1;
 		while (!IsAllDown())
 		{
-			if (waitingSince >= 3f)
+			if (waitingSince >= shapeChangeWaitFor)
 			{
+				if (--waitingCount <= 0) break;
+
 				waitingSince = 0f;
 				Debug.Log("AllDown again");
 				AllDown(shapeChangeDuration);
@@ -98,24 +138,62 @@ public class XP1_P2 : MonoBehaviour
 				yield return new WaitForSeconds(0.1f);
 			}
 		}
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_DESCENDED"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		Debug.Log("AllIsDown!");
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_TO_APPEAR"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_TO_APPEAR"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		gaugeState = GAUGE_TO_APPEAR;
 	}
 
 	IEnumerator ShowGauge()
 	{
-
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_APPEARING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_BLACKING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		Debug.Log("AllBlack...");
+		AllBlack(0.5f);
+		yield return new WaitForSeconds(0.5f);
+		// wait for no hand presence
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("WAIT_FOR_NO_HAND_PRESENCE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		Debug.Log("WaitForNoHandPresence...");
+		List<Vector3> safePositionAndSpeeds = new List<Vector3>();
+		Vector2 gaugePosition = gaugePositions[gaugeIndex];
+		bool gaugeIsPresent = false;
+		float waitingSince = 0f;
+		int waitingCount = 1;
+		/*while (!gaugeIsPresent)
+		{
+			if (!leftHand.IsActive() && !rightHand.IsActive())
+			{
+				safePositionAndSpeeds = FindAll();
+				if (safePositionAndSpeeds.Count > 0)
+				{
+					foreach (Vector3 safePosAndSpeed in safePositionAndSpeeds)
+					{
+						if (safePosAndSpeed.x == gaugePosition.x && safePosAndSpeed.y == gaugePosition.y) gaugeIsPresent = true;
+					}
+				}
+				if (waitingSince >= shapeChangeWaitFor)
+				{
+					if (--waitingCount <= 0) break;
+					waitingSince = 0f;
+				}
+				else
+				{
+					waitingSince += 0.1f;
+					yield return new WaitForSeconds(0.1f);
+				}
+			}
+		}*/
+		yield return new WaitForSeconds(3f);
+		Debug.Log("NoHandIsPresent!");
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_APPEARING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		Debug.Log("GaugeUp...");
 		GaugeUp(shapeChangeDuration);
-		yield return new WaitForSeconds(1f);
+		yield return new WaitForSeconds(shapeChangeWaitFor);
 		// wait until gauge is u^p
-		float waitingSince = 0f;
+		waitingSince = 0f;
 		while (!IsGaugeUp())
 		{
 
-			if (waitingSince >= 3f)
+			if (waitingSince >= shapeChangeDuration)
 			{
 				waitingSince = 0f;
 				Debug.Log("GaugeUp..."); 
@@ -128,79 +206,161 @@ public class XP1_P2 : MonoBehaviour
 			}
 		}
 		Debug.Log("GaugeIsUp!");
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_DISPLAYING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_DISPLAYING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		cadranRotation = aiguilleRotation = startRotation;
 		Debug.Log("GaugeInit!");
 		GaugeInit(0.5f);
 		yield return new WaitForSeconds(0.5f);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_APPEARED"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("GAUGE_APPEARED"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		gaugeState = GAUGE_APPEARED;
 	}
 	IEnumerator FakeEarthquake()
 	{
-		yield return new WaitForSeconds(3f);
+		yield return new WaitForSeconds(shapeChangeWaitFor);
+		gameDuration = (Time.time - startGameTime) + shapeChangeWaitFor;
 		gaugeState = GAUGE_STARTED;
 	}
 
 	IEnumerator Earthquake()
 	{
 		// wait for one hand presence
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("WAIT_FOR_HAND_PRESENCE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("WAIT_FOR_HAND_PRESENCE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		Debug.Log("WaitForHandPresence...");
-		while (!leftHand.IsActive() && !rightHand.IsActive())
+		List<Vector3> safePositionAndSpeeds = new List<Vector3>();
+		Vector2 gaugePosition = gaugePositions[gaugeIndex];
+		bool gaugeIsPresent = true;
+		while (gaugeIsPresent)
+		{
+			if (leftHand.IsActive() || rightHand.IsActive())
+			{
+				safePositionAndSpeeds = FindAll();
+				if (safePositionAndSpeeds.Count > 0)
+				{
+					gaugeIsPresent = false;
+					foreach (Vector3 safePosAndSpeed in safePositionAndSpeeds)
+					{
+						if (safePosAndSpeed.x == gaugePosition.x && safePosAndSpeed.y == gaugePosition.y) gaugeIsPresent = true;
+					}
+				}
+			}
 			yield return new WaitForSeconds(0.1f);
+		}
 		Debug.Log("HandIsPresent!");
 		// trigger most unsafe SC
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_ASCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		Debug.Log("AllUpExceptGauge..."); 
-		AllUpExceptGauge(shapeChangeDuration);
-		yield return new WaitForSeconds(3f);
-		// wait for one hand presence
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("WAIT_FOR_HAND_PRESENCE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		Debug.Log("WaitForHandPresence..."); 
-		while (!leftHand.IsActive() && !rightHand.IsActive())
-			yield return new WaitForSeconds(0.1f);
-		Debug.Log("HandIsPresent!");
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_DESCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		Debug.Log("AllDownExceptGauge..."); 
-		AllDownExceptGauge(shapeChangeDuration);
-		yield return new WaitForSeconds(3f);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_ASCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		AllUp(safePositionAndSpeeds);
+		Debug.Log("AllUp");
+		yield return new WaitForSeconds(shapeChangeWaitFor);
+		// wait until all pins are up
+		float waitingSince = 0f;
+		int waitingCount = 1;
+		while (!IsAllUp(safePositionAndSpeeds))
+		{
+			if (waitingSince >= shapeChangeWaitFor)
+			{
+				if (--waitingCount <= 0) break;
+
+				waitingSince = 0f;
+				Debug.Log("AllUp again");
+				AllUp(safePositionAndSpeeds);
+			}
+			else
+			{
+				waitingSince += 0.1f;
+				yield return new WaitForSeconds(0.1f);
+			}
+		}
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_ASCENDED"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		/*
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_DESCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		Debug.Log("AllDown..."); 
+		AllDown(safePositionAndSpeeds, shapeChangeDuration);
+		yield return new WaitForSeconds(shapeChangeWaitFor);*/
+		gameDuration = (Time.time - startGameTime) + shapeChangeWaitFor;
 		gaugeState = GAUGE_STARTED;
 	}
 
-	/*void AllReset(float duration)
+	List<Vector3> FindAll()
 	{
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
-		{
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-			{
-				expanDialSticks.modelMatrix[i, j].TargetColor = Color.black;
-				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
-				expanDialSticks.modelMatrix[i, j].TargetPosition = -1;
-				expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = duration;
+		List<Vector3> safePositions = new List<Vector3>();
 
-			}
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+				if (expanDialSticks.modelMatrix[i, j].CurrentProximity < 1f)
+					safePositions.Add(new Vector3(i, j, expanDialSticks.modelMatrix[i, j].CurrentProximity));
+
+		return safePositions;
+	}
+
+	void AllUp(List<Vector3> safePositionAndSpeeds)
+	{
+		foreach (Vector3 safePositionAndSpeed in safePositionAndSpeeds)
+		{
+			int i = (int)safePositionAndSpeed.x;
+			int j = (int)safePositionAndSpeed.y;
+			float speedCoeff = safePositionAndSpeed.z; // 1 stop, 0.5 half, 0.3
+			sbyte targetPos = 40;
+
+			float safetySpeed = maxSpeed * (1f - speedCoeff); // 20 pos per sec max
+			float distance = Math.Abs(targetPos - expanDialSticks.modelMatrix[i, j].CurrentPosition);
+			float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
+			expanDialSticks.modelMatrix[i, j].TargetPosition = targetPos;
+			Debug.Log(i + " " + j + " " + safetyDuration);
+			expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = safetyDuration;
 		}
-		expanDialSticks.triggerTextureChange();
+		expanDialSticks.triggerShapeChange();
+	}
+	void AllUp(List<Vector3> safePositionAndSpeeds, float duration)
+	{
+		foreach (Vector3 safePositionAndSpeed in safePositionAndSpeeds)
+		{
+			int i = (int)safePositionAndSpeed.x;
+			int j = (int)safePositionAndSpeed.y;
+			float speedCoeff = safePositionAndSpeed.z; // 1 stop, 0.5 half, 0.3
+			float safetyDuration = Math.Max(duration / (1f - speedCoeff), 0.1f);
+			expanDialSticks.modelMatrix[i, j].TargetPosition = 40;
+			//Debug.Log(i + " " + j + " " + safetyDuration);
+			expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = safetyDuration;
+		}
+		expanDialSticks.triggerShapeChange();
+	}
+
+	void AllDown(List<Vector3> safePositionAndSpeeds, float duration)
+	{
+		foreach (Vector3 safePositionAndSpeed in safePositionAndSpeeds)
+		{
+			int i = (int)safePositionAndSpeed.x;
+			int j = (int)safePositionAndSpeed.y;
+			float speedCoeff = safePositionAndSpeed.z; // 1 stop, 0.5 half, 0.3
+			float safetyDuration = Math.Max(duration / (1f - speedCoeff), 0.1f);
+			expanDialSticks.modelMatrix[i, j].TargetPosition = 0;
+			expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = safetyDuration;
+		}
 		expanDialSticks.triggerShapeChange();
 	}
 
 
-	void AllUp(float duration)
+	bool IsAllDown(List<Vector3> safePositionAndSpeeds)
 	{
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
+		foreach (Vector3 safePositionAndSpeed in safePositionAndSpeeds)
 		{
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-			{
-				expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
-				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
-				expanDialSticks.modelMatrix[i, j].TargetPosition = 40;
-				expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = duration;
-			}
+			int i = (int)safePositionAndSpeed.x;
+			int j = (int)safePositionAndSpeed.y;
+			if (expanDialSticks.viewMatrix[i, j].CurrentPosition > 0 || expanDialSticks.viewMatrix[i, j].CurrentReaching) return false;
 		}
-		expanDialSticks.triggerTextureChange();
-		expanDialSticks.triggerShapeChange();
-	}*/
+		return true;
+	}
+	bool IsAllUp(List<Vector3> safePositionAndSpeeds)
+	{
+		foreach (Vector3 safePositionAndSpeed in safePositionAndSpeeds)
+		{
+			int i = (int)safePositionAndSpeed.x;
+			int j = (int)safePositionAndSpeed.y;
+			if (expanDialSticks.viewMatrix[i, j].CurrentPosition < 40 || expanDialSticks.viewMatrix[i, j].CurrentReaching) return false;
+		}
+		return true;
+	}
+
 	void AllDown(float duration)
 	{
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
@@ -237,65 +397,6 @@ public class XP1_P2 : MonoBehaviour
 		}
 		return true;
 	}
-	void AllUpExceptGauge(float duration)
-	{
-		Vector2 gaugePosition = gaugePositions[gaugeIndex];
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
-		{
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-			{
-				if (i != (int)gaugePosition.x || j != (int)gaugePosition.y)
-				{
-					//expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
-					//expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
-					expanDialSticks.modelMatrix[i, j].TargetPosition = 40;
-					expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = duration;
-				}
-
-			}
-		}
-		//expanDialSticks.triggerTextureChange();
-		expanDialSticks.triggerShapeChange();
-	}
-	void AllDownExceptGauge(float duration)
-	{
-		Vector2 gaugePosition = gaugePositions[gaugeIndex];
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
-		{
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-			{
-				if (i != (int)gaugePosition.x || j != (int)gaugePosition.y)
-				{
-					//expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
-					//expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
-					expanDialSticks.modelMatrix[i, j].TargetPosition = 0;
-					expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = duration;
-				}
-			}
-		}
-		//expanDialSticks.triggerTextureChange();
-		expanDialSticks.triggerShapeChange();
-	}
-	bool IsAllDownExceptGauge()
-	{
-		Vector2 gaugePosition = gaugePositions[gaugeIndex];
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
-		{
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-			{
-
-				if ((i != (int)gaugePosition.x || j != (int)gaugePosition.y) && expanDialSticks.viewMatrix[i, j].CurrentPosition > 0 || expanDialSticks.viewMatrix[i, j].CurrentReaching)
-				{
-					//Debug.Log("i, j:" + i + "," + j + "gi, gj:" + (int)gaugePosition.x + "," + (int)gaugePosition.y);
-
-					//Debug.Log("expanDialSticks.viewMatrix[i, j].CurrentPosition:" + expanDialSticks.viewMatrix[i, j].CurrentPosition);
-					//Debug.Log("expanDialSticks.viewMatrix[i, j].CurrentReaching:" + expanDialSticks.viewMatrix[i, j].CurrentReaching);
-					return false;
-				}
-			}
-		}
-		return true;
-	}
 	void AllBlack(float duration)
 	{
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
@@ -315,6 +416,7 @@ public class XP1_P2 : MonoBehaviour
 				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
 			}
 		}
+		expanDialSticks.setBorderBackground(Color.black);
 		expanDialSticks.triggerTextureChange();
 	}
 
@@ -333,31 +435,31 @@ public class XP1_P2 : MonoBehaviour
 	private void InitTrials()
 	{
 
-		gaugePositions = new Vector2[engagementRows.Length * engagementColumns.Length];
+		gaugePositions = new Vector2[engagementRows.Length * engagementRows.Length];
 
 		// Generate Squared-Latin Row Indexes
-		int[] shuffledRowIndexes = new int[engagementRows.Length * engagementColumns.Length];
+		int[] shuffledRowIndexes = new int[engagementRows.Length * engagementRows.Length];
 		for (int i = 0; i < engagementRows.Length; i++)
 		{
-			for (int j = 0; j < engagementColumns.Length; j++)
+			for (int j = 0; j < engagementRows.Length; j++)
 			{
-				shuffledRowIndexes[i * engagementColumns.Length + j] = engagementRows[(i + numeroParticipant + j) % engagementRows.Length];
+				shuffledRowIndexes[i * engagementRows.Length + j] = engagementRows[(i + numeroParticipant + j) % engagementRows.Length];
 			}
 		}
 
 		// Generate Shuffled Column Indexes
-		int[] shuffledColumnsIndexes = new int[engagementRows.Length * engagementColumns.Length];
+		int[] shuffledColumnsIndexes = new int[engagementRows.Length * engagementRows.Length];
 		for (int i = 0; i < engagementRows.Length; i++)
 		{
 			engagementColumns = Shuffle(engagementColumns);
 
-			for (int j = 0; j < engagementColumns.Length; j++)
+			for (int j = 0; j < engagementRows.Length; j++)
 			{
-				shuffledColumnsIndexes[i * engagementColumns.Length + j] = engagementColumns[j];
+				shuffledColumnsIndexes[i * engagementRows.Length + j] = engagementColumns[j];
 			}
 		}
 
-		for (int i = 0; i < engagementRows.Length * engagementColumns.Length; i++)
+		for (int i = 0; i < engagementRows.Length * engagementRows.Length; i++)
 		{
 			gaugePositions[i] = new Vector2(shuffledRowIndexes[i], shuffledColumnsIndexes[i]);
 		}
@@ -434,6 +536,7 @@ public class XP1_P2 : MonoBehaviour
 		string trialProgress = "<pos=90%><b>" + (gaugeIndex + 1) + "/" + gaugePositions.Length + "</b>";
 		string legend = participantNumber + trialProgress;
 		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 16, Color.black, legend, new Vector3(90f, -90f, 0f));
+		expanDialSticks.setBorderBackground(Color.white);
 		expanDialSticks.triggerTextureChange();
 
 	}
@@ -458,13 +561,7 @@ public class XP1_P2 : MonoBehaviour
 		connected = false;
 		expanDialSticks.client_MqttConnect();
 	}
-	private void OnDestroy()
-	{
-		//expanDialSticks.client.Publish(MQTT_CAMERA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 
-	}
 
 	private void HandleConnecting(object sender, MqttConnectionEventArgs e)
 	{
@@ -475,19 +572,9 @@ public class XP1_P2 : MonoBehaviour
 	private void HandleConnected(object sender, MqttConnectionEventArgs e)
 	{
 		Debug.Log("Application connected.");
-		//expanDialSticks.client.Publish(MQTT_CAMERA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		connected = true;
-
-		/*expanDialSticks.modelMatrix[I, J].TargetPosition = 20;
-		expanDialSticks.modelMatrix[I, J].TargetShapeChangeDuration = 2f;
-		expanDialSticks.modelMatrix[I, J].TargetPlaneTexture = "aiguille";
-		expanDialSticks.modelMatrix[I, J].TargetPlaneRotation = currentRotation;
-
-		expanDialSticks.modelMatrix[I, J].TargetTextureChangeDuration = 2f;
-		expanDialSticks.triggerShapeChange();
-		expanDialSticks.triggerTextureChange();*/
 
 	}
 
@@ -523,13 +610,14 @@ public class XP1_P2 : MonoBehaviour
 			aiguilleRotation += e.diff * anglePerStep;
 			string msg = "";
 			msg += "USER_ROTATION " + prevRotation + " " + aiguilleRotation;
+			Debug.Log(msg);
 			if (gaugeState == GAUGE_APPEARED)
 			{
 				startGameTime = Time.time;
-				motionDuration = Random.Range(5f, gameDuration - 5f);
+				motionDuration = Random.Range(5f, initGameDuration - 5f);
 				gaugeState = GAUGE_STARTED;
 			}
-			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		}
 	}
 
@@ -551,13 +639,16 @@ public class XP1_P2 : MonoBehaviour
 
 	void Quit()
 	{
-#if UNITY_EDITOR
-		// Application.Quit() does not work in the editor so
-		// UnityEditor.EditorApplication.isPlaying need to be set to false to end the game
-		UnityEditor.EditorApplication.isPlaying = false;
-#else
-				Application.Quit();
-#endif
+
+		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		#if UNITY_EDITOR
+				// Application.Quit() does not work in the editor so
+				// UnityEditor.EditorApplication.isPlaying need to be set to false to end the game
+				UnityEditor.EditorApplication.isPlaying = false;
+		#else
+						Application.Quit();
+		#endif
 	}
 	void LogAllSystemData()
 	{
@@ -585,11 +676,11 @@ public class XP1_P2 : MonoBehaviour
 		}
 
 		//expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(colorString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(proximityString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(positionString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(leftHandString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(rightHandString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(pinOrientationString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(proximityString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(positionString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(leftHandString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(rightHandString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(pinOrientationString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		/*fileLogger.Log(colorString);
 		fileLogger.Log(proximityString);
 		fileLogger.Log(positionString);
@@ -621,8 +712,9 @@ public class XP1_P2 : MonoBehaviour
 			//GUI.Label(new Rect(midX - 50 - , midY, 100, 20), "Hello World!");
 
 			stringParticipant = GUI.TextField(new Rect(midX - 25, midY, 50, componentHeight), stringParticipant, 25);
-			if (GUI.Button(new Rect(midX + 25, midY, 50, componentHeight), "TRAINING"))
+			if (GUI.Button(new Rect(midX + 25, midY, 70, componentHeight), "TRAINING"))
 			{
+				training = true;
 				numeroParticipant = int.Parse(stringParticipant);
 				// init trials
 				InitTrials();
@@ -633,11 +725,12 @@ public class XP1_P2 : MonoBehaviour
 				prevTime = 0f;
 
 				string identity = "USER_IDENTITY " + numeroParticipant + " SYSTEM_TRIGGERED TRAINING";
-				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				unknownParticipant = false;
 			}
 			if (GUI.Button(new Rect(midX + 75, midY+25, 50, componentHeight), "SMS"))
 			{
+				training = false;
 				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
 				numeroParticipant = int.Parse(stringParticipant);
 				// init trials
@@ -648,11 +741,12 @@ public class XP1_P2 : MonoBehaviour
 				currTime = LOG_INTERVAL;
 				prevTime = 0f;
 				string identity = "USER_IDENTITY " + numeroParticipant + " SYSTEM_TRIGGERED SMS TRIAL";
-				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				unknownParticipant = false;
 			}
 			if (GUI.Button(new Rect(midX + 75, midY - 25, 50, componentHeight), "SSM"))
 			{
+				training = false;
 				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SpeedAndSeparationMonitoring);
 				numeroParticipant = int.Parse(stringParticipant);
 				// init trials
@@ -663,7 +757,7 @@ public class XP1_P2 : MonoBehaviour
 				currTime = LOG_INTERVAL;
 				prevTime = 0f;
 				string identity = "USER_IDENTITY " + numeroParticipant + " SYSTEM_TRIGGERED SSM TRIAL";
-				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				unknownParticipant = false;
 			}
 		}
@@ -723,6 +817,7 @@ public class XP1_P2 : MonoBehaviour
 					Debug.Log("gameDuration:" + gameDuration);*/
 					gaugeState = GAUGE_APPEARING;
 					StartCoroutine(NextGauge());
+					gameDuration = Mathf.Infinity;
 				}
 				else
 				{
@@ -740,7 +835,10 @@ public class XP1_P2 : MonoBehaviour
 							break;
 					}
 					string msg = "SYSTEM_ROTATION " + prevRotation + " " + cadranRotation;
-					expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+					if ((int)prevRotation != (int)cadranRotation) {
+						//Debug.Log(msg);
+					}
+					expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 
 					if (Time.time - directionTime >= directionDuration)
 					{

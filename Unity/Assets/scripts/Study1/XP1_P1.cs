@@ -49,87 +49,126 @@ public class XP1_P1 : MonoBehaviour
 	public const string CMD_STOP = "STOP";
 
 	private float shapeChangeDuration = 2f;
+	private float shapeChangeWaitFor = 3f;
 
 	private bool training = false;
 
 	private string stringParticipant = "";
 	private int numeroParticipant = 0;
 	private bool unknownParticipant = true;
+	private const float maxSpeed = 20f;
 
 	IEnumerator FakeNextMole()
 	{
-		yield return new WaitForSeconds(3f);
-		// wait for one hand presence
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("WAIT_FOR_HAND_PRESENCE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		Debug.Log("WaitForHandPresence...");
-		while (!leftHand.IsActive() && !rightHand.IsActive())
-			yield return new WaitForSeconds(0.1f);
-		Debug.Log("HandIsPresent!");
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_DESCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		AllDown(shapeChangeDuration);
-		Debug.Log("AllDown");
-		yield return new WaitForSeconds(3f);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_BLACKING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		yield return new WaitForSeconds(shapeChangeWaitFor);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_BLACKING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		AllBlack(0.5f);
 		Debug.Log("AllBlack");
-		yield return new WaitForSeconds(0.5f);
-		// wait until all pins are down
-		float waitingSince = 0f;
-		while (!IsAllDown())
-		{
-			if (waitingSince >= 3f)
-			{
-				waitingSince = 0f;
-				Debug.Log("AllDown again");
-				AllDown(shapeChangeDuration);
-			}
-			else
-			{
-				waitingSince += 0.1f;
-				yield return new WaitForSeconds(0.1f);
-			}
-		}
-
-		Debug.Log("AreAllDown");
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_DESCENDED"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		yield return new WaitForSeconds(shapeChangeWaitFor);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_DESCENDED"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		moleState = MOLE_TO_APPEAR;
 	}
 	IEnumerator NextMole()
 	{
 		// wait for one hand presence
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("WAIT_FOR_HAND_PRESENCE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		Debug.Log("WaitForHandPresence..."); 
-		while (!leftHand.IsActive() && !rightHand.IsActive())
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("WAIT_FOR_HAND_PRESENCE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		Debug.Log("WaitForHandPresence...");
+		List<Vector3> safePositionAndSpeeds = new List<Vector3>();
+		Vector2 molePosition = molePositions[moleIndex];
+		bool moleIsPresent = true;
+		while (moleIsPresent)
+		{
+			if (leftHand.IsActive() || rightHand.IsActive())
+			{
+				safePositionAndSpeeds = FindAll();
+				if (safePositionAndSpeeds.Count > 0)
+				{
+					moleIsPresent = false;
+					foreach (Vector3 safePosAndSpeed in safePositionAndSpeeds)
+					{
+						if (safePosAndSpeed.x == molePosition.x && safePosAndSpeed.y == molePosition.y) moleIsPresent = true;
+					}
+				}
+			}
 			yield return new WaitForSeconds(0.1f);
+		}
 		Debug.Log("HandIsPresent!");
 		// trigger most unsafe SC
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_ASCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		AllUp(shapeChangeDuration);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_ASCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		AllUp(safePositionAndSpeeds);
 		Debug.Log("AllUp");
-		yield return new WaitForSeconds(3f);
-		// wait for one hand presence
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("WAIT_FOR_HAND_PRESENCE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		Debug.Log("WaitForHandPresence..."); 
-		while (!leftHand.IsActive() && !rightHand.IsActive())
-			yield return new WaitForSeconds(0.1f);
-		Debug.Log("HandIsPresent!");
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_DESCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		AllDown(shapeChangeDuration);
-		Debug.Log("AllDown");
-		yield return new WaitForSeconds(3f); 
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_BLACKING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		yield return new WaitForSeconds(shapeChangeWaitFor);
+		// wait until all pins are up
+		float waitingSince = 0f;
+		int waitingCount = 1;
+		while (!IsAllUp(safePositionAndSpeeds))
+		{
+			if (waitingSince >= shapeChangeWaitFor)
+			{
+				if (--waitingCount <= 0) break;
+
+				waitingSince = 0f;
+				Debug.Log("AllUp again");
+				AllUp(safePositionAndSpeeds);
+			}
+			else
+			{
+				waitingSince += 0.1f;
+				yield return new WaitForSeconds(0.1f);
+			}
+		}
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_ASCENDED"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_BLACKING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		AllBlack(0.5f);
 		Debug.Log("AllBlack");
 		yield return new WaitForSeconds(0.5f);
-		// wait until all pins are down
-		float waitingSince = 0f;
-		while (!IsAllDown())
+		// wait for no hand presence
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("WAIT_FOR_NO_HAND_PRESENCE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		Debug.Log("WaitForNoHandPresence...");
+		moleIsPresent = false;
+		waitingSince = 0f;
+		waitingCount = 1;
+		while (!moleIsPresent)
 		{
-			if (waitingSince >= 3f)
+			if (!leftHand.IsActive() && !rightHand.IsActive())
 			{
+				safePositionAndSpeeds = FindAll();
+				if (safePositionAndSpeeds.Count > 0)
+				{
+					foreach (Vector3 safePosAndSpeed in safePositionAndSpeeds)
+					{
+						if (safePosAndSpeed.x == molePosition.x && safePosAndSpeed.y == molePosition.y) moleIsPresent = true;
+					}
+				}
+			}
+			if (waitingSince >= shapeChangeWaitFor)
+			{
+				if (--waitingCount <= 0) break;
+				waitingSince = 0f;
+			} else
+			{
+				waitingSince += 0.1f;
+				yield return new WaitForSeconds(0.1f);
+
+			}
+		}
+		Debug.Log("HandIsNoPresent!");
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_DESCENDING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		AllDown(safePositionAndSpeeds);
+		Debug.Log("AllDown");
+		yield return new WaitForSeconds(shapeChangeWaitFor); 
+		// wait until all pins are down
+		waitingSince = 0f;
+		waitingCount = 1;
+		while (!IsAllDown(safePositionAndSpeeds))
+		{
+			if (waitingSince >= shapeChangeWaitFor)
+			{
+				if (--waitingCount <= 0) break;
+
 				waitingSince = 0f;
 				Debug.Log("AllDown again");
-				AllDown(shapeChangeDuration);
+				AllDown(safePositionAndSpeeds);
 			}
 			else
 			{
@@ -139,10 +178,9 @@ public class XP1_P1 : MonoBehaviour
 		}
 
 		Debug.Log("AreAllDown");
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_DESCENDED"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("LANDSCAPE_DESCENDED"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		moleState = MOLE_TO_APPEAR;
 	}
-
 	void AllReset(float duration)
 	{
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
@@ -160,37 +198,94 @@ public class XP1_P1 : MonoBehaviour
 		expanDialSticks.triggerShapeChange();
 	}
 
-	void AllUp(float duration)
+	List<Vector3> FindAll()
 	{
+		List<Vector3> safePositions = new List<Vector3>();
+
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
-        {
-            for (int j = 0; j < expanDialSticks.NbColumns; j++)
-			{
-				expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
-				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
-				expanDialSticks.modelMatrix[i, j].TargetPosition = 40;
-                expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = duration;
-		
-            }
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+				if(expanDialSticks.modelMatrix[i, j].CurrentProximity < 1f)
+				{
+					safePositions.Add(new Vector3(i, j, expanDialSticks.modelMatrix[i, j].CurrentProximity));
+					//Debug.Log("Safe Pos: " + i + " " + j + " " + expanDialSticks.viewMatrix[i, j].CurrentProximity);
+				}
+				
+		return safePositions;
+	}
+
+
+	void AllUp(List<Vector3> safePositionAndSpeeds)
+	{
+		foreach (Vector3 safePositionAndSpeed in safePositionAndSpeeds)
+		{
+			int i = (int)safePositionAndSpeed.x;
+			int j = (int)safePositionAndSpeed.y;
+			float speedCoeff = safePositionAndSpeed.z; // 1 stop, 0.5 half, 0.3
+			sbyte targetPos = 40;
+
+			float safetySpeed = maxSpeed * (1f - speedCoeff); // 20 pos per sec max
+			float distance = Math.Abs(targetPos - expanDialSticks.modelMatrix[i, j].CurrentPosition);
+			float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
+			expanDialSticks.modelMatrix[i, j].TargetPosition = targetPos;
+			Debug.Log("Up you go : " + i + " " + j + " " + safetyDuration);
+			expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = safetyDuration;
 		}
-		expanDialSticks.triggerTextureChange();
 		expanDialSticks.triggerShapeChange();
 	}
-	void AllDown(float duration)
+	void AllDown(List<Vector3> safePositionAndSpeeds)
 	{
-		Vector2 molePosition = molePositions[moleIndex];
+		foreach (Vector3 safePositionAndSpeed in safePositionAndSpeeds)
+		{
+			int i = (int)safePositionAndSpeed.x;
+			int j = (int)safePositionAndSpeed.y;
+			sbyte targetPos = 0;
+			float safetySpeed = maxSpeed; // 20 pos per sec max
+			float distance = Math.Abs(targetPos - expanDialSticks.modelMatrix[i, j].CurrentPosition);
+			float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
+			expanDialSticks.modelMatrix[i, j].TargetPosition = targetPos;
+			expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = safetyDuration;
+		}
+		expanDialSticks.triggerShapeChange();
+	}
+	void AllDown()
+	{
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
 		{
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
-				expanDialSticks.modelMatrix[i, j].TargetColor = Color.green;
+				float safetySpeed = maxSpeed; // 20 pos per sec max
+				float distance = Math.Abs(0 - expanDialSticks.modelMatrix[i, j].CurrentPosition);
+				float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
 				expanDialSticks.modelMatrix[i, j].TargetPosition = 0;
-				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
-				expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = duration;
+				expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = safetyDuration;
 			}
 		}
-		expanDialSticks.triggerTextureChange();
 		expanDialSticks.triggerShapeChange();
+	}
+
+	void AllDown(List<Vector3> safePositionAndSpeeds, float duration)
+	{
+		foreach(Vector3 safePositionAndSpeed in safePositionAndSpeeds)
+		{
+			int i = (int)safePositionAndSpeed.x;
+			int j = (int)safePositionAndSpeed.y;
+			float speedCoeff = safePositionAndSpeed.z; // 1 stop, 0.5 half, 0.3
+			float safetyDuration = Math.Max(duration / (1f - speedCoeff), 0.1f);
+			Debug.Log(i + " " + j + " " + safetyDuration);
+			expanDialSticks.modelMatrix[i, j].TargetPosition = 0;
+			expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = safetyDuration;
+		}
+		expanDialSticks.triggerShapeChange();
+	}
+	bool IsAllUp(List<Vector3> safePositionAndSpeeds)
+	{
+		foreach (Vector3 safePositionAndSpeed in safePositionAndSpeeds)
+		{
+			int i = (int)safePositionAndSpeed.x;
+			int j = (int)safePositionAndSpeed.y;
+			if (expanDialSticks.viewMatrix[i, j].CurrentPosition < 40 || expanDialSticks.viewMatrix[i, j].CurrentReaching) return false;
+		}
+		return true;
 	}
 	bool IsAllDown()
 	{
@@ -200,6 +295,17 @@ public class XP1_P1 : MonoBehaviour
 			{
 				if (expanDialSticks.viewMatrix[i, j].CurrentPosition > 0 || expanDialSticks.viewMatrix[i, j].CurrentReaching) return false;
 			}
+		}
+		return true;
+	}
+
+	bool IsAllDown(List<Vector3> safePositionAndSpeeds)
+	{
+		foreach (Vector3 safePositionAndSpeed in safePositionAndSpeeds)
+		{
+			int i = (int)safePositionAndSpeed.x;
+			int j = (int)safePositionAndSpeed.y;
+			if (expanDialSticks.viewMatrix[i, j].CurrentPosition > 0 || expanDialSticks.viewMatrix[i, j].CurrentReaching) return false;
 		}
 		return true;
 	}
@@ -214,6 +320,8 @@ public class XP1_P1 : MonoBehaviour
 				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
 			}
 		}
+
+		expanDialSticks.setBorderBackground(Color.black);
 		expanDialSticks.triggerTextureChange();
 	}
 	void AllWhite(float duration)
@@ -231,20 +339,56 @@ public class XP1_P1 : MonoBehaviour
 
 	IEnumerator ShowMole()
 	{
-
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("MOLE_APPEARING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("MOLE_BLACKING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		AllBlack(0.5f);
+		Debug.Log("AllBlack");
+		yield return new WaitForSeconds(0.5f);
+		// wait for one hand presence
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("WAIT_FOR_NO_HAND_PRESENCE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		Debug.Log("WaitForNoHandPresence...");
+		List<Vector3> safePositionAndSpeeds = new List<Vector3>();
+		Vector2 molePosition = molePositions[moleIndex];
+		bool moleIsPresent = false;
+		float waitingSince = 0f;
+		int waitingCount = 1;
+		/*while (!moleIsPresent)
+		{
+			if (!leftHand.IsActive() && !rightHand.IsActive())
+			{
+				safePositionAndSpeeds = FindAll();
+				if (safePositionAndSpeeds.Count > 0)
+				{
+					foreach (Vector3 safePosAndSpeed in safePositionAndSpeeds)
+					{
+						if (safePosAndSpeed.x == molePosition.x && safePosAndSpeed.y == molePosition.y) moleIsPresent = true;
+					}
+				}
+			}
+			if (waitingSince >= shapeChangeWaitFor)
+			{
+				if (--waitingCount <= 0) break;
+				waitingSince = 0f;
+			}
+			else
+			{
+				waitingSince += 0.1f;
+				yield return new WaitForSeconds(0.1f);
+			}
+		}*/
+		yield return new WaitForSeconds(3f);
+		Debug.Log("NoHandIsPresent!");
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("MOLE_APPEARING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		Debug.Log("MoleUp"); 
 		MoleUp(shapeChangeDuration);
-		
-		yield return new WaitForSeconds(1f);
+		yield return new WaitForSeconds(shapeChangeWaitFor);
 		// wait until mole is up 
-		float waitingSince = 0f;
+		waitingSince = 0f;
 		while (!IsMoleUp())
 		{
-			if (waitingSince >= 3f)
+			if (waitingSince >= shapeChangeDuration)
 			{
 				waitingSince = 0f;
-				Debug.Log("MoleUp");
+				Debug.Log("MoleUpAgain");
 				MoleUp(shapeChangeDuration);
 			}
 			else
@@ -253,17 +397,18 @@ public class XP1_P1 : MonoBehaviour
 				yield return new WaitForSeconds(0.1f);
 			}
 		}
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("MOLE_GREENING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("MOLE_GREENING"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		MoleGreen(0.5f);
 		Debug.Log("MoleGreen");
 		yield return new WaitForSeconds(0.5f);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("MOLE_APPEARED"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("MOLE_APPEARED"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		moleState = MOLE_APPEARED;
 	}
 	bool IsMoleUp()
 	{
-		Vector2 molePosition = molePositions[moleIndex];
-		return expanDialSticks[(int)molePosition.x, (int)molePosition.y].TargetPosition == 20;
+		Vector2 molePosition = molePositions[moleIndex]; 
+		return !expanDialSticks.viewMatrix[(int)molePosition.x, (int)molePosition.y].CurrentReaching && expanDialSticks.viewMatrix[(int)molePosition.x, (int)molePosition.y].CurrentPosition == 20;
+		//return expanDialSticks.modelMatrix[(int)molePosition.x, (int)molePosition.y].CurrentPosition == 20;
 	}
 
 	void MoleUp(float duration)
@@ -291,9 +436,23 @@ public class XP1_P1 : MonoBehaviour
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
 				if (i == (int)molePosition.x && j == (int)molePosition.y)
+				{
 					expanDialSticks.modelMatrix[i, j].TargetColor = Color.white; //Color.green;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "dot";
+					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 0f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorColor = Color.black;
+				}
 				else
+				{
 					expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "projector";
+					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 0f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 0f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorColor = Color.white;
+
+				}
+				expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = duration;
 				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
 			}
 		}
@@ -301,6 +460,7 @@ public class XP1_P1 : MonoBehaviour
 		string trialProgress = "<pos=90%><b>" + (moleIndex+1) +  "/" + molePositions.Length + "</b>";
 		string legend = participantNumber + trialProgress;
 		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 16, Color.black, legend, new Vector3(90f, -90f, 0f));
+		expanDialSticks.setBorderBackground(Color.white);
 		expanDialSticks.triggerTextureChange();
 
 
@@ -355,47 +515,33 @@ public class XP1_P1 : MonoBehaviour
 	private void InitTrials()
 	{
 
-		molePositions = new Vector2[engagementRows.Length * engagementColumns.Length];
+		molePositions = new Vector2[engagementRows.Length * engagementRows.Length];
 
 		// Generate Squared-Latin Row Indexes
-		int[] shuffledRowIndexes = new int[engagementRows.Length * engagementColumns.Length];
+		int[] shuffledRowIndexes = new int[engagementRows.Length * engagementRows.Length];
 		for (int i = 0; i < engagementRows.Length; i++)
 		{
-			for(int j = 0; j < engagementColumns.Length; j++)
+			for(int j = 0; j < engagementRows.Length; j++)
 			{
-				shuffledRowIndexes[i * engagementColumns.Length + j] = engagementRows[(i+numeroParticipant+j)%engagementRows.Length];
-
+				shuffledRowIndexes[i * engagementRows.Length + j] = engagementRows[(i+numeroParticipant+j)%engagementRows.Length];
 			}
 		}
 		// Generate Shuffled Column Indexes
-		int[] shuffledColumnsIndexes = new int[engagementRows.Length * engagementColumns.Length];
+		int[] shuffledColumnsIndexes = new int[engagementRows.Length * engagementRows.Length];
 		for (int i = 0; i < engagementRows.Length; i++)
 		{
 			engagementColumns = Shuffle(engagementColumns);
 
-			for (int j = 0; j < engagementColumns.Length; j++)
+			for (int j = 0; j < engagementRows.Length; j++)
 			{
-				shuffledColumnsIndexes[i * engagementColumns.Length + j] = engagementColumns[j];
+				shuffledColumnsIndexes[i * engagementRows.Length + j] = engagementColumns[j];
 			}
 		}
 
-		for (int i = 0; i < engagementRows.Length * engagementColumns.Length; i++)
+		for (int i = 0; i < engagementRows.Length * engagementRows.Length; i++)
 		{
 			molePositions[i] = new Vector2(shuffledRowIndexes[i], shuffledColumnsIndexes[i]);
 		}
-	}
-
-	private void OnDestroy()
-	{
-
-
-		//expanDialSticks.client.Publish(MQTT_CAMERA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-
-		//fileLogger.Log("END_APPLICATION");
-
-		//fileLogger.Close();
 	}
 
 	private void HandleConnecting(object sender, MqttConnectionEventArgs e)
@@ -407,9 +553,8 @@ public class XP1_P1 : MonoBehaviour
 	private void HandleConnected(object sender, MqttConnectionEventArgs e)
 	{
 		Debug.Log("Application connected.");
-		//expanDialSticks.client.Publish(MQTT_CAMERA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		connected = true;
 
 	}
@@ -441,12 +586,19 @@ public class XP1_P1 : MonoBehaviour
 		if (e.i == (int)molePosition.x && e.j == (int)molePosition.y)
 		{
 			string msg = "USER_ROTATION " + e.i + " " + e.j;
-			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 
 			if (moleState == MOLE_APPEARED && moleIndex < molePositions.Length)
 			{
 				moleState = LANDSCAPE_IS_CHANGING;
-				StartCoroutine(NextMole());
+				if (training)
+				{
+					StartCoroutine(FakeNextMole());
+				}
+				else
+				{
+					StartCoroutine(NextMole());
+				}
 			}
 		}
 	}
@@ -469,6 +621,9 @@ public class XP1_P1 : MonoBehaviour
 
 	void Quit()
 	{
+
+		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		#if UNITY_EDITOR
 		// Application.Quit() does not work in the editor so
 		// UnityEditor.EditorApplication.isPlaying need to be set to false to end the game
@@ -503,19 +658,11 @@ public class XP1_P1 : MonoBehaviour
 			}
 		}
 
-		//expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(colorString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(proximityString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(positionString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(leftHandString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(rightHandString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(pinOrientationString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		/*fileLogger.Log(colorString);
-		fileLogger.Log(proximityString);
-		fileLogger.Log(positionString);
-		fileLogger.Log(leftHandString);
-		fileLogger.Log(rightHandString);
-		fileLogger.Log(pinOrientationString);*/
-		//fileLogger.Log(pinRotationString);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(proximityString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(positionString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(leftHandString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(rightHandString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(pinOrientationString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 	}
 
 	void OnGUI()
@@ -543,7 +690,7 @@ public class XP1_P1 : MonoBehaviour
 				prevTime = 0f;
 				//string safetyMode = (expanDialSticks.safetyMotionMode == ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop) ? "SMS":"SSM";
 				string identity = "USER_IDENTITY " + numeroParticipant + " USER_TRIGGERED TRAINING";
-				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				unknownParticipant = false;
 			}
 
@@ -562,7 +709,7 @@ public class XP1_P1 : MonoBehaviour
 				currTime = LOG_INTERVAL;
 				prevTime = 0f;
 				string identity = "USER_IDENTITY " + numeroParticipant + " USER_TRIGGERED SMS TRIAL";
-				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				unknownParticipant = false;
 			}
 
@@ -581,7 +728,7 @@ public class XP1_P1 : MonoBehaviour
 				currTime = LOG_INTERVAL;
 				prevTime = 0f;
 				string identity = "USER_IDENTITY " + numeroParticipant + " USER_TRIGGERED SSM TRIAL";
-				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				unknownParticipant = false;
 			}
 		}
@@ -602,7 +749,7 @@ public class XP1_P1 : MonoBehaviour
 				{
 					Vector2 molePosition = molePositions[moleIndex];
 					string msg = "USER_ROTATION " + molePosition.x + " " + molePosition.y; 
-					expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+					expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 
 					moleState = LANDSCAPE_IS_CHANGING;
 					if (training) {
