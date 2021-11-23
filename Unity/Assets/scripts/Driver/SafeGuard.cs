@@ -94,9 +94,9 @@ public class SafeGuard : MonoBehaviour
 	public enum SafetyOverlayMode {None, Dot, Line, Zone};
 	public static SafetyOverlayMode overlayMode = SafetyOverlayMode.Dot;
 	public enum SemioticMode { None, Index, Symbol, Icon};
-	public static SemioticMode semioticMode = SemioticMode.Icon;
+	public static SemioticMode semioticMode = SemioticMode.None;
 	public enum FeedbackMode { None, State, Intent};
-	public static FeedbackMode feedbackMode = FeedbackMode.Intent;
+	public static FeedbackMode feedbackMode = FeedbackMode.State;
 
 	private const int SEPARATION_LAYER = 10; // Safety Level 0
 
@@ -542,12 +542,12 @@ public class SafeGuard : MonoBehaviour
 
 		float backgroundDistance = 0f;
 
-		float minOrthographicSize = pins.diameter - 1.2f;
-		float maxOrthographicSize = minOrthographicSize * 3f;
-		float minOutlineWidth = 1.2f;
-		float maxOutlineWidth = minOutlineWidth * 3f;
-		float minSecondOutlineWidth = 2.6f;
-		float maxSecondOutlineWidth = minSecondOutlineWidth * 3f;
+		float minOrthographicSize = pins.diameter - 1.5f;
+		float maxOrthographicSize = minOrthographicSize * 3.3f;
+		float minOutlineWidth = 1.5f;
+		float maxOutlineWidth = minOutlineWidth * 3.3f;
+		float minSecondOutlineWidth = 2.9f;
+		float maxSecondOutlineWidth = minSecondOutlineWidth * 3.3f;
 
 		//float minScaleDistance = 0f;
 		//float maxScaleDistance = minOrthographicSize;
@@ -698,7 +698,7 @@ public class SafeGuard : MonoBehaviour
 					);
 
 					Color dotColor = (displacement > 0) ? Color.Lerp(_middleDivergingColor, _rightDivergingColor, displacement/40f) : Color.Lerp(_middleDivergingColor, _leftDivergingColor, -displacement/40f);
-					_dotColors[_dotIndex] = (feedbackMode != FeedbackMode.State) ? dotColor : Color.white;
+					_dotColors[_dotIndex] = (feedbackMode != FeedbackMode.State) ? dotColor : new Color(1f, 1f, 1f, 0f);//Color.white;
 					_dotOutlineColors[_dotIndex] = new Vector4(0f, 0f, 0f, 1f);
 					_dotOutlineWidths[_dotIndex] = Mathf.Lerp(minOutlineWidth, maxOutlineWidth, scaleDistanceCoeff);
 					_dotSecondOutlineColors[_dotIndex] = new Vector4(1f, 1f, 1f, 1f);
