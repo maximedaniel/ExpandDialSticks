@@ -92,11 +92,11 @@ public class SafeGuard : MonoBehaviour
 	private int _hullIndex = 0;
 
 	public enum SafetyOverlayMode {None, Dot, Line, Zone};
-	public static SafetyOverlayMode overlayMode = SafetyOverlayMode.Dot;
+	private SafetyOverlayMode overlayMode = SafetyOverlayMode.Dot;
 	public enum SemioticMode { None, Index, Symbol, Icon};
-	public static SemioticMode semioticMode = SemioticMode.None;
+	private SemioticMode semioticMode = SemioticMode.None;
 	public enum FeedbackMode { None, State, Intent};
-	public static FeedbackMode feedbackMode = FeedbackMode.State;
+	private FeedbackMode feedbackMode = FeedbackMode.State;
 
 	private const int SEPARATION_LAYER = 10; // Safety Level 0
 
@@ -127,6 +127,99 @@ public class SafeGuard : MonoBehaviour
 		return Vector3.Magnitude(ProjectPointLine(point, lineStart, lineEnd) - point);
 	}
 
+	public void setOverlayMode(SafetyOverlayMode overlayMode, SemioticMode semioticMode, FeedbackMode feedbackMode)
+	{
+		this.overlayMode = overlayMode;
+		this.semioticMode = semioticMode;
+		this.feedbackMode = feedbackMode;
+		switch (this.feedbackMode)
+		{
+			case FeedbackMode.None:
+				break;
+			case FeedbackMode.State:
+				switch (this.semioticMode)
+				{
+					case SemioticMode.Icon:
+						for (int i = 0; i < _shapeTextures.Length; i++)
+						{
+							_shapeTextures[i] = Resources.Load<Texture2D>("pause");
+						}
+						_shapeTextures[15] = Resources.Load<Texture2D>("white");
+						break;
+					case SemioticMode.Symbol:
+						for (int i = 0; i < _shapeTextures.Length; i++)
+						{
+							_shapeTextures[i] = Resources.Load<Texture2D>("spause");
+						}
+						_shapeTextures[15] = Resources.Load<Texture2D>("white");
+						break;
+					case SemioticMode.Index:
+						for (int i = 0; i < _shapeTextures.Length; i++)
+						{
+							_shapeTextures[i] = Resources.Load<Texture2D>("white");
+						}
+						break;
+					case SemioticMode.None:
+						for (int i = 0; i < _shapeTextures.Length; i++)
+						{
+							_shapeTextures[i] = Resources.Load<Texture2D>("default");
+						}
+						break;
+					default:
+						break;
+				}
+				break;
+
+			case FeedbackMode.Intent:
+				switch (this.semioticMode)
+				{
+					case SemioticMode.Icon:
+						for (int i = 0; i < 15; i++)
+						{
+							_shapeTextures[i] = Resources.Load<Texture2D>("down" + (15 - i));
+							_shapeTextures[i + 16] = Resources.Load<Texture2D>("up" + (i + 1));
+						}
+						_shapeTextures[15] = Resources.Load<Texture2D>("white");
+						break;
+					case SemioticMode.Symbol:
+						for (int i = 0; i < 15; i++)
+						{
+							_shapeTextures[i] = Resources.Load<Texture2D>("sdown" + (15 - i));
+							_shapeTextures[i + 16] = Resources.Load<Texture2D>("sup" + (i + 1));
+						}
+						_shapeTextures[15] = Resources.Load<Texture2D>("white");
+						break;
+					case SemioticMode.Index:
+						for (int i = 0; i < _shapeTextures.Length; i++)
+						{
+							_shapeTextures[i] = Resources.Load<Texture2D>("white");
+						}
+						break;
+					case SemioticMode.None:
+						for (int i = 0; i < _shapeTextures.Length; i++)
+						{
+							_shapeTextures[i] = Resources.Load<Texture2D>("default");
+						}
+						break;
+					default:
+						break;
+				}
+				break;
+		}
+
+	}
+	IEnumerator ResetProjectorSafeGuard()
+	{
+		this.projector.enabled = false;
+		yield return 0;
+		this.projector.enabled = true;
+	}
+
+	private void HandleConnected(object sender, MqttConnectionEventArgs e)
+	{
+		StartCoroutine(ResetProjectorSafeGuard());
+
+	}
 
 	// Start is called before the first frame update
 	void Start()
@@ -144,6 +237,7 @@ public class SafeGuard : MonoBehaviour
 		// Configure projector
 		projector = this.GetComponent<Projector>();
 		projector.orthographicSize = cam.orthographicSize;
+		//projector.material.renderQueue = 1000;
 
 		_handMatrices = new Matrix4x4[32];
 		_handColors = new Vector4[32];
@@ -180,82 +274,8 @@ public class SafeGuard : MonoBehaviour
 		_iconTextureArray = new Texture2DArray(textureSize, textureSize, _iconTextures.Length, TextureFormat.DXT5Crunched, false);
 
 		_shapeTextures = new Texture2D[31];
-		switch (feedbackMode)
-		{
-			case FeedbackMode.None:
-				break;
-			case FeedbackMode.State:
-				switch (semioticMode)
-				{
-					case SemioticMode.Icon:
-						for (int i = 0; i < _shapeTextures.Length; i++)
-						{
-							_shapeTextures[i] = Resources.Load<Texture2D>("pause");
-						}
-						_shapeTextures[15] = Resources.Load<Texture2D>("default");
-						break;
-					case SemioticMode.Symbol:
-						for (int i = 0; i < _shapeTextures.Length; i++)
-						{
-							_shapeTextures[i] = Resources.Load<Texture2D>("spause");
-						}
-						_shapeTextures[15] = Resources.Load<Texture2D>("default");
-						break;
-					case SemioticMode.Index:
-						for (int i = 0; i < _shapeTextures.Length; i++)
-						{
-							_shapeTextures[i] = Resources.Load<Texture2D>("white");
-						}
-						break;
-					case SemioticMode.None:
-						for (int i = 0; i < _shapeTextures.Length; i++)
-						{
-							_shapeTextures[i] = Resources.Load<Texture2D>("default");
-						}
-						break;
-					default:
-						break;
-				}
-				break;
 
-			case FeedbackMode.Intent:
-				switch (semioticMode)
-				{
-					case SemioticMode.Icon:
-						for (int i = 0; i < 15; i++)
-						{
-							_shapeTextures[i] = Resources.Load<Texture2D>("down" + (15 - i));
-							_shapeTextures[i + 16] = Resources.Load<Texture2D>("up" + (i + 1));
-						}
-						_shapeTextures[15] = Resources.Load<Texture2D>("default");
-						break;
-					case SemioticMode.Symbol:
-						for (int i = 0; i < 15; i++)
-						{
-							_shapeTextures[i] = Resources.Load<Texture2D>("sdown" + (15 - i));
-							_shapeTextures[i + 16] = Resources.Load<Texture2D>("sup" + (i + 1));
-						}
-						_shapeTextures[15] = Resources.Load<Texture2D>("default");
-						break;
-					case SemioticMode.Index:
-						for (int i = 0; i < _shapeTextures.Length; i++)
-						{
-							_shapeTextures[i] = Resources.Load<Texture2D>("white");
-						}
-						break;
-					case SemioticMode.None:
-						for (int i = 0; i < _shapeTextures.Length; i++)
-						{
-							_shapeTextures[i] = Resources.Load<Texture2D>("default");
-						}
-						break;
-					default:
-						break;
-				}
-				break;
-		}
-
-
+		setOverlayMode(overlayMode, semioticMode, feedbackMode);
 		/* 
 		Resources.Load<Texture2D>(projectorTexture);
 
@@ -384,6 +404,8 @@ public class SafeGuard : MonoBehaviour
 		ColorUtility.TryParseHtmlString("#b50021", out _rightDivergingColor);
 
 		freeze = frozen = false;
+
+		pins.OnConnected += HandleConnected;
 	}
 	private void Render()
 	{

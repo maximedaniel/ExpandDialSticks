@@ -16,7 +16,6 @@ using System.Linq;
 
 public class XP2_P1 : MonoBehaviour
 {
-
 	// ExpanDialSticks Core
 	public GameObject expanDialSticksPrefab;
 	public GameObject capsuleHandLeftPrefab;
@@ -31,6 +30,13 @@ public class XP2_P1 : MonoBehaviour
 	private float prevRandomTextureTime;
 	private float prevRandomIconTime;
 	private float prevRandomShapeTime;
+
+	private int nbTrials = 3;
+	private int[] amountFactor = new int[] {3, 6, 9 };
+	private ExpanDialSticks.SafetyOverlayMode[] overlayFactor = new ExpanDialSticks.SafetyOverlayMode[] { ExpanDialSticks.SafetyOverlayMode.SafetyZoneEdge, ExpanDialSticks.SafetyOverlayMode.SafetyIntentSurface};
+	private int[] targets;
+	private int currTarget;
+	private int currTargetIndex;
 
 	void Start()
 	{
@@ -52,6 +58,21 @@ public class XP2_P1 : MonoBehaviour
 		connected = false;
 		expanDialSticks.client_MqttConnect();
 		currTime = prevRandomTextureTime = prevRandomIconTime = prevRandomShapeTime = 0;
+
+		int nbTargets = nbTrials * amountFactor.Length * overlayFactor.Length;
+		targets = new int[nbTargets];
+
+		int nbPins = expanDialSticks.NbRows * expanDialSticks.NbColumns;
+		int[] randomPins = Enumerable.Range(0, nbPins).ToArray();
+
+		for(int i = 0; i < nbTargets; i++)
+		{
+			if(i%nbPins == 0) randomPins = Shuffle(randomPins);
+			targets[i] = randomPins[i%nbPins];
+		}
+		currTargetIndex = 0;
+		currTarget = targets[currTargetIndex];
+
 	}
 
 
@@ -59,6 +80,7 @@ public class XP2_P1 : MonoBehaviour
 	{
 		Debug.Log("Application connecting to MQTT Broker @" + e.address + ":" + e.port + "...");
 		connected = false;
+		//StartCoroutine(ResetProjectorSafeGuard());
 	}
 
 	private void HandleConnected(object sender, MqttConnectionEventArgs e)
@@ -91,6 +113,12 @@ public class XP2_P1 : MonoBehaviour
 
 	private void HandleRotationChanged(object sender, ExpanDialStickEventArgs e)
 	{
+		int targetRow = (int) (currTarget / ExpanDialSticks.nbColumns);
+		int targetColumn = (int) (currTarget % ExpanDialSticks.nbColumns);
+		if(e.i == targetRow && e.j == targetColumn)
+		{
+			TriggerShapeChangeUnderBody();
+		}
 	}
 
 	private void HandlePositionChanged(object sender, ExpanDialStickEventArgs e)
@@ -131,22 +159,72 @@ public class XP2_P1 : MonoBehaviour
 		return array;
 	}
 
-	void RandomIcon()
+	void TriggerShapeChangeUnderBody()
 	{
-		int[] iconIndexes = Enumerable.Range(0, expanDialSticks.NbRows * expanDialSticks.NbColumns).ToArray();
-		int[] randomIconIndexes = Shuffle(iconIndexes);
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
+		if (currTargetIndex < targets.Length)
 		{
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+			currTarget = targets[currTargetIndex++];
+			int[] iconIndexes = Enumerable.Range(0, expanDialSticks.NbRows * expanDialSticks.NbColumns).ToArray();
+			int[] randomIconIndexes = Shuffle(iconIndexes);
+			for (int i = 0; i < expanDialSticks.NbRows; i++)
 			{
-				expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon" + randomIconIndexes[i * expanDialSticks.NbColumns + j];
-				expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
-				expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
-				expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
+				for (int j = 0; j < expanDialSticks.NbColumns; j++)
+				{
+					// Target Icon
+					if (currTarget == i * expanDialSticks.NbColumns + j)
+					{
+						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon" + randomIconIndexes[i * expanDialSticks.NbColumns + j];
+					}
+					else
+					{
+
+						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "default";
+					}
+					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
+
+					// Random Shape
+					sbyte randomPosition = (sbyte)Random.Range(0, 40);
+					expanDialSticks.modelMatrix[i, j].TargetPosition = randomPosition;
+					expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = 2f;
+				}
 			}
+			expanDialSticks.triggerProjectorChange();
+			expanDialSticks.triggerShapeChange();
+
 		}
-		expanDialSticks.triggerProjectorChange();
 	}
+
+	/*void RandomIcon()
+	{
+		if(currTargetIndex < targets.Length)
+		{
+			int[] iconIndexes = Enumerable.Range(0, expanDialSticks.NbRows * expanDialSticks.NbColumns).ToArray();
+			int[] randomIconIndexes = Shuffle(iconIndexes);
+			for (int i = 0; i < expanDialSticks.NbRows; i++)
+			{
+				for (int j = 0; j < expanDialSticks.NbColumns; j++)
+				{
+					if (currTarget == i * expanDialSticks.NbColumns + j)
+					{
+						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon" + randomIconIndexes[i * expanDialSticks.NbColumns + j];
+					}
+					else
+					{
+
+						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "default";
+					}
+					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
+				}
+			}
+			currTarget = targets[++currTargetIndex];
+			expanDialSticks.triggerProjectorChange();
+
+		}
+	}*/
 
 	void RandomColor()
 	{
@@ -170,7 +248,9 @@ public class XP2_P1 : MonoBehaviour
 		expanDialSticks.triggerTextureChange();
 	}
 
-	void RandomShape()
+
+
+	/*void RandomShape()
 	{
 
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
@@ -183,7 +263,7 @@ public class XP2_P1 : MonoBehaviour
 			}
 		}
 		expanDialSticks.triggerShapeChange();
-	}
+	}*/
 
 	void Update()
 	{
@@ -200,20 +280,20 @@ public class XP2_P1 : MonoBehaviour
 				prevRandomTextureTime = currTime;
 			}
 			// random icon every 5 secondes
-			if (currTime - prevRandomIconTime >= 5f)
+			/*if (currTime - prevRandomIconTime >= 5f)
 			{
 				Debug.Log("RandomIcon!");
 				RandomIcon();
 				prevRandomIconTime = currTime;
-			}
+			}*/
 
 			// random shape every 4 secondes
-			if (currTime - prevRandomShapeTime >= 4f)
+			/*if (currTime - prevRandomShapeTime >= 4f)
 			{
 				Debug.Log("RandomShape!");
 				RandomShape();
 				prevRandomShapeTime = currTime;
-			}
+			}*/
 
 
 			if (Input.GetKey("escape"))
@@ -223,14 +303,23 @@ public class XP2_P1 : MonoBehaviour
 
 			if (Input.GetKeyDown(KeyCode.RightArrow))
 			{
-				int x = Random.Range(0, 5);
+				TriggerShapeChangeUnderBody();
+				/*int x = Random.Range(0, 5);
 				int y = Random.Range(0, 6);
 				expanDialSticks.modelMatrix[x, y].CurrentFeedForwarded = 20;
 				expanDialSticks.triggerSafetyChange();
-				Debug.Log(x + " " + y + " 20");
+				Debug.Log(x + " " + y + " 20");*/
 			}
 			if (Input.GetKeyDown(KeyCode.LeftArrow))
 			{
+				ExpanDialSticks.SafetyOverlayMode currentOverlayMode = expanDialSticks.getOverlayMode();
+				if(currentOverlayMode == ExpanDialSticks.SafetyOverlayMode.SafetyZoneEdge)
+				{
+					expanDialSticks.SetOverlayMode(ExpanDialSticks.SafetyOverlayMode.SafetyIntentSurface);
+				} else
+				{
+					expanDialSticks.SetOverlayMode(ExpanDialSticks.SafetyOverlayMode.SafetyZoneEdge);
+				}
 			}
 		}
 

@@ -119,6 +119,7 @@ public class SetAns
 
 public class ExpanDialSticks : MonoBehaviour
 {
+	public SafeGuard safeGuard;
 	public Material borderMaterial;
 	public bool SIMULATION = true;
 	public float diameter = 6.0f;
@@ -131,6 +132,8 @@ public class ExpanDialSticks : MonoBehaviour
 	public MyCapsuleHand rightHand;
 	public enum SafetyMotionMode {SafetyRatedMonitoredStop, SpeedAndSeparationMonitoring};
 	public SafetyMotionMode safetyMotionMode = SafetyMotionMode.SafetyRatedMonitoredStop;
+	public enum SafetyOverlayMode { SafetyZoneEdge, SafetyIntentSurface};
+	public SafetyOverlayMode safetyOverlayMode = SafetyOverlayMode.SafetyZoneEdge;
 	private int nbSeparationLevels = 1;
 
 
@@ -267,6 +270,12 @@ public class ExpanDialSticks : MonoBehaviour
 	{
 		get => borderOffset;
 	}
+
+	public SafetyMotionMode getSafetyMode()
+	{
+		return safetyMotionMode;
+	}
+
 	public void SetSafetyMode(SafetyMotionMode motionMode)
 	{
 		safetyMotionMode = motionMode;
@@ -290,6 +299,26 @@ public class ExpanDialSticks : MonoBehaviour
 				// collision
 				collisionMatrix[i, j].NbSeparationLevels = nbSeparationLevels;
 			}
+	}
+	public SafetyOverlayMode getOverlayMode()
+	{
+		return safetyOverlayMode;
+	}
+	public void SetOverlayMode(SafetyOverlayMode overlayMode)
+	{
+		safetyOverlayMode = overlayMode;
+		switch (safetyOverlayMode)
+		{
+			case SafetyOverlayMode.SafetyZoneEdge:
+				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Dot, SafeGuard.SemioticMode.None, SafeGuard.FeedbackMode.State);
+
+				break;
+			case SafetyOverlayMode.SafetyIntentSurface:
+				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Dot, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.Intent);
+				break;
+			default:
+				break;
+		}
 	}
 
 	void OnGUI()
