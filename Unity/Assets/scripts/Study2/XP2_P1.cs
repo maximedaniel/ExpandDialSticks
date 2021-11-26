@@ -37,6 +37,8 @@ public class XP2_P1 : MonoBehaviour
 	private int[] targets;
 	private int currTarget;
 	private int currTargetIndex;
+	private int[] pauses;
+	private sbyte[] displacements;
 
 	void Start()
 	{
@@ -72,6 +74,9 @@ public class XP2_P1 : MonoBehaviour
 		}
 		currTargetIndex = 0;
 		currTarget = targets[currTargetIndex];
+
+		pauses = new int[0];
+		displacements = new sbyte[pauses.Length];
 
 	}
 
@@ -147,6 +152,34 @@ public class XP2_P1 : MonoBehaviour
 						Application.Quit();
 #endif
 	}
+	/*List<Vector3> FindAllUnsafes()
+	{
+		List<Vector3> safePositions = new List<Vector3>();
+
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+				if (expanDialSticks.modelMatrix[i, j].CurrentProximity == 1f)
+				{
+					safePositions.Add(new Vector3(i, j, expanDialSticks.modelMatrix[i, j].CurrentProximity));
+				}
+
+		return safePositions;
+	}*/
+
+	int[] FindAllUnsafes()
+	{
+		List<int> safePositions = new List<int>();
+
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+				if (expanDialSticks.modelMatrix[i, j].CurrentProximity == 1f)
+				{
+					safePositions.Add(i * expanDialSticks.NbColumns +  j);
+				}
+
+		return safePositions.ToArray();
+	}
+
 	public int[] Shuffle(int[] array)
 	{
 		for (int i = 0; i < array.Length; i++)
@@ -164,6 +197,38 @@ public class XP2_P1 : MonoBehaviour
 		if (currTargetIndex < targets.Length)
 		{
 			currTarget = targets[currTargetIndex++];
+
+			// unpause prev pins
+			for (int i = 0; i < pauses.Length; i++)
+			{
+				int x = pauses[i] / expanDialSticks.NbColumns;
+				int y = pauses[i] % expanDialSticks.NbColumns;
+				expanDialSticks.modelMatrix[x, y].CurrentFeedForwarded = 0;
+			}
+			// get all unsafe pins
+			int[] unsafes = FindAllUnsafes();
+			if (unsafes.Length > 0)
+			{
+				// shuffle unsafe pins
+				unsafes = Shuffle(unsafes);
+				// select first N unsafe pins to move and pause
+				int nbPauses = 3;
+				pauses = new int[nbPauses];
+				Array.Copy(unsafes, pauses, (unsafes.Length < nbPauses) ? unsafes.Length : nbPauses);
+			}
+			// pause next pins
+			displacements = new sbyte[pauses.Length];
+			for(int i = 0; i < pauses.Length; i++)
+			{
+				int x = pauses[i] / expanDialSticks.NbColumns;
+				int y = pauses[i] % expanDialSticks.NbColumns;
+				displacements[i] = (sbyte)Random.Range(-expanDialSticks.modelMatrix[x, y].CurrentPosition, 40 - expanDialSticks.modelMatrix[x, y].CurrentPosition);
+				expanDialSticks.modelMatrix[x, y].CurrentFeedForwarded = displacements[i];
+			}
+			// trigger Safety Overlay
+			expanDialSticks.triggerSafetyChange();
+
+
 			int[] iconIndexes = Enumerable.Range(0, expanDialSticks.NbRows * expanDialSticks.NbColumns).ToArray();
 			int[] randomIconIndexes = Shuffle(iconIndexes);
 			for (int i = 0; i < expanDialSticks.NbRows; i++)
@@ -177,7 +242,6 @@ public class XP2_P1 : MonoBehaviour
 					}
 					else
 					{
-
 						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "default";
 					}
 					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
@@ -185,13 +249,14 @@ public class XP2_P1 : MonoBehaviour
 					expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
 
 					// Random Shape
+					/*if(Array.IndexOf(stringArray, value)) { }
 					sbyte randomPosition = (sbyte)Random.Range(0, 40);
 					expanDialSticks.modelMatrix[i, j].TargetPosition = randomPosition;
-					expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = 2f;
+					expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = 2f;*/
 				}
 			}
 			expanDialSticks.triggerProjectorChange();
-			expanDialSticks.triggerShapeChange();
+			//expanDialSticks.triggerShapeChange();
 
 		}
 	}
@@ -265,6 +330,34 @@ public class XP2_P1 : MonoBehaviour
 		expanDialSticks.triggerShapeChange();
 	}*/
 
+	void CheckShapeChangeUnderBody()
+	{
+		bool hasChanged = false;
+		for (int i = 0; i < pauses.Length; i++)
+		{
+			int x = pauses[i] / expanDialSticks.NbColumns;
+			int y = pauses[i] % expanDialSticks.NbColumns;
+
+			if (expanDialSticks.modelMatrix[x, y].CurrentProximity < 1f && displacements[i] != 0)
+			{
+				hasChanged = true;
+				// Motion On
+				expanDialSticks.modelMatrix[x, y].TargetPosition = (sbyte)(expanDialSticks.modelMatrix[x, y].CurrentPosition + displacements[i]);
+				expanDialSticks.modelMatrix[x, y].TargetShapeChangeDuration = 2f;
+				// Overlay Off
+				expanDialSticks.modelMatrix[x, y].CurrentFeedForwarded = 0;
+				// no more displacement
+				displacements[i] = 0;
+			}
+		}
+		if (hasChanged)
+		{
+			expanDialSticks.triggerShapeChange();
+			expanDialSticks.triggerSafetyChange();
+		}
+
+	}
+
 	void Update()
 	{
 		// check if ExpanDialSticks is connected
@@ -272,6 +365,7 @@ public class XP2_P1 : MonoBehaviour
 		{
 			currTime = Time.time;
 
+			CheckShapeChangeUnderBody();
 			// random texture every 3 secondes
 			if (currTime - prevRandomTextureTime >= 3f)
 			{
