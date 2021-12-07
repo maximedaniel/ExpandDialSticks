@@ -564,8 +564,8 @@ public class SafeGuard : MonoBehaviour
 
 		float backgroundDistance = 0f;
 
-		float minOrthographicSize = pins.diameter - 1.5f;
-		float maxOrthographicSize = minOrthographicSize * 3.3f;
+		float minOrthographicSize = pins.diameter - 2f; // -1.5f / 2f;
+		float maxOrthographicSize = minOrthographicSize * 3.3f; // 3.3f / 3.3f;
 		float minOutlineWidth = 1.5f;
 		float maxOutlineWidth = minOutlineWidth * 3.3f;
 		float minSecondOutlineWidth = 2.9f;
@@ -701,7 +701,7 @@ public class SafeGuard : MonoBehaviour
 				int paused = pins.viewMatrix[row, column].CurrentPaused;
 				int feedforwarded = pins.viewMatrix[row, column].CurrentFeedForwarded;
 				int displacement = (paused != 0) ? paused : feedforwarded;
-				Debug.Log("displacement : " + displacement);
+				//Debug.Log("displacement : " + displacement);
 				Transform pin = pins.viewMatrix[row, column].transform;
 				if (displacement != 0)
 				{

@@ -667,7 +667,7 @@ public class XP1_P1 : MonoBehaviour
 
 	void OnGUI()
 	{
-		if (unknownParticipant)
+		if (connected && unknownParticipant)
 		{
 			// Make a text field that modifies stringToEdit.
 			float midX = Screen.width / 2.0f;

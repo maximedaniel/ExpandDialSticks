@@ -120,6 +120,7 @@ public class SetAns
 public class ExpanDialSticks : MonoBehaviour
 {
 	public SafeGuard safeGuard;
+	public bool safeGuardOn = true;
 	public Material borderMaterial;
 	public bool SIMULATION = true;
 	public float diameter = 6.0f;
@@ -132,8 +133,8 @@ public class ExpanDialSticks : MonoBehaviour
 	public MyCapsuleHand rightHand;
 	public enum SafetyMotionMode {SafetyRatedMonitoredStop, SpeedAndSeparationMonitoring};
 	public SafetyMotionMode safetyMotionMode = SafetyMotionMode.SafetyRatedMonitoredStop;
-	public enum SafetyOverlayMode { SafetyZoneEdge, SafetyIntentSurface};
-	public SafetyOverlayMode safetyOverlayMode = SafetyOverlayMode.SafetyZoneEdge;
+	public enum SafetyOverlayMode { MotionZoneEdge, MotionTrajectoryFill, MotionTrajectoryHull, MotionTrajectoryZone};
+	public SafetyOverlayMode safetyOverlayMode = SafetyOverlayMode.MotionZoneEdge;
 	private int nbSeparationLevels = 1;
 
 
@@ -309,12 +310,18 @@ public class ExpanDialSticks : MonoBehaviour
 		safetyOverlayMode = overlayMode;
 		switch (safetyOverlayMode)
 		{
-			case SafetyOverlayMode.SafetyZoneEdge:
+			case SafetyOverlayMode.MotionZoneEdge:
 				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Dot, SafeGuard.SemioticMode.None, SafeGuard.FeedbackMode.State);
 
 				break;
-			case SafetyOverlayMode.SafetyIntentSurface:
+			case SafetyOverlayMode.MotionTrajectoryFill:
 				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Dot, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.Intent);
+				break;
+			case SafetyOverlayMode.MotionTrajectoryHull:
+				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Line, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.Intent);
+				break;
+			case SafetyOverlayMode.MotionTrajectoryZone:
+				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Zone, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.Intent);
 				break;
 			default:
 				break;
@@ -656,67 +663,74 @@ public class ExpanDialSticks : MonoBehaviour
 									MQTT_INTERVAL
 									);
 
-								//// doing nothing for each pin
-								//positions[i * nbColumns + j] = modelMatrix[i, j].CurrentPosition;
-								//holdings[i * nbColumns + j] = modelMatrix[i, j].CurrentHolding ? 1 : 0;
-								//durations[i * nbColumns + j] = 0f;
+								if (safeGuardOn)
+								{
+									// doing nothing for each pin
+									positions[i * nbColumns + j] = modelMatrix[i, j].CurrentPosition;
+									holdings[i * nbColumns + j] = modelMatrix[i, j].CurrentHolding ? 1 : 0;
+									durations[i * nbColumns + j] = 0f;
 
-								//// handle proximity
-								//if (nextProximity >= 1f) // PIN MUST STOP
-								//{
-								//	if (modelMatrix[i, j].CurrentReaching) // PIN IS INDEED MOVING 
-								//	{
-								//		if (modelMatrix[i, j].CurrentPaused == 0) // PIN IS NOT ALREADY BEING PAUSED
-								//		{
-								//			Debug.Log("modelMatrix[" + i + "," + j + "] pause towards " + modelMatrix[i, j].TargetPosition + "!");
-								//			modelMatrix[i, j].CurrentPaused = modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition;
-								//			positions[i * nbColumns + j] = modelMatrix[i, j].CurrentPosition;
-								//			holdings[i * nbColumns + j] = 0;
-								//			durations[i * nbColumns + j] = 0.1f;
-								//			safe = false;
-								//		}
-								//	}
-								//} else
-								//{
-								//	// PIN IS FREE
-								//	// PIN HAS BEEN PAUSED THEN START IT
-								//	if (!modelMatrix[i, j].CurrentReaching)
-								//	{
-								//		if (modelMatrix[i, j].CurrentPaused != 0)
-								//		{
-								//			Debug.Log("modelMatrix[" + i + "," + j + "] unpause towards " + modelMatrix[i, j].TargetPosition + "!");
-								//			modelMatrix[i, j].CurrentPaused = 0;
-								//			positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
-								//			holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
+									// handle proximity
+									if (nextProximity >= 1f) // PIN MUST STOP
+									{
+										if (modelMatrix[i, j].CurrentReaching) // PIN IS INDEED MOVING 
+										{
+											if (modelMatrix[i, j].CurrentPaused == 0) // PIN IS NOT ALREADY BEING PAUSED
+											{
+												Debug.Log("modelMatrix[" + i + "," + j + "] pause towards " + modelMatrix[i, j].TargetPosition + "!");
+												modelMatrix[i, j].CurrentPaused = modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition;
+												positions[i * nbColumns + j] = modelMatrix[i, j].CurrentPosition;
+												holdings[i * nbColumns + j] = 0;
+												durations[i * nbColumns + j] = 0.1f;
+												safe = false;
+											}
+										}
+									}
+									else
+									{
+										// PIN IS FREE
+										// PIN HAS BEEN PAUSED THEN START IT
+										if (!modelMatrix[i, j].CurrentReaching)
+										{
+											if (modelMatrix[i, j].CurrentPaused != 0)
+											{
+												modelMatrix[i, j].CurrentPaused = 0;
+												positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
+												holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
 
-								//			//float minShapeChangeDuration = 1f; // 20 pos per sec
-								//			//durations[i * nbColumns + j] = minShapeChangeDuration + (nextProximity * 3f);
+												//float minShapeChangeDuration = 1f; // 20 pos per sec
+												//durations[i * nbColumns + j] = minShapeChangeDuration + (nextProximity * 3f);
 
-								//			float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
-								//			float distance = Math.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition);
-								//			float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
-								//			durations[i * nbColumns + j] = safetyDuration;
-								//			safe = false;
-								//		}
-								//	}
-								//	if (modelMatrix[i, j].CurrentReaching) // PIN IS INDEED MOVING 
-								//	{
-								//		if (nextProximity != prevProximity) // SPEED UP
-								//		{
-								//			Debug.Log("modelMatrix[" + i + "," + j + "] change speed towards " + modelMatrix[i, j].TargetPosition  + "!");
-								//			positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
-								//			holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
-								//			float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
-								//			float distance = Math.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition);
-								//			float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
-								//			durations[i * nbColumns + j] = safetyDuration;
+												float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
+												float distance = Math.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition);
+												float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
+												durations[i * nbColumns + j] = safetyDuration;
+												Debug.Log("modelMatrix[" + i + "," + j + "] unpause from " + modelMatrix[i, j].TargetPosition
+													+ " to " + modelMatrix[i, j].CurrentPosition + " in " + safetyDuration + "s!");
+												safe = false;
+											}
+										}
+										if (modelMatrix[i, j].CurrentReaching) // PIN IS INDEED MOVING 
+										{
+											if (nextProximity != prevProximity) // SPEED UP
+											{
+												positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
+												holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
+												float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
+												float distance = Math.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition);
+												float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
+												durations[i * nbColumns + j] = safetyDuration;
 
-								//			//float minShapeChangeDuration = 1f; // 20 pos per sec
-								//			//durations[i * nbColumns + j] = minShapeChangeDuration + (nextProximity * 3f);
-								//			safe = false;
-								//		}
-								//	}
-								//}
+												Debug.Log("modelMatrix[" + i + "," + j + "] change speed from " + modelMatrix[i, j].TargetPosition
+													+ " to " + modelMatrix[i, j].CurrentPosition + " in " + safetyDuration  + "s!");
+												//float minShapeChangeDuration = 1f; // 20 pos per sec
+												//durations[i * nbColumns + j] = minShapeChangeDuration + (nextProximity * 3f);
+												safe = false;
+											}
+										}
+									}
+								}
+
 							}
 						}
 						shapeChanging = true;
@@ -893,19 +907,26 @@ public class ExpanDialSticks : MonoBehaviour
 					positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
 					holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
 					modelMatrix[i, j].CurrentProximity = collisionMatrix[i, j].Proximity();
-					/*if (modelMatrix[i, j].CurrentProximity < 1f)
-					{*/
-					/*float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
-					float distance = Math.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition);
-					float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
-					durations[i * nbColumns + j] = Math.Max(safetyDuration, modelMatrix[i, j].TargetShapeChangeDuration);*/
-					durations[i * nbColumns + j] = modelMatrix[i, j].TargetShapeChangeDuration; //  new
-					/*} else {
-							Debug.Log("modelMatrix[" + i + "," + j + "] pause at start!");
-							modelMatrix[i, j].CurrentPaused = modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition;
-							Debug.Log("modelMatrix[i, j].CurrentPaused: " + modelMatrix[i, j].CurrentPaused);
-							durations[i * nbColumns + j] = 0f;
-					}*/
+					if (safeGuardOn)
+					{
+						if (modelMatrix[i, j].CurrentProximity < 1f)
+						{
+						float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
+						float distance = Math.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition);
+						float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
+						durations[i * nbColumns + j] = Math.Max(safetyDuration, modelMatrix[i, j].TargetShapeChangeDuration);
+						} else {
+								Debug.Log("modelMatrix[" + i + "," + j + "] pause at start!");
+								modelMatrix[i, j].CurrentPaused = modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition;
+								Debug.Log("modelMatrix[i, j].CurrentPaused: " + modelMatrix[i, j].CurrentPaused);
+								durations[i * nbColumns + j] = 0f;
+						}
+					}
+					else
+					{
+						durations[i * nbColumns + j] = modelMatrix[i, j].TargetShapeChangeDuration;
+					}
+
 					// Reset TargetShapeChangeDuration to zero to prevent previous animations
 					modelMatrix[i, j].TargetShapeChangeDuration = 0f;
 				}
@@ -990,7 +1011,7 @@ public class ExpanDialSticks : MonoBehaviour
 				);
 				modelMatrix[i, j].TargetTextureChangeDuration = 0f;
 				
-				modelMatrix[i, j].setProjectorChangeCurrent(
+				/*modelMatrix[i, j].setProjectorChangeCurrent(
 					modelMatrix[i, j].TargetProjectorColor,
 					modelMatrix[i, j].TargetProjectorTexture,
 					modelMatrix[i, j].TargetProjectorOffset,
@@ -998,7 +1019,7 @@ public class ExpanDialSticks : MonoBehaviour
 					modelMatrix[i, j].TargetProjectorSize,
 					modelMatrix[i, j].TargetProjectorChangeDuration
 				);
-				modelMatrix[i, j].TargetProjectorChangeDuration = 0f;
+				modelMatrix[i, j].TargetProjectorChangeDuration = 0f;*/
 			}
 		}
 		textureChanging = true;
@@ -1024,83 +1045,85 @@ public class ExpanDialSticks : MonoBehaviour
 				viewMatrix[i, j].CurrentDistance = modelMatrix[i, j].CurrentDistance = currDistance;
 				viewMatrix[i, j].CurrentSeparationLevel = modelMatrix[i, j].CurrentSeparationLevel = currSeparationLevel;
 				viewMatrix[i, j].CurrentReaching = modelMatrix[i, j].CurrentReaching = modelMatrix[i, j].CurrentPosition != viewMatrix[i, j].CurrentPosition;
-				/*
-				if (nextProximity >= 1f)
+				if (safeGuardOn)
 				{
-					if (modelMatrix[i, j].CurrentReaching) // PIN IS INDEED MOVING 
+					if (nextProximity >= 1f)
 					{
-						if (modelMatrix[i, j].CurrentPaused == 0)
+						if (modelMatrix[i, j].CurrentReaching) // PIN IS INDEED MOVING 
 						{
-							modelMatrix[i, j].setShapeChangeCurrent(
-								modelMatrix[i, j].CurrentAxisX,
-								modelMatrix[i, j].CurrentAxisY,
-								modelMatrix[i, j].CurrentSelectCount,
-								modelMatrix[i, j].CurrentRotation,
-								viewMatrix[i, j].CurrentPosition, // set to view current pos
-								false,
-								modelMatrix[i, j].CurrentHolding,
-								modelMatrix[i, j].CurrentSeparationLevel,
-								modelMatrix[i, j].CurrentProximity,
-								modelMatrix[i, j].CurrentDistance,
-								modelMatrix[i, j].CurrentPosition-viewMatrix[i, j].CurrentPosition,
-								0.1f // very fast
-							);
-							shapeChanging = true;
-						}
-					}
-				}
-				else
-				{
-					if (!modelMatrix[i, j].CurrentReaching) // PIN IS NOT MOVING 
-					{
-						if (modelMatrix[i, j].CurrentPaused != 0)
-						{
-
-							float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
-							float distance = Math.Abs(modelMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition);
-							float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
-							modelMatrix[i, j].setShapeChangeCurrent(
+							if (modelMatrix[i, j].CurrentPaused == 0)
+							{
+								modelMatrix[i, j].setShapeChangeCurrent(
 									modelMatrix[i, j].CurrentAxisX,
 									modelMatrix[i, j].CurrentAxisY,
 									modelMatrix[i, j].CurrentSelectCount,
 									modelMatrix[i, j].CurrentRotation,
-									modelMatrix[i, j].TargetPosition, // set to model target pos
+									viewMatrix[i, j].CurrentPosition, // set to view current pos
+									false,
+									modelMatrix[i, j].CurrentHolding,
+									modelMatrix[i, j].CurrentSeparationLevel,
+									modelMatrix[i, j].CurrentProximity,
+									modelMatrix[i, j].CurrentDistance,
+									modelMatrix[i, j].CurrentPosition-viewMatrix[i, j].CurrentPosition,
+									0.1f // very fast
+								);
+								shapeChanging = true;
+							}
+						}
+					}
+					else
+					{
+						if (!modelMatrix[i, j].CurrentReaching) // PIN IS NOT MOVING 
+						{
+							if (modelMatrix[i, j].CurrentPaused != 0)
+							{
+
+								float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
+								float distance = Math.Abs(modelMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition);
+								float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
+								modelMatrix[i, j].setShapeChangeCurrent(
+										modelMatrix[i, j].CurrentAxisX,
+										modelMatrix[i, j].CurrentAxisY,
+										modelMatrix[i, j].CurrentSelectCount,
+										modelMatrix[i, j].CurrentRotation,
+										modelMatrix[i, j].TargetPosition, // set to model target pos
+										true,
+										modelMatrix[i, j].TargetHolding,
+										modelMatrix[i, j].CurrentSeparationLevel,
+										modelMatrix[i, j].CurrentProximity,
+										modelMatrix[i, j].CurrentDistance,
+										0,
+										safetyDuration //  fast
+									);
+								shapeChanging = true;
+							}
+						}
+						if (modelMatrix[i, j].CurrentReaching) // PIN IS INDEED MOVING 
+						{
+							if (prevProximity != nextProximity)
+							{
+								float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
+								float distance = Math.Abs(modelMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition);
+								float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
+								modelMatrix[i, j].setShapeChangeCurrent(
+									modelMatrix[i, j].CurrentAxisX,
+									modelMatrix[i, j].CurrentAxisY,
+									modelMatrix[i, j].CurrentSelectCount,
+									modelMatrix[i, j].CurrentRotation,
+									modelMatrix[i, j].TargetPosition, // set to view current pos
 									true,
 									modelMatrix[i, j].TargetHolding,
 									modelMatrix[i, j].CurrentSeparationLevel,
 									modelMatrix[i, j].CurrentProximity,
 									modelMatrix[i, j].CurrentDistance,
-									0,
+									modelMatrix[i, j].CurrentPaused,
 									safetyDuration //  fast
 								);
-							shapeChanging = true;
+								shapeChanging = true;
+							}
 						}
 					}
-					if (modelMatrix[i, j].CurrentReaching) // PIN IS INDEED MOVING 
-					{
-						if (prevProximity != nextProximity)
-						{
-							float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
-							float distance = Math.Abs(modelMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition);
-							float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
-							modelMatrix[i, j].setShapeChangeCurrent(
-								modelMatrix[i, j].CurrentAxisX,
-								modelMatrix[i, j].CurrentAxisY,
-								modelMatrix[i, j].CurrentSelectCount,
-								modelMatrix[i, j].CurrentRotation,
-								modelMatrix[i, j].TargetPosition, // set to view current pos
-								true,
-								modelMatrix[i, j].TargetHolding,
-								modelMatrix[i, j].CurrentSeparationLevel,
-								modelMatrix[i, j].CurrentProximity,
-								modelMatrix[i, j].CurrentDistance,
-								modelMatrix[i, j].CurrentPaused,
-								safetyDuration //  fast
-							);
-							shapeChanging = true;
-						}
-					}
-				}*/
+				}
 			}
 		}
 	}
@@ -1220,14 +1243,14 @@ public class ExpanDialSticks : MonoBehaviour
 						modelMatrix[i, j].CurrentPlaneRotation,
 						modelMatrix[i, j].CurrentTextureChangeDuration
 					);
-					viewMatrix[i, j].setProjectorChangeTarget(
+					/*viewMatrix[i, j].setProjectorChangeTarget(
 						modelMatrix[i, j].CurrentProjectorColor,
 						modelMatrix[i, j].CurrentProjectorTexture,
 						modelMatrix[i, j].CurrentProjectorOffset,
 						modelMatrix[i, j].CurrentProjectorRotation,
 						modelMatrix[i, j].CurrentProjectorSize,
 						modelMatrix[i, j].CurrentProjectorChangeDuration
-					);
+					);*/
 				}
 			}
 			textureChanging = false;

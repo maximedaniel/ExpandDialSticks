@@ -1033,6 +1033,7 @@ public class ExpanDialStickView : MonoBehaviour
 			this.projectorColorCurrent = this.projectorColorTarget;
 			this.projectorSizeCurrent = this.projectorSizeTarget;
 			this.projectorRotationCurrent = this.projectorRotationTarget;
+			//Debug.Log("this.projectorSizeCurrent : " + this.projectorSizeCurrent);
 			this.projectorChangeDurationTarget -= Time.deltaTime;
 		}
 		render();
