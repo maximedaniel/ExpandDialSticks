@@ -348,9 +348,9 @@ public class XP1_P1 : MonoBehaviour
 		Debug.Log("WaitForNoHandPresence...");
 		List<Vector3> safePositionAndSpeeds = new List<Vector3>();
 		Vector2 molePosition = molePositions[moleIndex];
-		bool moleIsPresent = false;
+		//bool moleIsPresent = false;
 		float waitingSince = 0f;
-		int waitingCount = 1;
+		//int waitingCount = 1;
 		/*while (!moleIsPresent)
 		{
 			if (!leftHand.IsActive() && !rightHand.IsActive())

@@ -14,8 +14,26 @@ using Leap.Unity;
 using Random = UnityEngine.Random;
 using System.Linq;
 
+public static class ListExtension
+{
+	public static System.Random rng = new System.Random();
+
+	public static void Shuffle<T>(this IList<T> list)
+	{
+		int n = list.Count;
+		while (n > 1)
+		{
+			n--;
+			int k = rng.Next(n + 1);
+			T value = list[k];
+			list[k] = list[n];
+			list[n] = value;
+		}
+	}
+}
 public class XP2_P1 : MonoBehaviour
 {
+
 	// ExpanDialSticks Core
 	public GameObject expanDialSticksPrefab;
 	public GameObject capsuleHandLeftPrefab;
@@ -25,43 +43,32 @@ public class XP2_P1 : MonoBehaviour
 	private ExpanDialSticks expanDialSticks;
 	private bool connected;
 
-	// timer variables
 	private float currTime;
 	private float prevRandomTextureTime;
-	private float prevRandomIconTime;
-	private float prevRandomShapeTime;
-	private const sbyte minPos = 0;
-	private const sbyte maxPos = 10;
-
-	private int nbTrials = 3;
-	private int[] amountFactor = new int[] { 3, 6, 9 };
-	private ExpanDialSticks.SafetyOverlayMode[] overlayFactor = new ExpanDialSticks.SafetyOverlayMode[] {
-		ExpanDialSticks.SafetyOverlayMode.MotionTrajectoryZone,
-		ExpanDialSticks.SafetyOverlayMode.MotionTrajectoryHull,
-		ExpanDialSticks.SafetyOverlayMode.MotionTrajectoryFill,
-		ExpanDialSticks.SafetyOverlayMode.MotionZoneEdge
-	};
-	private int currIndex;
-	private List<int> targets;
-	private int currTarget;
-	private List<int> amounts;
-	private int currAmount;
-	private ExpanDialSticks.SafetyOverlayMode currOverlay;
-	private List<Vector2Int> pauses;
-	//private List<int> unpauses;
-	//private List<sbyte> displacements;
-	//private List<int> selects;
 
 
-	private float shapeChangeWaitFor = 3f;
-	private bool toNextTarget = true;
-
+	private const int minPos = 10;
+	private const int maxPos = 20;
+	private const float shapeChangeDuration = 2f;
+	private const float safetyDistance = 6f;
 
 	private bool training = false;
 	private string stringParticipant = "";
 	private int numeroParticipant = 0;
 	private bool unknownParticipant = true;
 
+	private ExpanDialSticks.SafetyOverlayMode currOverlay;
+	private enum IconFactor { TwoIconsUnder, OneIconUnder, NoIconUnder};
+	private IconFactor currIconFactor;
+	private int nbIconFactor;
+	private const int nbRepeat = 3;
+	private const int nbChange = 3;
+	private List<IconFactor> trials;
+	private int nbTrials;
+	private List<Vector2Int> candidates;
+	private Vector3Int rightCandidate;
+	private Vector3Int wrongCandidate;
+	private bool toNextTrial = true;
 
 	void Start()
 	{
@@ -82,44 +89,33 @@ public class XP2_P1 : MonoBehaviour
 
 		connected = false;
 		expanDialSticks.client_MqttConnect();
-		currTime = prevRandomTextureTime = prevRandomIconTime = prevRandomShapeTime = 0;
 
-		int nbTargets = nbTrials * amountFactor.Length;
-		targets = new List<int>();
-		amounts = new List<int>();
-
-		List<int> randomPins = new List<int>(); //= Enumerable.Range(0, nbPins).ToList<int>();
-		// get pins inside matrix only
-		for(int i = 1; i < expanDialSticks.NbRows-1; i++)
+		// generate candidates
+		candidates = new List<Vector2Int>(); //= Enumerable.Range(0, nbPins).ToList<int>();
+												// get pins inside matrix only
+		for (int i = 1; i < expanDialSticks.NbRows - 1; i++)
 		{
 			for (int j = 1; j < expanDialSticks.NbColumns - 1; j++)
 			{
-				randomPins.Add(i * expanDialSticks.NbColumns + j);
+				candidates.Add(new Vector2Int(i,j));
 			}
 		}
-		int nbPins = randomPins.Count();
 
-		for (int j = 0; j < amountFactor.Length; j++)
+		// generate trials
+		nbIconFactor = Enum.GetNames(typeof(IconFactor)).Length;
+
+		trials = new List<IconFactor>(); //= Enumerable.Range(0, nbPins).ToList<int>();
+		for (int i = 0; i < nbIconFactor; i++)
 		{
-			for (int w = 0; w < nbTrials; w++)
+			for(int j = 0; j < nbRepeat; j++)
 			{
-				int z = (j * nbTrials) + w;
-				amounts.Add(amountFactor[j]);
-				if (z % nbPins == 0) randomPins = Shuffle(randomPins);
-				targets.Add(randomPins[z % nbPins]);
+				trials.Add((IconFactor)i);
 			}
 		}
-
-		currIndex = 0;
-		currTarget = targets[currIndex];
-		currAmount = amounts[currIndex];
-		currOverlay = ExpanDialSticks.SafetyOverlayMode.MotionZoneEdge;
-		pauses = new List<Vector2Int>();
-		toNextTarget = true;
-		/*unpauses = new List<int>();
-		displacements = new List<sbyte>();
-		selects = new List<int>();*/
-
+		ListExtension.Shuffle(trials);
+		trials.Insert(0, IconFactor.NoIconUnder);
+		nbTrials = trials.Count();
+		toNextTrial = true;
 	}
 
 
@@ -127,13 +123,11 @@ public class XP2_P1 : MonoBehaviour
 	{
 		Debug.Log("Application connecting to MQTT Broker @" + e.address + ":" + e.port + "...");
 		connected = false;
-		//StartCoroutine(ResetProjectorSafeGuard());
 	}
 
 	private void HandleConnected(object sender, MqttConnectionEventArgs e)
 	{
 		Debug.Log("Application connected.");
-		//RandomShape();
 		connected = true;
 
 	}
@@ -161,22 +155,24 @@ public class XP2_P1 : MonoBehaviour
 
 	private void HandleRotationChanged(object sender, ExpanDialStickEventArgs e)
 	{
-		int select = e.i * ExpanDialSticks.nbColumns + e.j;
-		//Debug.Lo
-		// if rotate is not paused and is the target
-		if (select == currTarget)
+
+		DebugInSitu("target(" + e.i + ", " + e.j + ") == right(" + rightCandidate.x + ", " + rightCandidate.y + ")", Color.black, Color.white);
+		if (toNextTrial == false)
 		{
-			Debug.Log("Right Target : " + select + " == " + currTarget);
-			TriggerShapeChangeUnderBody();
-			toNextTarget = true;
+			
+			if (e.i == rightCandidate.x && e.j == rightCandidate.y) // right candidate
+			{
+				//DebugInSitu("target("+e.i+", "+e.j+") == right("+ rightCandidate.x + ", "+ rightCandidate.y + ")", Color.black, Color.green);
+				toNextTrial = true;
+
+			}
+			else // wrong candidate
+			{
+
+				//DebugInSitu("target(" + e.i + ", " + e.j + ") != right(" + rightCandidate.x + ", " + rightCandidate.y + ")", Color.black, Color.red);
+			}
+
 		}
-		else
-		{
-
-			Debug.Log("Wrong Target : " + select + " != "  + currTarget);
-		}
-
-
 	}
 
 	private void HandlePositionChanged(object sender, ExpanDialStickEventArgs e)
@@ -205,70 +201,60 @@ public class XP2_P1 : MonoBehaviour
 						Application.Quit();
 #endif
 	}
-	/*List<Vector3> FindAllUnsafes()
+
+	List<Vector2Int> FindAllUnsafesUnderDistance(float distance)
 	{
-		List<Vector3> safePositions = new List<Vector3>();
+		List<Vector2Int> positions = new List<Vector2Int>();
+
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+				if (expanDialSticks.modelMatrix[i, j].CurrentDistance < distance)
+				{
+					positions.Add(new Vector2Int(i, j));
+				}
+
+		return positions;
+	}
+	List<Vector2Int> FindAllSafesAboveDistance(float distance)
+	{
+		List<Vector2Int> positions = new List<Vector2Int>();
+
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+				if (expanDialSticks.modelMatrix[i, j].CurrentDistance > distance)
+				{
+					positions.Add(new Vector2Int(i, j));
+				}
+
+		return positions;
+	}
+	List<Vector2Int> FindAllUnsafes()
+	{
+		List<Vector2Int> unsafePositions = new List<Vector2Int>();
 
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 				if (expanDialSticks.modelMatrix[i, j].CurrentProximity == 1f)
 				{
-					safePositions.Add(new Vector3(i, j, expanDialSticks.modelMatrix[i, j].CurrentProximity));
-				}
-
-		return safePositions;
-	}*/
-
-	List<int> FindAllUnsafesAtDistance(float distance)
-	{
-		List<int> unsafePositions = new List<int>();
-
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-				if (expanDialSticks.modelMatrix[i, j].CurrentProximity == 1f && expanDialSticks.modelMatrix[i, j].CurrentDistance < distance)
-				{
-					unsafePositions.Add(i * expanDialSticks.NbColumns + j);
-				}
-
-		return unsafePositions;
-	}
-
-	List<int> FindAllUnsafes()
-	{
-		List<int> unsafePositions = new List<int>();
-
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-				if (expanDialSticks.modelMatrix[i, j].CurrentProximity == 1f)
-				{
-					unsafePositions.Add(i * expanDialSticks.NbColumns + j);
+					unsafePositions.Add(new Vector2Int(i, j));
 				}
 		return unsafePositions;
 	}
-	List<int> FindAllSafes()
+	List<Vector2Int> FindAllSafes()
 	{
-		List<int> safePositions = new List<int>();
+		List<Vector2Int> safePositions = new List<Vector2Int>();
 
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 				if (expanDialSticks.modelMatrix[i, j].CurrentProximity < 1f)
 				{
-					safePositions.Add(i * expanDialSticks.NbColumns + j);
+					safePositions.Add(new Vector2Int(i, j));
 				}
 		return safePositions;
 	}
 
-	public List<int> Shuffle(List<int> array)
-	{
-		for (int i = 0; i < array.Count(); i++)
-		{
-			int rnd = Random.Range(0, array.Count());
-			int temp = array[rnd];
-			array[rnd] = array[i];
-			array[i] = temp;
-		}
-		return array;
-	}
+
+
 	public List<sbyte> Swap(List<sbyte> array, int index0, int index1)
 	{
 		if (0 <= index0 && index0 < array.Count() && 0 <= index1 && index1 < array.Count())
@@ -290,35 +276,6 @@ public class XP2_P1 : MonoBehaviour
 		return array;
 	}
 
-	/*void RandomIcon()
-	{
-		if(currTargetIndex < targets.Length)
-		{
-			int[] iconIndexes = Enumerable.Range(0, expanDialSticks.NbRows * expanDialSticks.NbColumns).ToArray();
-			int[] randomIconIndexes = Shuffle(iconIndexes);
-			for (int i = 0; i < expanDialSticks.NbRows; i++)
-			{
-				for (int j = 0; j < expanDialSticks.NbColumns; j++)
-				{
-					if (currTarget == i * expanDialSticks.NbColumns + j)
-					{
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon" + randomIconIndexes[i * expanDialSticks.NbColumns + j];
-					}
-					else
-					{
-
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "default";
-					}
-					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
-				}
-			}
-			currTarget = targets[++currTargetIndex];
-			expanDialSticks.triggerProjectorChange();
-
-		}
-	}*/
 
 	void RandomColor()
 	{
@@ -343,101 +300,6 @@ public class XP2_P1 : MonoBehaviour
 	}
 
 
-
-	void RandomShape()
-	{
-
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
-		{
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-			{
-					sbyte randomPosition = (sbyte)Random.Range(10, 30);
-					expanDialSticks.modelMatrix[i, j].TargetPosition = randomPosition;
-					expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = 2f;
-			}
-		}
-		expanDialSticks.triggerShapeChange();
-	}
-	/*
-	IEnumerator NextTarget()
-	{
-		Debug.Log("WaitForNoHandPresence...");
-		bool handIsPresent = true;
-		float waitingSince = 0f;
-		float waitingCount = 1;
-		List<int> allUnsafes = new List<int>();
-
-		while (handIsPresent)
-		{
-			if (!leftHand.IsActive() && !rightHand.IsActive())
-			{
-				allUnsafes = FindAllUnsafes();
-				if (allUnsafes.Count() == 0)
-				{
-					handIsPresent = false;
-				}
-			}
-			if (waitingSince >= shapeChangeWaitFor)
-			{
-				if (--waitingCount <= 0) break;
-				waitingSince = 0f;
-			}
-			else
-			{
-				waitingSince += 0.1f;
-				yield return new WaitForSeconds(0.1f);
-
-			}
-		}
-		Debug.Log("HandIsNoPresent!");
-		for (int i = 0; i < unpauses.Count(); i++)
-		{
-			int x = unpauses[i] / expanDialSticks.NbColumns;
-			int y = unpauses[i] % expanDialSticks.NbColumns;
-			// Motion On
-			// ERROR : WRONG DISPALCEMENT APPLIED
-			expanDialSticks.modelMatrix[x, y].TargetPosition = (sbyte)(expanDialSticks.modelMatrix[x, y].CurrentPosition + displacements[i]);
-			expanDialSticks.modelMatrix[x, y].TargetShapeChangeDuration = 2f;
-		}
-		expanDialSticks.triggerShapeChange();
-		Debug.Log("TriggerShapeChange!");
-		yield return new WaitForSeconds(2f);
-		if (currIndex < targets.Count())
-		{
-
-			currTarget = targets[currIndex];
-			currAmount = amounts[currIndex];
-			currOverlay = overlays[currIndex];
-			currIndex += 1;
-			for (int i = 0; i < expanDialSticks.NbRows; i++)
-			{
-				for (int j = 0; j < expanDialSticks.NbColumns; j++)
-				{
-					if (currTarget == i * expanDialSticks.NbColumns + j)
-					{
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon0";
-					}
-					else
-					{
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "default";
-					}
-					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
-				}
-			}
-			expanDialSticks.triggerProjectorChange();
-			Debug.Log("ShowNextTarget!");
-		}
-		else
-		{
-			Debug.Log("NoNextTarget!");
-			Quit();
-		}
-		waitingForNoHand = false;
-
-	}*/
-
 	List<Vector3> FindSafes()
 	{
 		List<Vector3> safePositions = new List<Vector3>();
@@ -450,112 +312,6 @@ public class XP2_P1 : MonoBehaviour
 				}
 
 		return safePositions;
-	}
-
-	
-	void CheckShapeChangeUnderBody()
-	{
-			// move unpaused pins
-			List<Vector2Int> unpauses = new List<Vector2Int>();
-			for (int i = 0; i < pauses.Count(); i++)
-			{
-				Vector2Int pause = pauses[i];
-				int x = pause.x / expanDialSticks.NbColumns;
-				int y = pause.x % expanDialSticks.NbColumns;
-				int displacement = pause.y;
-
-				if (expanDialSticks.modelMatrix[x, y].CurrentProximity < 1f && displacement != 0)
-				{
-					// unpaused index
-					unpauses.Add(pause);
-					// Motion On
-					expanDialSticks.modelMatrix[x, y].TargetPosition = (sbyte)(expanDialSticks.modelMatrix[x, y].CurrentPosition + displacement);
-					expanDialSticks.modelMatrix[x, y].TargetShapeChangeDuration = 2f;
-					// Overlay Off
-					//expanDialSticks.modelMatrix[x, y].CurrentFeedForwarded = 0;
-				}
-				pauses.RemoveAll(lambda => unpauses.Contains(lambda));
-			}
-			if (unpauses.Count() > 0)
-			{
-				expanDialSticks.triggerShapeChange();
-				//expanDialSticks.triggerSafetyChange();
-			}
-	}
-
-	void TriggerNextTarget()
-	{
-		Debug.Log("TriggerNextTarget!");
-		if (currIndex < targets.Count())
-		{
-			currTarget = targets[currIndex];
-			currAmount = amounts[currIndex];
-			currIndex += 1;
-			Debug.Log("currTarget:"+ currTarget);
-			for (int i = 0; i < expanDialSticks.NbRows; i++)
-			{
-				for (int j = 0; j < expanDialSticks.NbColumns; j++)
-				{
-					if (currTarget == i * expanDialSticks.NbColumns + j)
-					{
-
-						//Debug.Log("TargetProjectorTexture:icon0");
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon0";
-					}
-					else
-					{
-						//Debug.Log("TargetProjectorTexture:default");
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "default";
-					}
-					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
-				}
-			}
-			Debug.Log("TriggerProjectorChange!");
-			expanDialSticks.triggerProjectorChange();
-		} else
-		{
-			Quit();
-		}
-	}
-	void TriggerShapeChangeUnderBody()
-	{
-
-		Debug.Log("TriggerShapeChangeUnderBody!");
-		// get all unsafe pins
-		List<int> unsafes = FindAllUnsafesAtDistance(6f);
-	
-			if (unsafes.Count() > 0)
-			{
-				// shuffle unsafe pins
-				unsafes = Shuffle(unsafes);
-				// select first N unsafe pins to move and pause
-				int startIndex = ((unsafes.Count() < currAmount) ? unsafes.Count() : currAmount) - 1;
-				unsafes.RemoveRange(startIndex, unsafes.Count() - startIndex);
-				// pause next pins
-				for (int i = 0; i < unsafes.Count(); i++)
-				{
-					int x = unsafes[i] / expanDialSticks.NbColumns;
-					int y = unsafes[i] % expanDialSticks.NbColumns;
-					int currentPosition = expanDialSticks.modelMatrix[x, y].CurrentPosition;
-					List<int> randomPositions = Enumerable.Range(minPos, maxPos).Where(randomPos => randomPos != currentPosition).ToList<int>();
-					int randomPosition = randomPositions[Random.Range(0, randomPositions.Count())];
-					sbyte displacement = (sbyte)(randomPosition - currentPosition);
-					//expanDialSticks.modelMatrix[x, y].CurrentFeedForwarded = displacement; 
-					expanDialSticks.modelMatrix[x, y].TargetPosition = (sbyte)randomPosition;
-					expanDialSticks.modelMatrix[x, y].TargetShapeChangeDuration = 2f;
-					pauses.Add(new Vector2Int(unsafes[i], displacement));
-				}
-				// trigger shape-change
-				expanDialSticks.triggerShapeChange();
-
-		} else // LeapMotion failed to track user hands !!
-			{
-				// add to end queue for retry
-				targets.Add(currTarget);
-				amounts.Add(currAmount);
-		}
 	}
 
 
@@ -657,6 +413,155 @@ public class XP2_P1 : MonoBehaviour
 		}
 	}
 
+	private void DebugInSitu(string message, Color textColor, Color backgroundColor)
+	{
+		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 16, textColor, message, new Vector3(90f, -90f, 0f));
+		expanDialSticks.setBorderBackground(backgroundColor);
+		expanDialSticks.triggerTextureChange();
+	}
+	private void TriggerNextTrial()
+	{
+		if (trials.Count() > 0)
+		{
+			List<Vector2Int> unsafes;
+			List<Vector2Int> safes;
+			Vector2Int rightCandidatePos = new Vector2Int(rightCandidate.x, rightCandidate.y);
+			Vector2Int wrongCandidatePos = new Vector2Int(wrongCandidate.x, wrongCandidate.y);
+			bool candidatesFound = false;
+			int iconFactorIndex = -1;
+			while (!candidatesFound)
+			{
+				iconFactorIndex++;
+				if(iconFactorIndex < trials.Count()) 
+				{
+					currIconFactor = trials[iconFactorIndex];
+					Debug.Log("Looking for candidates (" + currIconFactor+")...");
+					switch (currIconFactor)
+					{
+						case IconFactor.TwoIconsUnder:
+							// get all pins under user body
+							unsafes = FindAllUnsafesUnderDistance(safetyDistance);
+							// prevent same candidates
+							unsafes.Remove(rightCandidatePos);
+							unsafes.Remove(wrongCandidatePos);
+							// if there is remaining candidates
+							if (unsafes.Count() > 1)
+							{
+								ListExtension.Shuffle(unsafes);
+								rightCandidate = new Vector3Int(unsafes[0].x, unsafes[0].y, maxPos);
+								wrongCandidate = new Vector3Int(unsafes[1].x, unsafes[1].y, minPos);
+								candidatesFound = true;
+							}
+							else
+							{
+								//What if?
+							}
+							break;
+						case IconFactor.OneIconUnder:
+							// get all pins under user body
+							unsafes = FindAllUnsafesUnderDistance(safetyDistance);
+							// prevent same candidates
+							unsafes.Remove(rightCandidatePos);
+							unsafes.Remove(wrongCandidatePos);
+							// get all pins not under user body
+							safes = FindAllSafesAboveDistance(safetyDistance);
+							// prevent same candidates
+							safes.Remove(rightCandidatePos);
+							safes.Remove(wrongCandidatePos);
+							// if there is remaining candidates
+							if (unsafes.Count() > 0 && safes.Count() > 0)
+							{
+								rightCandidate = new Vector3Int(unsafes[0].x, unsafes[0].y, maxPos);
+								wrongCandidate = new Vector3Int(safes[0].x, safes[0].y, minPos);
+								candidatesFound = true;
+							}
+							else
+							{
+								//What if?
+							}
+
+							break;
+						case IconFactor.NoIconUnder:
+							// get all pins not under user body
+							safes = FindAllSafesAboveDistance(safetyDistance);
+							// prevent same candidates
+							safes.Remove(rightCandidatePos);
+							safes.Remove(wrongCandidatePos);
+							// if there is remaining candidates
+							if (safes.Count() > 1)
+							{
+								ListExtension.Shuffle(safes);
+								rightCandidate = new Vector3Int(safes[0].x, safes[0].y, maxPos);
+								wrongCandidate = new Vector3Int(safes[1].x, safes[1].y, minPos);
+								candidatesFound = true;
+							}
+							else
+							{
+								//What if?
+							}
+							break;
+					}
+				} else // fails to find candidates for remaining icon factor
+				{
+					Debug.Log("Candidates Fail! Adding IconFactor.NoIconUnder.");
+					iconFactorIndex = -1;
+					trials.Insert(0, IconFactor.NoIconUnder);
+				}
+
+			}
+			Debug.Log("Candidates Success!");
+			trials.RemoveAt(iconFactorIndex);
+
+
+			// Output Control
+			for (int i = 0; i < expanDialSticks.NbRows; i++)
+			{
+				for (int j = 0; j < expanDialSticks.NbColumns; j++)
+				{
+					if (rightCandidate.x == i && rightCandidate.y == j)
+					{
+						// Projector
+						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon0";
+						// Shape
+						expanDialSticks.modelMatrix[i, j].TargetPosition = (sbyte)rightCandidate.z;
+						expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = shapeChangeDuration;
+					}
+					else if (wrongCandidate.x == i && wrongCandidate.y == j)
+					{
+						// Projector
+						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon0";
+						// Shape
+						expanDialSticks.modelMatrix[i, j].TargetPosition = (sbyte)wrongCandidate.z;
+						expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = shapeChangeDuration;
+					}
+					else
+					{
+						// Projector
+						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "default";
+					}
+					// Projector
+					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
+				}
+			}
+			expanDialSticks.triggerProjectorChange();
+			expanDialSticks.triggerShapeChange();
+
+			string participantNumber = "<pos=0%><b>P" + numeroParticipant + "</b>";
+			string trialProgress = "<pos=90%><b>" + trials.Count() + "/" + nbTrials + "</b>";
+			string legend = participantNumber + trialProgress;
+			expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 16, Color.black, legend, new Vector3(90f, -90f, 0f));
+			expanDialSticks.setBorderBackground(Color.white);
+			expanDialSticks.triggerTextureChange();
+
+		}
+		else
+		{
+			Quit();
+		}
+	}
+
 	void Update()
 	{
 		// check if ExpanDialSticks is connected
@@ -664,10 +569,10 @@ public class XP2_P1 : MonoBehaviour
 		{
 			currTime = Time.time;
 
-			if(toNextTarget == true)
+			if(toNextTrial == true)
 			{
-				TriggerNextTarget();
-				toNextTarget = false;
+				TriggerNextTrial();
+				toNextTrial = false;
 			}
 
 			//CheckShapeChangeUnderBody();
@@ -679,21 +584,6 @@ public class XP2_P1 : MonoBehaviour
 				RandomColor();
 				prevRandomTextureTime = currTime;
 			}
-			// random icon every 5 secondes
-			/*if (currTime - prevRandomIconTime >= 5f)
-			{
-				Debug.Log("RandomIcon!");
-				RandomIcon();
-				prevRandomIconTime = currTime;
-			}*/
-
-			// random shape every 4 secondes
-			/*if (currTime - prevRandomShapeTime >= 4f)
-			{
-				Debug.Log("RandomShape!");
-				RandomShape();
-				prevRandomShapeTime = currTime;
-			}*/
 
 			if (Input.GetKey("escape"))
 			{
@@ -702,9 +592,7 @@ public class XP2_P1 : MonoBehaviour
 
 			if (Input.GetKeyDown(KeyCode.RightArrow))
 			{
-					int i = (int)(currTarget / ExpanDialSticks.nbColumns);
-					int j = (int)(currTarget % ExpanDialSticks.nbColumns);
-					HandleRotationChanged(this, new ExpanDialStickEventArgs(DateTime.Now, i, j, 0, 10, 10));
+					HandleRotationChanged(this, new ExpanDialStickEventArgs(DateTime.Now, rightCandidate.x, rightCandidate.y, 0, 10, 10));
 			}
 		}
 	}

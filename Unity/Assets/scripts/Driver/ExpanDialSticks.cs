@@ -1173,6 +1173,11 @@ public class ExpanDialSticks : MonoBehaviour
 							OnYAxisChanged(this, new ExpanDialStickEventArgs(t, i, j, modelMatrix[i, j].CurrentAxisY - events[1], modelMatrix[i, j].CurrentAxisY, events[1]));
 							//Debug.Log("(" + i + ", " + j + ") Y Axis Event.");
 						}
+						if (events[2] != 0f && (events[4] == 0f || (events[4] != 0f && modelMatrix[i, j].CurrentHolding))) // Click events
+						{
+							OnClickChanged(this, new ExpanDialStickEventArgs(t, i, j, modelMatrix[i, j].CurrentSelectCount - events[2], modelMatrix[i, j].CurrentSelectCount, events[2]));
+							//Debug.Log("(" + i + ", " + j + ") Select Event.");
+						}
 						if (events[3] != 0f) // Rotation events
 						{
 							OnRotationChanged(this, new ExpanDialStickEventArgs(t, i, j, modelMatrix[i, j].CurrentRotation - events[3], modelMatrix[i, j].CurrentRotation, events[3]));
@@ -1185,11 +1190,6 @@ public class ExpanDialSticks : MonoBehaviour
 							//Debug.Log("(" + i + ", " + j + ") Encoder Event.");
 						}
 
-						if (events[2] != 0f && (events[4] == 0f || (events[4] != 0f && modelMatrix[i, j].CurrentHolding))) // Click events
-						{
-							OnClickChanged(this, new ExpanDialStickEventArgs(t, i, j, modelMatrix[i, j].CurrentSelectCount - events[2], modelMatrix[i, j].CurrentSelectCount, events[2]));
-							//Debug.Log("(" + i + ", " + j + ") Select Event.");
-						}
 
 						if (events[5] != 0f) // Reaching events
 						{
