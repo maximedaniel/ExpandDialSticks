@@ -136,6 +136,7 @@ namespace Leap.Unity {
         return matrix;
     }
 
+    public MyCapsuleHand otherHand;
     private const int TOTAL_JOINT_COUNT = 4 * 5;
     private const float CYLINDER_MESH_RESOLUTION = 0.1f; //in centimeters, meshes within this resolution will be re-used
     private const int THUMB_BASE_INDEX = (int)Finger.FingerType.TYPE_THUMB * 4;
@@ -447,18 +448,29 @@ namespace Leap.Unity {
         _rightColorIndex = (_rightColorIndex + 1) % _rightColorList.Length;
       }
       ShowGameObjects();
-     // setCollisionMode(true);
+
+        // If the other hand is still tracked
+        if (!otherHand.IsTracked)
+        {
+            // then hide this one
+            otherHand.HideGameObjects();
+        }
+        
     }
     public override void FinishHand()
     {
-      Debug.Log(handedness + "FinishHand()");
-      HideGameObjects();
-      //setCollisionMode(false);
-      base.FinishHand();
+         Debug.Log(handedness + "FinishHand()");
+         base.FinishHand();
+        // If the other hand is still tracked
+        if (otherHand.IsTracked)
+        {
+            // then hide this one
+            this.HideGameObjects();
+        }
 
     }
         // Project /point/ onto a line.
-    public static Vector3 ProjectPointLine(Vector3 point, Vector3 lineStart, Vector3 lineEnd)
+        public static Vector3 ProjectPointLine(Vector3 point, Vector3 lineStart, Vector3 lineEnd)
     {
         Vector3 relativePoint = point - lineStart;
         Vector3 lineDirection = lineEnd - lineStart;
@@ -553,6 +565,7 @@ namespace Leap.Unity {
       //Debug.Log(handedness + "UpdateHand()");
 
       if (_fillColliders == null || _fingerColliders == null || _handColliders == null || _forearmColliders == null) return; //InstantiateGameObjects();
+
       int _currFingerColliderIndex = 0;
       int _currFillColliderIndex = 0;
       _curSphereIndex = 0;
