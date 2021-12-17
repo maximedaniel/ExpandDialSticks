@@ -43,8 +43,10 @@ public class XP2_P1 : MonoBehaviour
 	private ExpanDialSticks expanDialSticks;
 	private bool connected;
 
+	private const float LOG_INTERVAL = 0.2f; // 0.2f;
 	private float currTime;
 	private float prevRandomTextureTime;
+	private float prevMetricsTime;
 
 
 	private const int minPos = 10;
@@ -57,12 +59,16 @@ public class XP2_P1 : MonoBehaviour
 	private int numeroParticipant = 0;
 	private bool unknownParticipant = true;
 
+	public const string MQTT_EMPATICA_RECORDER = "EMPATICA_RECORDER";
+	public const string MQTT_SYSTEM_RECORDER = "SYSTEM_RECORDER";
+	public const string CMD_START = "START";
+	public const string CMD_STOP = "STOP";
+
 	private ExpanDialSticks.SafetyOverlayMode currOverlay;
 	private enum IconFactor { TwoIconsUnder, OneIconUnder, NoIconUnder};
 	private IconFactor currIconFactor;
 	private int nbIconFactor;
-	private const int nbRepeat = 3;
-	private const int nbChange = 3;
+	private const int nbRepeat = 5;
 	private List<IconFactor> trials;
 	private int nbTrials;
 	private List<Vector2Int> candidates;
@@ -156,18 +162,22 @@ public class XP2_P1 : MonoBehaviour
 	private void HandleRotationChanged(object sender, ExpanDialStickEventArgs e)
 	{
 
-		DebugInSitu("target(" + e.i + ", " + e.j + ") == right(" + rightCandidate.x + ", " + rightCandidate.y + ")", Color.black, Color.white);
 		if (toNextTrial == false)
 		{
 			
 			if (e.i == rightCandidate.x && e.j == rightCandidate.y) // right candidate
 			{
+				string payload = "USER_RIGHT_PIN " + e.i + " " + e.j + " " + expanDialSticks.modelMatrix[e.i, e.j].CurrentPosition;
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(payload), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				//DebugInSitu("target("+e.i+", "+e.j+") == right("+ rightCandidate.x + ", "+ rightCandidate.y + ")", Color.black, Color.green);
 				toNextTrial = true;
 
 			}
 			else // wrong candidate
 			{
+
+				string payload = "USER_WRONG_PIN " + e.i + " " + e.j + " " + expanDialSticks.modelMatrix[e.i, e.j].CurrentPosition; 
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(payload), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 
 				//DebugInSitu("target(" + e.i + ", " + e.j + ") != right(" + rightCandidate.x + ", " + rightCandidate.y + ")", Color.black, Color.red);
 			}
@@ -327,11 +337,13 @@ public class XP2_P1 : MonoBehaviour
 
 			stringParticipant = GUI.TextField(new Rect(midX - 55, midY, 50, componentHeight), stringParticipant, 25);
 
-			if (GUI.Button(new Rect(midX + 5, midY - 50, 150, componentHeight), "Training"))
+			if (GUI.Button(new Rect(midX + 5, midY - 50, 150, componentHeight), "Training Overlay"))
 			{
 				training = true;
 				numeroParticipant = int.Parse(stringParticipant);
 				Debug.Log("TRAINING");
+				string identity = "USER_IDENTITY " + numeroParticipant + " TRAINING";
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				// init trials
 				/*InitTrials();
 				moleIndex = -1;
@@ -345,7 +357,7 @@ public class XP2_P1 : MonoBehaviour
 				unknownParticipant = false;
 			}
 
-			if (GUI.Button(new Rect(midX + 5, midY - 25, 150, componentHeight), "Motion Zone Edge"))
+			if (GUI.Button(new Rect(midX + 5, midY - 25, 150, componentHeight), "Edge Overlay"))
 			{
 
 				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
@@ -357,12 +369,12 @@ public class XP2_P1 : MonoBehaviour
 				expanDialSticks.SetOverlayMode(currOverlay);
 				expanDialSticks.triggerSafetyChange();
 
-				//string identity = "USER_IDENTITY " + numeroParticipant + " USER_TRIGGERED SMS TRIAL";
-				//expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+				string identity = "USER_IDENTITY " + numeroParticipant + " EDGE_OVERLAY";
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				unknownParticipant = false;
 			}
 
-			if (GUI.Button(new Rect(midX + 5, midY, 150, componentHeight), "Motion Trajectory Fill"))
+			if (GUI.Button(new Rect(midX + 5, midY, 150, componentHeight), "Surface Overlay"))
 			{
 
 				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
@@ -374,11 +386,11 @@ public class XP2_P1 : MonoBehaviour
 				expanDialSticks.SetOverlayMode(currOverlay);
 				expanDialSticks.triggerSafetyChange();
 
-				//string identity = "USER_IDENTITY " + numeroParticipant + " USER_TRIGGERED SMS TRIAL";
-				//expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+				string identity = "USER_IDENTITY " + numeroParticipant + " SURFACE_OVERLAY";
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				unknownParticipant = false;
 			}
-			if (GUI.Button(new Rect(midX + 5, midY + 25, 150, componentHeight), "Motion Trajectory Hull"))
+			if (GUI.Button(new Rect(midX + 5, midY + 25, 150, componentHeight), "Hull Overlay"))
 			{
 
 				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
@@ -390,11 +402,11 @@ public class XP2_P1 : MonoBehaviour
 				expanDialSticks.SetOverlayMode(currOverlay);
 				expanDialSticks.triggerSafetyChange();
 
-				//string identity = "USER_IDENTITY " + numeroParticipant + " USER_TRIGGERED SMS TRIAL";
-				//expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+				string identity = "USER_IDENTITY " + numeroParticipant + " HULL_OVERLAY";
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				unknownParticipant = false;
 			}
-			if (GUI.Button(new Rect(midX + 5, midY + 50, 150, componentHeight), "Motion Trajectory Zone"))
+			if (GUI.Button(new Rect(midX + 5, midY + 50, 150, componentHeight), "Zone Overlay"))
 			{
 
 				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
@@ -406,8 +418,8 @@ public class XP2_P1 : MonoBehaviour
 				expanDialSticks.SetOverlayMode(currOverlay);
 				expanDialSticks.triggerSafetyChange();
 
-				//string identity = "USER_IDENTITY " + numeroParticipant + " USER_TRIGGERED SMS TRIAL";
-				//expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+				string identity = "USER_IDENTITY " + numeroParticipant + " ZONE_OVERLAY";
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				unknownParticipant = false;
 			}
 		}
@@ -512,7 +524,6 @@ public class XP2_P1 : MonoBehaviour
 			Debug.Log("Candidates Success!");
 			trials.RemoveAt(iconFactorIndex);
 
-
 			// Output Control
 			for (int i = 0; i < expanDialSticks.NbRows; i++)
 			{
@@ -555,12 +566,19 @@ public class XP2_P1 : MonoBehaviour
 			expanDialSticks.setBorderBackground(Color.white);
 			expanDialSticks.triggerTextureChange();
 
+			string rightCandidateMsg = "SYSTEM_RIGHT_PIN " + rightCandidate.x + " " + rightCandidate.y + " " + rightCandidate.z;
+			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(rightCandidateMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+			string wrongCandidateMsg = "SYSTEM_WRONG_PIN " + wrongCandidate.x + " " + wrongCandidate.y + " " + wrongCandidate.z;
+			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(wrongCandidateMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+
+
 		}
 		else
 		{
 			Quit();
 		}
 	}
+
 
 	void Update()
 	{
@@ -585,6 +603,12 @@ public class XP2_P1 : MonoBehaviour
 				prevRandomTextureTime = currTime;
 			}
 
+			if (currTime - prevMetricsTime >= LOG_INTERVAL)
+			{
+				LogMetrics();
+				prevMetricsTime = currTime;
+			}
+
 			if (Input.GetKey("escape"))
 			{
 				Quit();
@@ -595,5 +619,31 @@ public class XP2_P1 : MonoBehaviour
 					HandleRotationChanged(this, new ExpanDialStickEventArgs(DateTime.Now, rightCandidate.x, rightCandidate.y, 0, 10, 10));
 			}
 		}
+	}
+
+	void LogMetrics()
+	{
+
+		//string colorString = "SYSTEM_COLOR ";
+		string proximityString = "SYSTEM_PROXIMITY ";
+		string positionString = "SYSTEM_POSITION ";
+		string leftHandString = "USER_LEFT_HAND " + leftHand.ToString();
+		string rightHandString = "USER_RIGHT_HAND " + rightHand.ToString();
+
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+		{
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+			{
+				//colorString += "0x" + ColorUtility.ToHtmlStringRGB(expanDialSticks.viewMatrix[i, j].CurrentColor) + " ";
+				proximityString += expanDialSticks.viewMatrix[i, j].CurrentProximity + " ";
+				positionString += expanDialSticks.viewMatrix[i, j].CurrentPosition + " ";
+			}
+		}
+
+		//expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(colorString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(proximityString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(positionString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(leftHandString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(rightHandString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 	}
 }
