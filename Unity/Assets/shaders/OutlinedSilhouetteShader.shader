@@ -82,6 +82,8 @@ Shader "Outlined/SilhouetteShader" {
 			UNITY_DEFINE_INSTANCED_PROP(float4, _OutlineColor)
 			UNITY_DEFINE_INSTANCED_PROP(float, _SecondOutline)
 			UNITY_DEFINE_INSTANCED_PROP(float4, _SecondOutlineColor)
+			UNITY_DEFINE_INSTANCED_PROP(float, _ThirdOutline)
+			UNITY_DEFINE_INSTANCED_PROP(float4, _ThirdOutlineColor)
 			// Left Hand
 			UNITY_DEFINE_INSTANCED_PROP(float4, _LeftHandCenter)
 			UNITY_DEFINE_INSTANCED_PROP(float, _LeftHandRadius)
@@ -262,7 +264,7 @@ Shader "Outlined/SilhouetteShader" {
 			ENDCG
 		}
 			// note that a vertex shader is specified here but its using the one above
-			Pass {
+		Pass {
 				Name "OUTLINE 2"
 				Tags { "LightMode" = "Always" }
 				Cull Front
@@ -328,7 +330,6 @@ Shader "Outlined/SilhouetteShader" {
 			}
 			ENDCG
 		}
-
 	}
 
 		Fallback "Diffuse"

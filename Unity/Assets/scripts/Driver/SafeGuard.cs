@@ -59,14 +59,30 @@ public class SafeGuard : MonoBehaviour
 	public Mesh _dotMesh;
 	public Material _dotMat;
 	private Matrix4x4[] _dotMatrices;
-	private Vector4[] _dotColors, _dotOutlineColors, _dotSecondOutlineColors;
-	private float[] _dotOutlineWidths, _dotSecondOutlineWidths;
+	private Vector4[] _dotColors, _dotOutlineColors, _dotSecondOutlineColors, _dotThirdOutlineColors, _dotFourthOutlineColors, _dotFifthOutlineColors;
+	private float[] _dotOutlineWidths, _dotSecondOutlineWidths, _dotThirdOutlineWidths, _dotFourthOutlineWidths, _dotFifthOutlineWidths;
 	private Vector4[] _dotLeftHandCenters, _dotRightHandCenters;
 	private float[] _dotLeftHandRadius, _dotRightHandRadius;
 	private Vector4[] _dotLeftBackArmCenters, _dotRightBackArmCenters;
 	private Vector4[] _dotLeftFrontArmCenters, _dotRightFrontArmCenters;
 	private float[] _dotLeftArmRadius, _dotRightArmRadius;
 	private int _dotIndex = 0;
+
+
+
+	private float minOrthographicSize = 0f; // -1.5f / 2f;
+	private float maxOrthographicSize = 0f; // 3.3f / 3.3f;
+	private float minOutlineWidth = 0f;
+	private float maxOutlineWidth = 0f;
+	private float minSecondOutlineWidth = 0f;
+	private float maxSecondOutlineWidth = 0f;
+	private float minThirdOutlineWidth = 0f; 
+	private float maxThirdOutlineWidth = 0f;
+	private float minFourthOutlineWidth = 0f;
+	private float maxFourthOutlineWidth = 0f;
+	private float minFifthOutlineWidth = 0f;
+	private float maxFifthOutlineWidth = 0f;
+
 
 	public Mesh _lineMesh;
 	public Material _lineMat;
@@ -91,7 +107,7 @@ public class SafeGuard : MonoBehaviour
 	private float[] _hullLeftArmRadius, _hullRightArmRadius;
 	private int _hullIndex = 0;
 
-	public enum SafetyOverlayMode {None, Dot, Line, Zone};
+	public enum SafetyOverlayMode {None, Dot, Surface, Hull, Zone};
 	private SafetyOverlayMode overlayMode = SafetyOverlayMode.Dot;
 	public enum SemioticMode { None, Index, Symbol, Icon};
 	private SemioticMode semioticMode = SemioticMode.None;
@@ -309,6 +325,12 @@ public class SafeGuard : MonoBehaviour
 		_dotOutlineWidths = new float[32];
 		_dotSecondOutlineColors = new Vector4[32];
 		_dotSecondOutlineWidths = new float[32];
+		_dotThirdOutlineColors = new Vector4[32];
+		_dotThirdOutlineWidths = new float[32];
+		_dotFourthOutlineColors = new Vector4[32];
+		_dotFourthOutlineWidths = new float[32];
+		_dotFifthOutlineColors = new Vector4[32];
+		_dotFifthOutlineWidths = new float[32];
 		_dotLeftHandCenters = new Vector4[32];
 		_dotRightHandCenters = new Vector4[32];
 		_dotLeftHandRadius = new float[32];
@@ -442,6 +464,13 @@ public class SafeGuard : MonoBehaviour
 		dotBlock.SetFloatArray("_Outline", _dotOutlineWidths);
 		dotBlock.SetVectorArray("_SecondOutlineColor", _dotSecondOutlineColors);
 		dotBlock.SetFloatArray("_SecondOutline", _dotSecondOutlineWidths);
+		dotBlock.SetVectorArray("_ThirdOutlineColor", _dotThirdOutlineColors);
+		dotBlock.SetFloatArray("_ThirdOutline", _dotThirdOutlineWidths);
+		dotBlock.SetVectorArray("_FourthOutlineColor", _dotFourthOutlineColors);
+		dotBlock.SetFloatArray("_FourthOutline", _dotFourthOutlineWidths);
+		dotBlock.SetVectorArray("_FifthOutlineColor", _dotFifthOutlineColors);
+		dotBlock.SetFloatArray("_FifthOutline", _dotFifthOutlineWidths);
+
 		dotBlock.SetVectorArray("_LeftHandCenter", _dotLeftHandCenters);
 		dotBlock.SetFloatArray("_LeftHandRadius", _dotLeftHandRadius);
 		dotBlock.SetVectorArray("_LeftBackArmCenter", _dotLeftBackArmCenters);
@@ -564,12 +593,73 @@ public class SafeGuard : MonoBehaviour
 
 		float backgroundDistance = 0f;
 
-		float minOrthographicSize = pins.diameter - 2f; // -1.5f / 2f;
-		float maxOrthographicSize = minOrthographicSize * 3.3f; // 3.3f / 3.3f;
-		float minOutlineWidth = 1.5f;
-		float maxOutlineWidth = minOutlineWidth * 3.3f;
-		float minSecondOutlineWidth = 2.9f;
-		float maxSecondOutlineWidth = minSecondOutlineWidth * 3.3f;
+
+		// Handle Overlay Modes à priori
+		switch (overlayMode)
+		{
+			case SafetyOverlayMode.Dot:
+				// set outlines width
+				minOrthographicSize = pins.diameter - 3f; // -1.5f / 2f;
+				maxOrthographicSize = minOrthographicSize * 3.3f; // 3.3f / 3.3f;
+				minOutlineWidth = 1f;
+				maxOutlineWidth = minOutlineWidth * 3.3f;
+				minSecondOutlineWidth = 2f;
+				maxSecondOutlineWidth = minSecondOutlineWidth * 3.3f;
+				minThirdOutlineWidth = 4f;
+				maxThirdOutlineWidth = minThirdOutlineWidth * 3.3f;
+				minFourthOutlineWidth = 5f;
+				maxFourthOutlineWidth = minFourthOutlineWidth * 3.3f;
+				minFifthOutlineWidth = 6f;
+				maxFifthOutlineWidth = minFifthOutlineWidth * 3.3f;
+				break;
+			case SafetyOverlayMode.Surface:
+				// set outlines width
+				minOrthographicSize = pins.diameter - 2f; // -1.5f / 2f;
+				maxOrthographicSize = minOrthographicSize * 3.3f; // 3.3f / 3.3f;
+				minOutlineWidth = 0f;
+				maxOutlineWidth = minOutlineWidth * 3.3f;
+				minSecondOutlineWidth = 0f;
+				maxSecondOutlineWidth = minSecondOutlineWidth * 3.3f;
+				minThirdOutlineWidth = 0f;
+				maxThirdOutlineWidth = minThirdOutlineWidth * 3.3f;
+				minFourthOutlineWidth = 1.5f;
+				maxFourthOutlineWidth = minFourthOutlineWidth * 3.3f;
+				minFifthOutlineWidth = 2.9f;
+				maxFifthOutlineWidth = minFifthOutlineWidth * 3.3f;
+				break;
+			case SafetyOverlayMode.Hull:
+				// set outlines width
+				minOrthographicSize = pins.diameter - 2f; // -1.5f / 2f;
+				maxOrthographicSize = minOrthographicSize * 3.3f; // 3.3f / 3.3f;
+				minOutlineWidth = 0f;
+				maxOutlineWidth = minOutlineWidth * 3.3f;
+				minSecondOutlineWidth = 0f;
+				maxSecondOutlineWidth = minSecondOutlineWidth * 3.3f;
+				minThirdOutlineWidth = 0f;
+				maxThirdOutlineWidth = minThirdOutlineWidth * 3.3f;
+				minFourthOutlineWidth = 1.5f;
+				maxFourthOutlineWidth = minFourthOutlineWidth * 3.3f;
+				minFifthOutlineWidth = 2.9f;
+				maxFifthOutlineWidth = minFifthOutlineWidth * 3.3f;
+				break;
+			case SafetyOverlayMode.Zone:
+				// set outlines width
+				minOrthographicSize = pins.diameter - 2f; // -1.5f / 2f;
+				maxOrthographicSize = minOrthographicSize * 3.3f; // 3.3f / 3.3f;
+				minOutlineWidth = 0f;
+				maxOutlineWidth = minOutlineWidth * 3.3f;
+				minSecondOutlineWidth = 0f;
+				maxSecondOutlineWidth = minSecondOutlineWidth * 3.3f;
+				minThirdOutlineWidth = 0f;
+				maxThirdOutlineWidth = minThirdOutlineWidth * 3.3f;
+				minFourthOutlineWidth = 1.5f;
+				maxFourthOutlineWidth = minFourthOutlineWidth * 3.3f;
+				minFifthOutlineWidth = 2.9f;
+				maxFifthOutlineWidth = minFifthOutlineWidth * 3.3f;
+				break;
+			case SafetyOverlayMode.None:
+				return;
+		}
 
 		//float minScaleDistance = 0f;
 		//float maxScaleDistance = minOrthographicSize;
@@ -721,10 +811,17 @@ public class SafeGuard : MonoBehaviour
 
 					Color dotColor = (displacement > 0) ? Color.Lerp(_middleDivergingColor, _rightDivergingColor, displacement/40f) : Color.Lerp(_middleDivergingColor, _leftDivergingColor, -displacement/40f);
 					_dotColors[_dotIndex] = (feedbackMode != FeedbackMode.State) ? dotColor : new Color(1f, 1f, 1f, 0f);//Color.white;
-					_dotOutlineColors[_dotIndex] = new Vector4(0f, 0f, 0f, 1f);
+					_dotOutlineColors[_dotIndex] = new Vector4(1f, 1f, 1f, 1f);
 					_dotOutlineWidths[_dotIndex] = Mathf.Lerp(minOutlineWidth, maxOutlineWidth, scaleDistanceCoeff);
-					_dotSecondOutlineColors[_dotIndex] = new Vector4(1f, 1f, 1f, 1f);
+					_dotSecondOutlineColors[_dotIndex] = new Vector4(0f, 0f, 0f, 1f);
 					_dotSecondOutlineWidths[_dotIndex] = Mathf.Lerp(minSecondOutlineWidth, maxSecondOutlineWidth, scaleDistanceCoeff);
+					_dotThirdOutlineColors[_dotIndex] = _dotColors[_dotIndex];
+					_dotThirdOutlineWidths[_dotIndex] = Mathf.Lerp(minThirdOutlineWidth, maxThirdOutlineWidth, scaleDistanceCoeff);
+					_dotFourthOutlineColors[_dotIndex] = new Vector4(0f, 0f, 0f, 1f);
+					_dotFourthOutlineWidths[_dotIndex] = Mathf.Lerp(minFourthOutlineWidth, maxFourthOutlineWidth, scaleDistanceCoeff);
+					_dotFifthOutlineColors[_dotIndex] = new Vector4(1f, 1f, 1f, 1f);
+					_dotFifthOutlineWidths[_dotIndex] = Mathf.Lerp(minFifthOutlineWidth, maxFifthOutlineWidth, scaleDistanceCoeff);
+
 					// left hand mask
 					_dotLeftHandCenters[_dotIndex] = leftHandPos;
 					_dotLeftHandRadius[_dotIndex] = leftHandRadius;
@@ -922,7 +1019,7 @@ public class SafeGuard : MonoBehaviour
 			_hullIndex++;
 		}
 
-		// Handle Overlay Modes
+		// Handle Overlay Modes à posteriori
 		switch (overlayMode)
 		{
 			case SafetyOverlayMode.Dot:
@@ -938,7 +1035,20 @@ public class SafeGuard : MonoBehaviour
 					_armColors[i] = new Vector4(1f, 1f, 1f, 0f);
 				}
 			break;
-			case SafetyOverlayMode.Line:
+			case SafetyOverlayMode.Surface:
+				// hide lines and hull
+				_lineIndex = _hullIndex = 0;
+				// hide zones
+				for (int i = 0; i < _handIndex; i++)
+				{
+					_handColors[i] = new Vector4(1f, 1f, 1f, 0f);
+				}
+				for (int i = 0; i < _armIndex; i++)
+				{
+					_armColors[i] = new Vector4(1f, 1f, 1f, 0f);
+				}
+				break;
+			case SafetyOverlayMode.Hull:
 				// hide zones
 				for (int i = 0; i < _handIndex; i++)
 				{
@@ -956,10 +1066,8 @@ public class SafeGuard : MonoBehaviour
 				for (int i = 0; i < _dotIndex; i++)
 				{
 					_dotOutlineColors[i] = new Vector4(1f, 1f, 1f, 0f);
-				}
-				for (int i = 0; i < _dotIndex; i++)
-				{
 					_dotSecondOutlineColors[i] = new Vector4(1f, 1f, 1f, 0f);
+					_dotThirdOutlineColors[i] = new Vector4(1f, 1f, 1f, 0f);
 				}
 				break;
 			case SafetyOverlayMode.None:

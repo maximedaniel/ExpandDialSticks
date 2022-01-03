@@ -164,7 +164,7 @@ public class XP2_P1 : MonoBehaviour
 
 		if (toNextTrial == false)
 		{
-			
+			Debug.Log("target(" + e.i + ", " + e.j + ") == right(" + rightCandidate.x + ", " + rightCandidate.y + ")?");
 			if (e.i == rightCandidate.x && e.j == rightCandidate.y) // right candidate
 			{
 				string payload = "USER_RIGHT_PIN " + e.i + " " + e.j + " " + expanDialSticks.modelMatrix[e.i, e.j].CurrentPosition;
@@ -565,7 +565,8 @@ public class XP2_P1 : MonoBehaviour
 			expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 16, Color.black, legend, new Vector3(90f, -90f, 0f));
 			expanDialSticks.setBorderBackground(Color.white);
 			expanDialSticks.triggerTextureChange();
-
+			string iconSituationMsg = "ICON_APPARATUS " + currIconFactor;
+			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(iconSituationMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 			string rightCandidateMsg = "SYSTEM_RIGHT_PIN " + rightCandidate.x + " " + rightCandidate.y + " " + rightCandidate.z;
 			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(rightCandidateMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 			string wrongCandidateMsg = "SYSTEM_WRONG_PIN " + wrongCandidate.x + " " + wrongCandidate.y + " " + wrongCandidate.z;
@@ -598,7 +599,7 @@ public class XP2_P1 : MonoBehaviour
 			// random texture every 3 secondes
 			if (currTime - prevRandomTextureTime >= 3f)
 			{
-				Debug.Log("RandomTexture!");
+				//Debug.Log("RandomTexture!");
 				RandomColor();
 				prevRandomTextureTime = currTime;
 			}

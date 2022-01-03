@@ -164,6 +164,26 @@ public class Test : MonoBehaviour
 				Quit();
 			}
 
+			if (Input.GetKeyDown("i"))
+			{
+
+				for (int i = 0; i < expanDialSticks.NbRows; i++)
+				{
+					for (int j = 0; j < expanDialSticks.NbColumns; j++)
+					{
+						expanDialSticks.modelMatrix[i, j].TargetColor = Color.red;
+						expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = 0.1f;
+						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "cross-reverse";
+						expanDialSticks.modelMatrix[i, j].TargetProjectorColor = Color.white;
+						expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
+						expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
+						expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
+					}
+				}
+				expanDialSticks.triggerProjectorChange();
+				expanDialSticks.triggerTextureChange();
+			}
+
 			if (Input.GetKeyDown("n"))
 			{
 				int i = currentIndex / expanDialSticks.NbColumns;// int i = 4;

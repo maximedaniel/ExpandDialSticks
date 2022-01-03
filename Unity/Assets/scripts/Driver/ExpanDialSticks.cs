@@ -315,10 +315,10 @@ public class ExpanDialSticks : MonoBehaviour
 
 				break;
 			case SafetyOverlayMode.MotionTrajectoryFill:
-				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Dot, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.Intent);
+				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Surface, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.Intent);
 				break;
 			case SafetyOverlayMode.MotionTrajectoryHull:
-				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Line, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.Intent);
+				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Hull, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.Intent);
 				break;
 			case SafetyOverlayMode.MotionTrajectoryZone:
 				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Zone, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.Intent);
