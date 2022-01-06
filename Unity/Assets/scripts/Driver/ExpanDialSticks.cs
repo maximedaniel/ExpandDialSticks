@@ -133,8 +133,8 @@ public class ExpanDialSticks : MonoBehaviour
 	public MyCapsuleHand rightHand;
 	public enum SafetyMotionMode {SafetyRatedMonitoredStop, SpeedAndSeparationMonitoring};
 	public SafetyMotionMode safetyMotionMode = SafetyMotionMode.SafetyRatedMonitoredStop;
-	public enum SafetyOverlayMode { MotionZoneEdge, MotionTrajectoryFill, MotionTrajectoryHull, MotionTrajectoryZone};
-	public SafetyOverlayMode safetyOverlayMode = SafetyOverlayMode.MotionZoneEdge;
+	public enum SafetyOverlayMode {None, Edge, Fill, Hull, Zone};
+	public SafetyOverlayMode safetyOverlayMode = SafetyOverlayMode.Edge;
 	private int nbSeparationLevels = 1;
 
 
@@ -216,8 +216,26 @@ public class ExpanDialSticks : MonoBehaviour
 	private GameObject rightBorderBackground;
 	private Color backgroundColorRight;
 
+
+	private GameObject rightCornerText;
+	private Vector3 textRotationRightCorner;
+	private TextMeshPro textMeshRightCorner;
+	private TextAlignmentOptions textAlignmentRightCorner;
+	private int textSizeRightCorner;
+	private Color textColorRightCorner;
+	private string textRightCorner;
 	private GameObject rightCornerBackground;
 	private Color backgroundColorCornerRight;
+
+
+
+	private GameObject leftCornerText;
+	private Vector3 textRotationLeftCorner;
+	private TextMeshPro textMeshLeftCorner;
+	private TextAlignmentOptions textAlignmentLeftCorner;
+	private int textSizeLeftCorner;
+	private Color textColorLeftCorner;
+	private string textLeftCorner;
 	private GameObject leftCornerBackground;
 	private Color backgroundColorCornerLeft;
 
@@ -310,17 +328,17 @@ public class ExpanDialSticks : MonoBehaviour
 		safetyOverlayMode = overlayMode;
 		switch (safetyOverlayMode)
 		{
-			case SafetyOverlayMode.MotionZoneEdge:
+			case SafetyOverlayMode.Edge:
 				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Dot, SafeGuard.SemioticMode.None, SafeGuard.FeedbackMode.State);
 
 				break;
-			case SafetyOverlayMode.MotionTrajectoryFill:
+			case SafetyOverlayMode.Fill:
 				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Surface, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.Intent);
 				break;
-			case SafetyOverlayMode.MotionTrajectoryHull:
+			case SafetyOverlayMode.Hull:
 				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Hull, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.Intent);
 				break;
-			case SafetyOverlayMode.MotionTrajectoryZone:
+			case SafetyOverlayMode.Zone:
 				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Zone, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.Intent);
 				break;
 			default:
@@ -502,7 +520,6 @@ public class ExpanDialSticks : MonoBehaviour
 		leftBorderBackground.transform.Rotate(new Vector3(0f, 0f, -90f), Space.Self);
 		leftBorderBackground.transform.localScale = new Vector3((diameter + borderOffset/2), nbRows * (diameter + offset) + 2*offset + 2*borderOffset, 1f);
 		leftBorderText.transform.position += new Vector3(0f, 1f, 0f);
-
 		textMeshLeft = leftBorderText.AddComponent<TextMeshPro>();
 		leftBorderText.GetComponent<RectTransform>().sizeDelta = new Vector2(nbRows * diameter, diameter);
 		textMeshLeft.alignment = textAlignmentLeft = TextAlignmentOptions.Center;
@@ -513,11 +530,6 @@ public class ExpanDialSticks : MonoBehaviour
 
 		// Corner Quads
 
-		/*GameObject topRightCornerQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
-		topRightCornerQuad.transform.localScale = new Vector3(diameter, diameter, 1f);
-		topRightCornerQuad.transform.LookAt(Vector3.down);
-		topRightCornerQuad.transform.position = new Vector3(-(diameter + offset), height/2, nbColumns * (diameter + offset));*/
-
 		backgroundColorCornerLeft = backgroundColorCornerRight = Color.white;
 
 		rightCornerBackground = GameObject.CreatePrimitive(PrimitiveType.Quad);
@@ -525,6 +537,17 @@ public class ExpanDialSticks : MonoBehaviour
 		rightCornerBackground.transform.localScale = new Vector3(diameter  - borderOffset, diameter  + borderOffset/2, 1f);
 		rightCornerBackground.transform.LookAt(Vector3.down);
 		rightCornerBackground.transform.position = new Vector3(nbRows * (diameter + offset) + borderOffset/2, height/2,  nbColumns * (diameter + offset) + borderOffset);
+		rightCornerText = Instantiate(rightCornerBackground);
+		rightCornerText.transform.position += new Vector3(0f, 1f, 0f);
+		rightCornerText.transform.localScale = new Vector3(1, 1, 1);
+		textMeshRightCorner = rightCornerText.AddComponent<TextMeshPro>();
+		rightCornerText.GetComponent<RectTransform>().sizeDelta = new Vector2(nbRows * diameter, diameter);
+
+		textMeshRightCorner.alignment = textAlignmentRightCorner = TextAlignmentOptions.Center;
+		textMeshRightCorner.fontSize = textSizeRightCorner = 16;
+		textMeshRightCorner.color = textColorRightCorner = Color.black;
+		textMeshRightCorner.text = textRightCorner = "";
+		textRotationRightCorner = new Vector3(90f, 0f, 0f);
 
 
 
@@ -533,7 +556,16 @@ public class ExpanDialSticks : MonoBehaviour
 		leftCornerBackground.transform.localScale = new Vector3(diameter  - borderOffset, diameter  + borderOffset/2, 1f);
 		leftCornerBackground.transform.LookAt(Vector3.down);
 		leftCornerBackground.transform.position = new Vector3(nbRows * (diameter + offset) + borderOffset/2, height/2, -(diameter + offset + borderOffset));
-
+		leftCornerText = Instantiate(leftCornerBackground);
+		leftCornerText.transform.position += new Vector3(0f, 1f, 0f);
+		leftCornerText.transform.localScale = new Vector3(1, 1, 1);
+		textMeshLeftCorner = leftCornerText.AddComponent<TextMeshPro>();
+		leftCornerText.GetComponent<RectTransform>().sizeDelta = new Vector2(nbRows * diameter, diameter);
+		textMeshLeftCorner.alignment = textAlignmentLeftCorner = TextAlignmentOptions.Center;
+		textMeshLeftCorner.fontSize = textSizeLeftCorner = 16;
+		textMeshLeftCorner.color = textColorLeftCorner = Color.black;
+		textMeshLeftCorner.text = textLeftCorner = "";
+		textRotationLeftCorner = new Vector3(90f, 0f, 0f);
 		/*GameObject topLeftCornerQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
 		topLeftCornerQuad.transform.localScale = new Vector3(diameter, diameter, 1f);
 		topLeftCornerQuad.transform.LookAt(Vector3.down);
@@ -581,7 +613,7 @@ public class ExpanDialSticks : MonoBehaviour
 		{
 
 			BROKER_ADDRESS = LOCALHOST_BROKER_ADDRESS;
-			//Debug.LogException(e0, this);
+
 			try
 			{
 				// Connecting to localhosy MQTT Broker
@@ -828,6 +860,14 @@ public class ExpanDialSticks : MonoBehaviour
 		this.textRotationRight = textRotation;
 	}
 
+	public void setRightCornerText(TextAlignmentOptions textAlignment, int textSize, Color textColor, string text, Vector3 textRotation)
+	{
+		this.textAlignmentRightCorner = textAlignment;
+		this.textSizeRightCorner = textSize;
+		this.textColorRightCorner = textColor;
+		this.textRightCorner = text;
+		this.textRotationRightCorner = textRotation;
+	}
 
 	public void setLeftBorderText(TextAlignmentOptions textAlignment, int textSize, Color textColor, string text, Vector3 textRotation){
 		this.textAlignmentLeft = textAlignment;
@@ -836,6 +876,16 @@ public class ExpanDialSticks : MonoBehaviour
 		this.textLeft = text;
 		this.textRotationLeft = textRotation;
 	}
+
+	public void setLeftCornerText(TextAlignmentOptions textAlignment, int textSize, Color textColor, string text, Vector3 textRotation)
+	{
+		this.textAlignmentLeftCorner = textAlignment;
+		this.textSizeLeftCorner = textSize;
+		this.textColorLeftCorner = textColor;
+		this.textLeftCorner = text;
+		this.textRotationLeftCorner = textRotation;
+	}
+
 	public void setBottomBorderBackground(Color backgroundColor)
 	{
 		this.backgroundColorBottom = backgroundColor;
@@ -1310,11 +1360,23 @@ public class ExpanDialSticks : MonoBehaviour
 		textMeshRight.text = textRight;
 		rightBorderText.transform.eulerAngles = textRotationRight;
 
+		textMeshRightCorner.alignment = textAlignmentRightCorner;
+		textMeshRightCorner.fontSize = textSizeRightCorner;
+		textMeshRightCorner.color = textColorRightCorner;
+		textMeshRightCorner.text = textRightCorner;
+		rightCornerText.transform.eulerAngles = textRotationRightCorner;
+
 		textMeshLeft.alignment  = textAlignmentLeft;
 		textMeshLeft.fontSize = textSizeLeft;
 		textMeshLeft.color = textColorLeft;
 		textMeshLeft.text = textLeft;
 		leftBorderText.transform.eulerAngles = textRotationLeft;
+
+		textMeshLeftCorner.alignment = textAlignmentLeftCorner;
+		textMeshLeftCorner.fontSize = textSizeLeftCorner;
+		textMeshLeftCorner.color = textColorLeftCorner;
+		textMeshLeftCorner.text = textLeftCorner;
+		leftCornerText.transform.eulerAngles = textRotationLeftCorner;
 
 		bottomBorderBackground.GetComponent<Renderer>().material.color = backgroundColorBottom;
 		rightBorderBackground.GetComponent<Renderer>().material.color = backgroundColorRight;

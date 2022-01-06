@@ -153,11 +153,11 @@ public class XP1_P2 : MonoBehaviour
 		// wait for no hand presence
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("WAIT_FOR_NO_HAND_PRESENCE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		Debug.Log("WaitForNoHandPresence...");
-		List<Vector3> safePositionAndSpeeds = new List<Vector3>();
+		/*List<Vector3> safePositionAndSpeeds = new List<Vector3>();
 		Vector2 gaugePosition = gaugePositions[gaugeIndex];
-		bool gaugeIsPresent = false;
+		bool gaugeIsPresent = false;*/
 		float waitingSince = 0f;
-		int waitingCount = 1;
+		//int waitingCount = 1;
 		/*while (!gaugeIsPresent)
 		{
 			if (!leftHand.IsActive() && !rightHand.IsActive())

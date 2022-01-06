@@ -137,6 +137,8 @@ namespace Leap.Unity {
     }
 
     public MyCapsuleHand otherHand;
+
+    private bool frozen = false;
     private const int TOTAL_JOINT_COUNT = 4 * 5;
     private const float CYLINDER_MESH_RESOLUTION = 0.1f; //in centimeters, meshes within this resolution will be re-used
     private const int THUMB_BASE_INDEX = (int)Finger.FingerType.TYPE_THUMB * 4;
@@ -166,9 +168,9 @@ namespace Leap.Unity {
     public Mesh _sphereMesh;
     public Mesh _cylinderMesh;
 
-    [MinValue(3)]
+   /* [MinValue(3)]
     [SerializeField]
-    private int _cylinderResolution = 12;
+    private int _cylinderResolution = 12;*/
 
     [MinValue(0)]
     [SerializeField]
@@ -212,8 +214,6 @@ namespace Leap.Unity {
     private CombineInstance[] combine;
     private int _curSphereIndex, _curCylinderIndex;
 
-    private string _toString = "";
-
     public override ModelType HandModelType {
       get {
         return ModelType.Graphics;
@@ -251,6 +251,15 @@ namespace Leap.Unity {
     public override void SetLeapHand(Hand hand) {
       _hand = hand;
     }
+
+    public void Unfreeze()
+	{
+        frozen = false;
+	}
+    public void Freeze()
+	{
+        frozen = true;
+	}
 
     private void InstantiateGameObjects()
 	{
@@ -438,6 +447,8 @@ namespace Leap.Unity {
     #endif
 
     public override void BeginHand() {
+      if (frozen) return;  // do nothing if frozen
+
       Debug.Log(handedness + "BeginHand()");
       base.BeginHand();
       if (_hand.IsLeft) {
@@ -459,6 +470,8 @@ namespace Leap.Unity {
     }
     public override void FinishHand()
     {
+           
+         if (frozen) return;  // do nothing if frozen
          Debug.Log(handedness + "FinishHand()");
          base.FinishHand();
         // If the other hand is still tracked
@@ -563,7 +576,7 @@ namespace Leap.Unity {
 
   public override void UpdateHand() {
       //Debug.Log(handedness + "UpdateHand()");
-
+      if(frozen) return;
       if (_fillColliders == null || _fingerColliders == null || _handColliders == null || _forearmColliders == null) return; //InstantiateGameObjects();
 
       int _currFingerColliderIndex = 0;

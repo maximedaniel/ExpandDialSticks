@@ -16,6 +16,7 @@ using System.Linq;
 
 public class XP2_P1BIS : MonoBehaviour
 {
+
 	// ExpanDialSticks Core
 	public GameObject expanDialSticksPrefab;
 	public GameObject capsuleHandLeftPrefab;
@@ -25,45 +26,43 @@ public class XP2_P1BIS : MonoBehaviour
 	private ExpanDialSticks expanDialSticks;
 	private bool connected;
 
-	// timer variables
+	private const float LOG_INTERVAL = 0.2f; // 0.2f;
 	private float currTime;
 	private float prevRandomTextureTime;
-	private float prevRandomIconTime;
-	private float prevRandomShapeTime;
-	private const sbyte minPos = 10;
-	private const sbyte maxPos = 30;
-
-	private int nbTrials = 3;
-	private int[] amountFactor = new int[] { 3, 6, 9 };
-	private ExpanDialSticks.SafetyOverlayMode[] overlayFactor = new ExpanDialSticks.SafetyOverlayMode[] {
-		ExpanDialSticks.SafetyOverlayMode.MotionTrajectoryZone,
-		ExpanDialSticks.SafetyOverlayMode.MotionTrajectoryHull,
-		ExpanDialSticks.SafetyOverlayMode.MotionTrajectoryFill,
-		ExpanDialSticks.SafetyOverlayMode.MotionZoneEdge
-	};
-	public enum IconApparatus { TwoIconsUnder, OneIconUnder, NoIconUnder };
-
-	private int currIndex;
-	private List<int> targets;
-	private int currTarget;
-	private List<int> amounts;
-	private int currAmount;
-	private ExpanDialSticks.SafetyOverlayMode currOverlay;
-	private List<Vector2Int> pauses;
-	//private List<int> unpauses;
-	//private List<sbyte> displacements;
-	//private List<int> selects;
+	private float prevMetricsTime;
 
 
-	private float shapeChangeWaitFor = 3f;
-	private bool toNextTarget = true;
+	// generate all potential positions for selected candidates
+	public int nbPositionCandidate = 3;
+	public int stepPositionCandidate = 10;
+	private List<int> positionCandidates;
+	private const int minPos = 10;
+	private const int maxPos = 20;
+	private const float shapeChangeDuration = 2f;
+	private const float safetyDistance = 6f;
 
-
-	private bool training = false;
 	private string stringParticipant = "";
 	private int numeroParticipant = 0;
 	private bool unknownParticipant = true;
 
+	public const string MQTT_EMPATICA_RECORDER = "EMPATICA_RECORDER";
+	public const string MQTT_SYSTEM_RECORDER = "SYSTEM_RECORDER";
+	public const string CMD_START = "START";
+	public const string CMD_STOP = "STOP";
+
+	private ExpanDialSticks.SafetyOverlayMode currOverlay;
+	public int maxIconUnder = 3;
+	private int currIconUnder;
+	private int nbIconFactor;
+	private const int nbRepeat = 5;
+	private List<int> trials;
+	private int nbTrials;
+	private List<Vector2Int> candidates;
+
+	private Vector3Int rightCandidate;
+	private Vector3Int wrongCandidate;
+	private List<Vector3Int> movingCandidates;
+	private bool toNextTrial = true;
 
 	void Start()
 	{
@@ -84,44 +83,39 @@ public class XP2_P1BIS : MonoBehaviour
 
 		connected = false;
 		expanDialSticks.client_MqttConnect();
-		currTime = prevRandomTextureTime = prevRandomIconTime = prevRandomShapeTime = 0;
 
-		int nbTargets = nbTrials * amountFactor.Length;
-		targets = new List<int>();
-		amounts = new List<int>();
-
-		List<int> randomPins = new List<int>(); //= Enumerable.Range(0, nbPins).ToList<int>();
-												// get pins inside matrix only
+		// generate potential candidates
+		candidates = new List<Vector2Int>(); //= Enumerable.Range(0, nbPins).ToList<int>();
+											 // get pins inside matrix only
 		for (int i = 1; i < expanDialSticks.NbRows - 1; i++)
 		{
 			for (int j = 1; j < expanDialSticks.NbColumns - 1; j++)
 			{
-				randomPins.Add(i * expanDialSticks.NbColumns + j);
+				candidates.Add(new Vector2Int(i, j));
 			}
 		}
-		int nbPins = randomPins.Count();
-
-		for (int j = 0; j < amountFactor.Length; j++)
+		movingCandidates = new List<Vector3Int>();
+		// Generate potential positions for selected candidates
+		positionCandidates = new List<int>();
+		for (int i = 0; i < nbPositionCandidate; i++)
 		{
-			for (int w = 0; w < nbTrials; w++)
-			{
-				int z = (j * nbTrials) + w;
-				amounts.Add(amountFactor[j]);
-				if (z % nbPins == 0) randomPins = Shuffle(randomPins);
-				targets.Add(randomPins[z % nbPins]);
-			}
+			positionCandidates.Add(i * stepPositionCandidate);
 		}
 
-		currIndex = 0;
-		currTarget = targets[currIndex];
-		currAmount = amounts[currIndex];
-		currOverlay = ExpanDialSticks.SafetyOverlayMode.MotionZoneEdge;
-		pauses = new List<Vector2Int>();
-		toNextTarget = true;
-		/*unpauses = new List<int>();
-		displacements = new List<sbyte>();
-		selects = new List<int>();*/
+		// generate trials
 
+		trials = new List<int>(); //= Enumerable.Range(0, nbPins).ToList<int>();
+		for (int i = 0; i < maxIconUnder; i++)
+		{
+			for (int j = 0; j < nbRepeat; j++)
+			{
+				trials.Add(i);
+			}
+		}
+		ListExtension.Shuffle(trials);
+		trials.Insert(0, 0);
+		nbTrials = trials.Count();
+		toNextTrial = true;
 	}
 
 
@@ -129,13 +123,11 @@ public class XP2_P1BIS : MonoBehaviour
 	{
 		Debug.Log("Application connecting to MQTT Broker @" + e.address + ":" + e.port + "...");
 		connected = false;
-		//StartCoroutine(ResetProjectorSafeGuard());
 	}
 
 	private void HandleConnected(object sender, MqttConnectionEventArgs e)
 	{
 		Debug.Log("Application connected.");
-		//RandomShape();
 		connected = true;
 
 	}
@@ -163,22 +155,28 @@ public class XP2_P1BIS : MonoBehaviour
 
 	private void HandleRotationChanged(object sender, ExpanDialStickEventArgs e)
 	{
-		int select = e.i * ExpanDialSticks.nbColumns + e.j;
-		//Debug.Lo
-		// if rotate is not paused and is the target
-		if (select == currTarget)
+
+		if (toNextTrial == false)
 		{
-			Debug.Log("Right Target : " + select + " == " + currTarget);
-			TriggerShapeChangeUnderBody();
-			toNextTarget = true;
+			//Debug.Log("target(" + e.i + ", " + e.j + ") == right(" + rightCandidate.x + ", " + rightCandidate.y + ")?");
+			if (e.i == rightCandidate.x && e.j == rightCandidate.y) // right candidate
+			{
+				string payload = "USER_RIGHT_PIN " + e.i + " " + e.j + " " + expanDialSticks.modelMatrix[e.i, e.j].CurrentPosition;
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(payload), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+				//DebugInSitu("target("+e.i+", "+e.j+") == right("+ rightCandidate.x + ", "+ rightCandidate.y + ")", Color.black, Color.green);
+				toNextTrial = true;
+
+			}
+			else // wrong candidate
+			{
+
+				string payload = "USER_WRONG_PIN " + e.i + " " + e.j + " " + expanDialSticks.modelMatrix[e.i, e.j].CurrentPosition;
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(payload), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+
+				//DebugInSitu("target(" + e.i + ", " + e.j + ") != right(" + rightCandidate.x + ", " + rightCandidate.y + ")", Color.black, Color.red);
+			}
+
 		}
-		else
-		{
-
-			Debug.Log("Wrong Target : " + select + " != " + currTarget);
-		}
-
-
 	}
 
 	private void HandlePositionChanged(object sender, ExpanDialStickEventArgs e)
@@ -207,70 +205,60 @@ public class XP2_P1BIS : MonoBehaviour
 						Application.Quit();
 #endif
 	}
-	/*List<Vector3> FindAllUnsafes()
+
+	List<Vector3Int> FindAllUnsafesUnderDistance(float distance)
 	{
-		List<Vector3> safePositions = new List<Vector3>();
+		List<Vector3Int> positions = new List<Vector3Int>();
+
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+				if (expanDialSticks.modelMatrix[i, j].CurrentDistance < distance)
+				{
+					positions.Add(new Vector3Int(i, j, expanDialSticks.modelMatrix[i, j].CurrentPosition));
+				}
+
+		return positions;
+	}
+	List<Vector3Int> FindAllSafesAboveDistance(float distance)
+	{
+		List<Vector3Int> positions = new List<Vector3Int>();
+
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+				if (expanDialSticks.modelMatrix[i, j].CurrentDistance > distance)
+				{
+					positions.Add(new Vector3Int(i, j, expanDialSticks.modelMatrix[i, j].CurrentPosition));
+				}
+
+		return positions;
+	}
+	List<Vector2Int> FindAllUnsafes()
+	{
+		List<Vector2Int> unsafePositions = new List<Vector2Int>();
 
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 				if (expanDialSticks.modelMatrix[i, j].CurrentProximity == 1f)
 				{
-					safePositions.Add(new Vector3(i, j, expanDialSticks.modelMatrix[i, j].CurrentProximity));
-				}
-
-		return safePositions;
-	}*/
-
-	List<int> FindAllUnsafesAtDistance(float distance)
-	{
-		List<int> unsafePositions = new List<int>();
-
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-				if (expanDialSticks.modelMatrix[i, j].CurrentProximity == 1f && expanDialSticks.modelMatrix[i, j].CurrentDistance < distance)
-				{
-					unsafePositions.Add(i * expanDialSticks.NbColumns + j);
-				}
-
-		return unsafePositions;
-	}
-
-	List<int> FindAllUnsafes()
-	{
-		List<int> unsafePositions = new List<int>();
-
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-				if (expanDialSticks.modelMatrix[i, j].CurrentProximity == 1f)
-				{
-					unsafePositions.Add(i * expanDialSticks.NbColumns + j);
+					unsafePositions.Add(new Vector2Int(i, j));
 				}
 		return unsafePositions;
 	}
-	List<int> FindAllSafes()
+	List<Vector2Int> FindAllSafes()
 	{
-		List<int> safePositions = new List<int>();
+		List<Vector2Int> safePositions = new List<Vector2Int>();
 
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 				if (expanDialSticks.modelMatrix[i, j].CurrentProximity < 1f)
 				{
-					safePositions.Add(i * expanDialSticks.NbColumns + j);
+					safePositions.Add(new Vector2Int(i, j));
 				}
 		return safePositions;
 	}
 
-	public List<int> Shuffle(List<int> array)
-	{
-		for (int i = 0; i < array.Count(); i++)
-		{
-			int rnd = Random.Range(0, array.Count());
-			int temp = array[rnd];
-			array[rnd] = array[i];
-			array[i] = temp;
-		}
-		return array;
-	}
+
+
 	public List<sbyte> Swap(List<sbyte> array, int index0, int index1)
 	{
 		if (0 <= index0 && index0 < array.Count() && 0 <= index1 && index1 < array.Count())
@@ -292,35 +280,6 @@ public class XP2_P1BIS : MonoBehaviour
 		return array;
 	}
 
-	/*void RandomIcon()
-	{
-		if(currTargetIndex < targets.Length)
-		{
-			int[] iconIndexes = Enumerable.Range(0, expanDialSticks.NbRows * expanDialSticks.NbColumns).ToArray();
-			int[] randomIconIndexes = Shuffle(iconIndexes);
-			for (int i = 0; i < expanDialSticks.NbRows; i++)
-			{
-				for (int j = 0; j < expanDialSticks.NbColumns; j++)
-				{
-					if (currTarget == i * expanDialSticks.NbColumns + j)
-					{
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon" + randomIconIndexes[i * expanDialSticks.NbColumns + j];
-					}
-					else
-					{
-
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "default";
-					}
-					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
-				}
-			}
-			currTarget = targets[++currTargetIndex];
-			expanDialSticks.triggerProjectorChange();
-
-		}
-	}*/
 
 	void RandomColor()
 	{
@@ -346,101 +305,6 @@ public class XP2_P1BIS : MonoBehaviour
 	}
 
 
-
-	void RandomShape()
-	{
-
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
-		{
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-			{
-				sbyte randomPosition = (sbyte)Random.Range(minPos, maxPos);
-				expanDialSticks.modelMatrix[i, j].TargetPosition = randomPosition;
-				expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = 2f;
-			}
-		}
-		expanDialSticks.triggerShapeChange();
-	}
-	/*
-	IEnumerator NextTarget()
-	{
-		Debug.Log("WaitForNoHandPresence...");
-		bool handIsPresent = true;
-		float waitingSince = 0f;
-		float waitingCount = 1;
-		List<int> allUnsafes = new List<int>();
-
-		while (handIsPresent)
-		{
-			if (!leftHand.IsActive() && !rightHand.IsActive())
-			{
-				allUnsafes = FindAllUnsafes();
-				if (allUnsafes.Count() == 0)
-				{
-					handIsPresent = false;
-				}
-			}
-			if (waitingSince >= shapeChangeWaitFor)
-			{
-				if (--waitingCount <= 0) break;
-				waitingSince = 0f;
-			}
-			else
-			{
-				waitingSince += 0.1f;
-				yield return new WaitForSeconds(0.1f);
-
-			}
-		}
-		Debug.Log("HandIsNoPresent!");
-		for (int i = 0; i < unpauses.Count(); i++)
-		{
-			int x = unpauses[i] / expanDialSticks.NbColumns;
-			int y = unpauses[i] % expanDialSticks.NbColumns;
-			// Motion On
-			// ERROR : WRONG DISPALCEMENT APPLIED
-			expanDialSticks.modelMatrix[x, y].TargetPosition = (sbyte)(expanDialSticks.modelMatrix[x, y].CurrentPosition + displacements[i]);
-			expanDialSticks.modelMatrix[x, y].TargetShapeChangeDuration = 2f;
-		}
-		expanDialSticks.triggerShapeChange();
-		Debug.Log("TriggerShapeChange!");
-		yield return new WaitForSeconds(2f);
-		if (currIndex < targets.Count())
-		{
-
-			currTarget = targets[currIndex];
-			currAmount = amounts[currIndex];
-			currOverlay = overlays[currIndex];
-			currIndex += 1;
-			for (int i = 0; i < expanDialSticks.NbRows; i++)
-			{
-				for (int j = 0; j < expanDialSticks.NbColumns; j++)
-				{
-					if (currTarget == i * expanDialSticks.NbColumns + j)
-					{
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon0";
-					}
-					else
-					{
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "default";
-					}
-					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
-				}
-			}
-			expanDialSticks.triggerProjectorChange();
-			Debug.Log("ShowNextTarget!");
-		}
-		else
-		{
-			Debug.Log("NoNextTarget!");
-			Quit();
-		}
-		waitingForNoHand = false;
-
-	}*/
-
 	List<Vector3> FindSafes()
 	{
 		List<Vector3> safePositions = new List<Vector3>();
@@ -456,114 +320,6 @@ public class XP2_P1BIS : MonoBehaviour
 	}
 
 
-	void CheckShapeChangeUnderBody()
-	{
-		// move unpaused pins
-		List<Vector2Int> unpauses = new List<Vector2Int>();
-		for (int i = 0; i < pauses.Count(); i++)
-		{
-			Vector2Int pause = pauses[i];
-			int x = pause.x / expanDialSticks.NbColumns;
-			int y = pause.x % expanDialSticks.NbColumns;
-			int displacement = pause.y;
-
-			if (expanDialSticks.modelMatrix[x, y].CurrentProximity < 1f && displacement != 0)
-			{
-				// unpaused index
-				unpauses.Add(pause);
-				// Motion On
-				expanDialSticks.modelMatrix[x, y].TargetPosition = (sbyte)(expanDialSticks.modelMatrix[x, y].CurrentPosition + displacement);
-				expanDialSticks.modelMatrix[x, y].TargetShapeChangeDuration = 2f;
-				// Overlay Off
-				//expanDialSticks.modelMatrix[x, y].CurrentFeedForwarded = 0;
-			}
-			pauses.RemoveAll(lambda => unpauses.Contains(lambda));
-		}
-		if (unpauses.Count() > 0)
-		{
-			expanDialSticks.triggerShapeChange();
-			//expanDialSticks.triggerSafetyChange();
-		}
-	}
-
-	void TriggerNextTarget()
-	{
-		Debug.Log("TriggerNextTarget!");
-		if (currIndex < targets.Count())
-		{
-			currTarget = targets[currIndex];
-			currAmount = amounts[currIndex];
-			currIndex += 1;
-			Debug.Log("currTarget:" + currTarget);
-			for (int i = 0; i < expanDialSticks.NbRows; i++)
-			{
-				for (int j = 0; j < expanDialSticks.NbColumns; j++)
-				{
-					if (currTarget == i * expanDialSticks.NbColumns + j)
-					{
-
-						//Debug.Log("TargetProjectorTexture:icon0");
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon0";
-					}
-					else
-					{
-						//Debug.Log("TargetProjectorTexture:default");
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "default";
-					}
-					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
-				}
-			}
-			Debug.Log("TriggerProjectorChange!");
-			expanDialSticks.triggerProjectorChange();
-		}
-		else
-		{
-			Quit();
-		}
-	}
-	void TriggerShapeChangeUnderBody()
-	{
-
-		Debug.Log("TriggerShapeChangeUnderBody!");
-		// get all unsafe pins
-		List<int> unsafes = FindAllUnsafesAtDistance(6f);
-
-		if (unsafes.Count() > 0)
-		{
-			// shuffle unsafe pins
-			unsafes = Shuffle(unsafes);
-			// select first N unsafe pins to move and pause
-			int startIndex = ((unsafes.Count() < currAmount) ? unsafes.Count() : currAmount) - 1;
-			unsafes.RemoveRange(startIndex, unsafes.Count() - startIndex);
-			// pause next pins
-			for (int i = 0; i < unsafes.Count(); i++)
-			{
-				int x = unsafes[i] / expanDialSticks.NbColumns;
-				int y = unsafes[i] % expanDialSticks.NbColumns;
-				int currentPosition = expanDialSticks.modelMatrix[x, y].CurrentPosition;
-				List<int> randomPositions = Enumerable.Range(minPos, maxPos).Where(randomPos => randomPos != currentPosition).ToList<int>();
-				int randomPosition = randomPositions[Random.Range(0, randomPositions.Count())];
-				sbyte displacement = (sbyte)(randomPosition - currentPosition);
-				//expanDialSticks.modelMatrix[x, y].CurrentFeedForwarded = displacement; 
-				expanDialSticks.modelMatrix[x, y].TargetPosition = (sbyte)randomPosition;
-				expanDialSticks.modelMatrix[x, y].TargetShapeChangeDuration = 2f;
-				pauses.Add(new Vector2Int(unsafes[i], displacement));
-			}
-			// trigger shape-change
-			expanDialSticks.triggerShapeChange();
-
-		}
-		else // LeapMotion failed to track user hands !!
-		{
-			// add to end queue for retry
-			targets.Add(currTarget);
-			amounts.Add(currAmount);
-		}
-	}
-
-
 	void OnGUI()
 	{
 		if (unknownParticipant)
@@ -576,11 +332,12 @@ public class XP2_P1BIS : MonoBehaviour
 
 			stringParticipant = GUI.TextField(new Rect(midX - 55, midY, 50, componentHeight), stringParticipant, 25);
 
-			if (GUI.Button(new Rect(midX + 5, midY - 50, 150, componentHeight), "Training"))
+			if (GUI.Button(new Rect(midX + 5, midY - 50, 150, componentHeight), "Training Overlay"))
 			{
-				training = true;
 				numeroParticipant = int.Parse(stringParticipant);
 				Debug.Log("TRAINING");
+				string identity = "USER_IDENTITY " + numeroParticipant + " TRAINING";
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				// init trials
 				/*InitTrials();
 				moleIndex = -1;
@@ -594,73 +351,246 @@ public class XP2_P1BIS : MonoBehaviour
 				unknownParticipant = false;
 			}
 
-			if (GUI.Button(new Rect(midX + 5, midY - 25, 150, componentHeight), "Motion Zone Edge"))
+			if (GUI.Button(new Rect(midX + 5, midY - 25, 150, componentHeight), "Edge Overlay"))
 			{
 
 				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
-				training = false;
 				numeroParticipant = int.Parse(stringParticipant);
 				Debug.Log("Start");
 
-				currOverlay = ExpanDialSticks.SafetyOverlayMode.MotionZoneEdge;
+				currOverlay = ExpanDialSticks.SafetyOverlayMode.Edge;
 				expanDialSticks.SetOverlayMode(currOverlay);
 				expanDialSticks.triggerSafetyChange();
 
-				//string identity = "USER_IDENTITY " + numeroParticipant + " USER_TRIGGERED SMS TRIAL";
-				//expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+				string identity = "USER_IDENTITY " + numeroParticipant + " EDGE_OVERLAY";
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				unknownParticipant = false;
 			}
 
-			if (GUI.Button(new Rect(midX + 5, midY, 150, componentHeight), "Motion Trajectory Fill"))
+			if (GUI.Button(new Rect(midX + 5, midY, 150, componentHeight), "Surface Overlay"))
 			{
 
 				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
-				training = false;
 				numeroParticipant = int.Parse(stringParticipant);
 				Debug.Log("Start");
 
-				currOverlay = ExpanDialSticks.SafetyOverlayMode.MotionTrajectoryFill;
+				currOverlay = ExpanDialSticks.SafetyOverlayMode.Fill;
 				expanDialSticks.SetOverlayMode(currOverlay);
 				expanDialSticks.triggerSafetyChange();
 
-				//string identity = "USER_IDENTITY " + numeroParticipant + " USER_TRIGGERED SMS TRIAL";
-				//expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+				string identity = "USER_IDENTITY " + numeroParticipant + " SURFACE_OVERLAY";
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				unknownParticipant = false;
 			}
-			if (GUI.Button(new Rect(midX + 5, midY + 25, 150, componentHeight), "Motion Trajectory Hull"))
+			if (GUI.Button(new Rect(midX + 5, midY + 25, 150, componentHeight), "Hull Overlay"))
 			{
 
 				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
-				training = false;
 				numeroParticipant = int.Parse(stringParticipant);
 				Debug.Log("Start");
 
-				currOverlay = ExpanDialSticks.SafetyOverlayMode.MotionTrajectoryHull;
+				currOverlay = ExpanDialSticks.SafetyOverlayMode.Hull;
 				expanDialSticks.SetOverlayMode(currOverlay);
 				expanDialSticks.triggerSafetyChange();
 
-				//string identity = "USER_IDENTITY " + numeroParticipant + " USER_TRIGGERED SMS TRIAL";
-				//expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+				string identity = "USER_IDENTITY " + numeroParticipant + " HULL_OVERLAY";
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				unknownParticipant = false;
 			}
-			if (GUI.Button(new Rect(midX + 5, midY + 50, 150, componentHeight), "Motion Trajectory Zone"))
+			if (GUI.Button(new Rect(midX + 5, midY + 50, 150, componentHeight), "Zone Overlay"))
 			{
 
 				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
-				training = false;
 				numeroParticipant = int.Parse(stringParticipant);
 				Debug.Log("Start");
 
-				currOverlay = ExpanDialSticks.SafetyOverlayMode.MotionTrajectoryZone;
+				currOverlay = ExpanDialSticks.SafetyOverlayMode.Zone;
 				expanDialSticks.SetOverlayMode(currOverlay);
 				expanDialSticks.triggerSafetyChange();
 
-				//string identity = "USER_IDENTITY " + numeroParticipant + " USER_TRIGGERED SMS TRIAL";
-				//expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+				string identity = "USER_IDENTITY " + numeroParticipant + " ZONE_OVERLAY";
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				unknownParticipant = false;
 			}
 		}
 	}
+
+	private void DebugInSitu(string message, Color textColor, Color backgroundColor)
+	{
+		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 16, textColor, message, new Vector3(90f, -90f, 0f));
+		expanDialSticks.setBorderBackground(backgroundColor);
+		expanDialSticks.triggerTextureChange();
+	}
+	private void TriggerNextTrial()
+	{
+		if (trials.Count() > 0)
+		{
+			List<Vector3Int> unsafes;
+			List<Vector3Int> safes;
+			//Vector2Int rightCandidatePosition = new Vector2Int(rightCandidate.x, rightCandidate.y);
+			bool candidatesFound = false;
+			int iconFactorIndex = -1;
+			while (!candidatesFound)
+			{
+				iconFactorIndex++;
+				if (iconFactorIndex < trials.Count())
+				{
+					currIconUnder = trials[iconFactorIndex];
+					Debug.Log("Looking for candidates (" + currIconUnder + ")...");
+
+					// get all pins under and around user body
+					unsafes = FindAllUnsafesUnderDistance(safetyDistance);
+					safes = FindAllSafesAboveDistance(safetyDistance);
+
+					// prevent same candidates
+					unsafes.RemoveAll(x => movingCandidates.Contains(x));
+					safes.RemoveAll(x => movingCandidates.Contains(x));
+					// candidates to find under or above
+					int nbUnderCandidates = currIconUnder;
+					int nbAroundCandidates = maxIconUnder - currIconUnder;
+					Predicate<Vector3Int> hasPotentialRightCandidate = candidate => Math.Abs(positionCandidates.Last() - candidate.z) >= stepPositionCandidate;
+					List<Vector3Int> potentialRightCandidates = new List<Vector3Int>();
+					potentialRightCandidates.AddRange(unsafes.FindAll(hasPotentialRightCandidate));
+					potentialRightCandidates.AddRange(safes.FindAll(hasPotentialRightCandidate));
+					// if there is enough candidates
+					if (unsafes.Count() >= nbUnderCandidates && safes.Count() >= nbAroundCandidates && potentialRightCandidates.Count() > 0)
+					{
+						// Randomly select the right candidate
+						rightCandidate = potentialRightCandidates[Random.Range(0, potentialRightCandidates.Count())];
+						// Get all moving candidates
+						movingCandidates = new List<Vector3Int>();
+						ListExtension.Shuffle(unsafes);
+						ListExtension.Shuffle(safes);
+						bool isSafe = safes.Remove(rightCandidate);
+						//Debug.Log("isSafe => " + isSafe);
+						bool isUnsafe = unsafes.Remove(rightCandidate);
+						//Debug.Log("isUnsafe => " + isUnsafe);
+						// check if right candidates is safe or unsafe to not select him
+						if (isSafe)
+						{
+							movingCandidates.AddRange(unsafes.GetRange(0, nbUnderCandidates));
+							movingCandidates.AddRange(safes.GetRange(0, nbAroundCandidates - 1));
+						}
+						else if (isUnsafe)
+						{
+							movingCandidates.AddRange(unsafes.GetRange(0, nbUnderCandidates - 1));
+							movingCandidates.AddRange(safes.GetRange(0, nbAroundCandidates));
+						}
+						// generate position for moving candidates
+						for (int i = 0; i < movingCandidates.Count(); i++)
+						{
+							Vector3Int movingCandidate = movingCandidates[i];
+							movingCandidate.z = Math.Abs(positionCandidates[0] - movingCandidate.z) > Math.Abs(positionCandidates[1] - movingCandidate.z) ? positionCandidates[0] : positionCandidates[1];
+							movingCandidates[i] = movingCandidate;
+						}
+						//Debug.Log("movingCandidates.Count() => " + movingCandidates.Count());
+						// Select a wrong candidate
+						wrongCandidate = movingCandidates[Random.Range(0, movingCandidates.Count())];
+						// Add the right candidate to moving candidate
+						rightCandidate.z = positionCandidates.Last();
+						movingCandidates.Add(rightCandidate);
+
+
+						candidatesFound = true;
+					}
+					else
+					{
+						//What if?
+					}
+				}
+				else // fails to find candidates for remaining icon factor
+				{
+					Debug.Log("Candidates Fail! Adding IconFactor.NoIconUnder.");
+					iconFactorIndex = -1;
+					trials.Insert(0, 0);
+				}
+			}
+			Debug.Log("Candidates Successfully found!");
+			trials.RemoveAt(iconFactorIndex);
+
+			// Output Control
+			List<int> randomIcons = new List<int>(); //= Enumerable.Range(0, nbPins).ToList<int>();
+			for (int i = 1; i < 30; i++)
+			{
+				randomIcons.Add(i);
+			}
+			ListExtension.Shuffle(randomIcons);
+
+			for (int i = 0; i < expanDialSticks.NbRows; i++)
+			{
+				for (int j = 0; j < expanDialSticks.NbColumns; j++)
+				{
+					Vector3Int movingCandidate = movingCandidates.Find(l => (l.x == i && l.y == j));
+					if (rightCandidate.x == i && rightCandidate.y == j)
+					{
+						Debug.Log("rightCandidate => " + rightCandidate);
+						// Projector
+						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon0";
+						// Shape
+						expanDialSticks.modelMatrix[i, j].TargetPosition = (sbyte)rightCandidate.z;
+						expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = shapeChangeDuration;
+					}
+					else if (wrongCandidate.x == i && wrongCandidate.y == j)
+					{
+						Debug.Log("wrongCandidate => " + wrongCandidate);
+						// Projector
+						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon0";
+						// Shape
+						expanDialSticks.modelMatrix[i, j].TargetPosition = (sbyte)wrongCandidate.z;
+						expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = shapeChangeDuration;
+					}
+					else if (movingCandidate != new Vector3Int())
+					{
+						Debug.Log("movingCandidate => " + movingCandidate);
+						// Projector
+						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon" + randomIcons.First();
+						randomIcons.RemoveAt(0);
+						// Shape
+						expanDialSticks.modelMatrix[i, j].TargetPosition = (sbyte)movingCandidate.z;
+						expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = shapeChangeDuration;
+					}
+					else
+					{
+						// Projector
+						//expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "default";
+						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon" + randomIcons.First();
+						randomIcons.RemoveAt(0);
+					}
+					// Projector
+					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
+				}
+			}
+			expanDialSticks.triggerProjectorChange();
+			expanDialSticks.triggerShapeChange();
+
+			string participantNumber = "<pos=0%><b>P" + numeroParticipant + "</b>";
+			string trialProgress = "<pos=90%><b>" + trials.Count() + "/" + nbTrials + "</b>";
+			string legend = participantNumber + trialProgress;
+			expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 16, Color.black, legend, new Vector3(90f, -90f, 0f));
+			expanDialSticks.setBorderBackground(Color.white);
+			expanDialSticks.triggerTextureChange();
+			string iconSituationMsg = "ICON_APPARATUS " + currIconUnder;
+			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(iconSituationMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+			string selectCandidateMsg = "SYSTEM_SELECT_PIN ";
+			foreach (Vector3Int movingCandidate in movingCandidates)
+			{
+				selectCandidateMsg += "(" + movingCandidate.x + ", " + movingCandidate.y + ", " + movingCandidate.z + ") ";
+			}
+			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(selectCandidateMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+			string rightCandidateMsg = "SYSTEM_RIGHT_PIN (" + rightCandidate.x + ", " + rightCandidate.y + ", " + rightCandidate.z + ")";
+			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(rightCandidateMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+			string wrongCandidateMsg = "SYSTEM_WRONG_PIN (" + wrongCandidate.x + ", " + wrongCandidate.y + ", " + wrongCandidate.z + ")";
+			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(wrongCandidateMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+
+		}
+		else
+		{
+			Quit();
+		}
+	}
+
 
 	void Update()
 	{
@@ -669,10 +599,10 @@ public class XP2_P1BIS : MonoBehaviour
 		{
 			currTime = Time.time;
 
-			if (toNextTarget == true)
+			if (toNextTrial == true)
 			{
-				TriggerNextTarget();
-				toNextTarget = false;
+				TriggerNextTrial();
+				toNextTrial = false;
 			}
 
 			//CheckShapeChangeUnderBody();
@@ -680,25 +610,16 @@ public class XP2_P1BIS : MonoBehaviour
 			// random texture every 3 secondes
 			if (currTime - prevRandomTextureTime >= 3f)
 			{
-				Debug.Log("RandomTexture!");
+				//Debug.Log("RandomTexture!");
 				RandomColor();
 				prevRandomTextureTime = currTime;
 			}
-			// random icon every 5 secondes
-			/*if (currTime - prevRandomIconTime >= 5f)
-			{
-				Debug.Log("RandomIcon!");
-				RandomIcon();
-				prevRandomIconTime = currTime;
-			}*/
 
-			// random shape every 4 secondes
-			/*if (currTime - prevRandomShapeTime >= 4f)
+			if (currTime - prevMetricsTime >= LOG_INTERVAL)
 			{
-				Debug.Log("RandomShape!");
-				RandomShape();
-				prevRandomShapeTime = currTime;
-			}*/
+				LogMetrics();
+				prevMetricsTime = currTime;
+			}
 
 			if (Input.GetKey("escape"))
 			{
@@ -707,10 +628,34 @@ public class XP2_P1BIS : MonoBehaviour
 
 			if (Input.GetKeyDown(KeyCode.RightArrow))
 			{
-				int i = (int)(currTarget / ExpanDialSticks.nbColumns);
-				int j = (int)(currTarget % ExpanDialSticks.nbColumns);
-				HandleRotationChanged(this, new ExpanDialStickEventArgs(DateTime.Now, i, j, 0, 10, 10));
+				HandleRotationChanged(this, new ExpanDialStickEventArgs(DateTime.Now, rightCandidate.x, rightCandidate.y, 0, 10, 10));
 			}
 		}
+	}
+
+	void LogMetrics()
+	{
+
+		//string colorString = "SYSTEM_COLOR ";
+		string proximityString = "SYSTEM_PROXIMITY ";
+		string positionString = "SYSTEM_POSITION ";
+		string leftHandString = "USER_LEFT_HAND " + leftHand.ToString();
+		string rightHandString = "USER_RIGHT_HAND " + rightHand.ToString();
+
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+		{
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+			{
+				//colorString += "0x" + ColorUtility.ToHtmlStringRGB(expanDialSticks.viewMatrix[i, j].CurrentColor) + " ";
+				proximityString += expanDialSticks.viewMatrix[i, j].CurrentProximity + " ";
+				positionString += expanDialSticks.viewMatrix[i, j].CurrentPosition + " ";
+			}
+		}
+
+		//expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(colorString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(proximityString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(positionString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(leftHandString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(rightHandString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 	}
 }

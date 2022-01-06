@@ -815,7 +815,7 @@ public class SafeGuard : MonoBehaviour
 					_dotOutlineWidths[_dotIndex] = Mathf.Lerp(minOutlineWidth, maxOutlineWidth, scaleDistanceCoeff);
 					_dotSecondOutlineColors[_dotIndex] = new Vector4(0f, 0f, 0f, 1f);
 					_dotSecondOutlineWidths[_dotIndex] = Mathf.Lerp(minSecondOutlineWidth, maxSecondOutlineWidth, scaleDistanceCoeff);
-					_dotThirdOutlineColors[_dotIndex] = _dotColors[_dotIndex];
+					_dotThirdOutlineColors[_dotIndex] = dotColor;
 					_dotThirdOutlineWidths[_dotIndex] = Mathf.Lerp(minThirdOutlineWidth, maxThirdOutlineWidth, scaleDistanceCoeff);
 					_dotFourthOutlineColors[_dotIndex] = new Vector4(0f, 0f, 0f, 1f);
 					_dotFourthOutlineWidths[_dotIndex] = Mathf.Lerp(minFourthOutlineWidth, maxFourthOutlineWidth, scaleDistanceCoeff);
