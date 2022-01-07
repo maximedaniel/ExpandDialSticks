@@ -115,7 +115,7 @@ public class XP2_P1 : MonoBehaviour
 			}
 		}
 		// Generate trials
-		overlays = new List<ExpanDialSticks.SafetyOverlayMode> { ExpanDialSticks.SafetyOverlayMode.Edge, ExpanDialSticks.SafetyOverlayMode.Fill, ExpanDialSticks.SafetyOverlayMode.Hull, ExpanDialSticks.SafetyOverlayMode.Zone};
+		overlays = new List<ExpanDialSticks.SafetyOverlayMode> { ExpanDialSticks.SafetyOverlayMode.Hull, ExpanDialSticks.SafetyOverlayMode.Zone, ExpanDialSticks.SafetyOverlayMode.Edge, ExpanDialSticks.SafetyOverlayMode.Fill};
 		currOverlay = ExpanDialSticks.SafetyOverlayMode.None;
 		difficulties = new List<Difficulty> { Difficulty.Easy, Difficulty.Medium, Difficulty.Hard };
 		trials = new Dictionary<Difficulty, List<List<int>>>();
@@ -216,7 +216,10 @@ public class XP2_P1 : MonoBehaviour
 				Debug.Log("TargetRotated!");
 				string targetCandidateMsg = "USER_TARGET_ROTATION " + target;
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(targetCandidateMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-				TriggerOverlay();
+				TriggerOverlay(); 
+				target = new Vector2Int(-1, -1); 
+				
+				
 			}
 		} else
 		{
@@ -512,19 +515,22 @@ public class XP2_P1 : MonoBehaviour
 		expanDialSticks.setBorderBackground(backgroundColor);
 		expanDialSticks.triggerTextureChange();
 	}
-	private void SelectCandidatesAround(Vector2Int around, int nb)
+	private List<Vector2Int> FindAllCandidatesAroundTarget(Vector2Int target)
 	{
-		for (int i = 1; i < expanDialSticks.NbRows - 1; i++)
+
+		List<Vector2Int> candidatesAround = new List<Vector2Int>();
+		for (int i = Math.Max(0, target.x - 1); i < Math.Min(expanDialSticks.NbRows - 1, target.x + 1); i++)
 		{
-			for (int j = 1; j < expanDialSticks.NbColumns - 1; j++)
+			for (int j = Math.Max(0, target.y - 1); j < Math.Min(expanDialSticks.NbColumns - 1, target.y+1); j++)
 			{
-				candidates.Add(new Vector2Int(i, j));
+				candidatesAround.Add(new Vector2Int(i, j));
 			}
 		}
+		return candidatesAround;
 	}
 	private void TriggerOverlay()
 	{
-		List<Vector3Int> unsafeCandidates = FindAllUnsafesUnderDistance(safetyDistance);
+		List<Vector2Int> unsafeCandidates = FindAllCandidatesAroundTarget(target);//FindAllUnsafesUnderDistance(safetyDistance);
 		if (currSubChanges.Count() <= unsafeCandidates.Count())
 		{
 			ListExtension.Shuffle(unsafeCandidates);
