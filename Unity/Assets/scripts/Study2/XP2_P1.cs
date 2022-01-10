@@ -104,7 +104,7 @@ public class XP2_P1 : MonoBehaviour
 		expanDialSticks.client_MqttConnect();
 		// generate potential candidates
 		orderedCandidates = new List<Vector3Int>();
-		prevOrderedCandidate = Vector3Int.zero;
+		prevOrderedCandidate = new Vector3Int(-1,-1,-1);
 		candidates = new List<Vector2Int>(); //= Enumerable.Range(0, nbPins).ToList<int>();
 											 // get pins inside matrix only
 		for (int i = 1; i < expanDialSticks.NbRows - 1; i++)

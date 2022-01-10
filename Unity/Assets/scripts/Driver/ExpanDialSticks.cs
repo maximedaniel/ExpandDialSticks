@@ -167,7 +167,7 @@ public class ExpanDialSticks : MonoBehaviour
 
 	public GameObject expanDialStickPrefab;
 
-	private Camera mainCamera;
+	public Camera SARCamera;
 
 	public MqttClient client;
 
@@ -429,16 +429,16 @@ public class ExpanDialSticks : MonoBehaviour
 				//collisionMatrix[i, j].EnableCollision();
 			}
 		// Set camera
-		mainCamera = Camera.main;
-		mainCamera.enabled = true;
-		mainCamera.pixelRect = new Rect(0, 0, 1920, 1080);
+		//SARCamera = Camera.main;
+		SARCamera.enabled = true;
+		SARCamera.pixelRect = new Rect(0, 0, 1920, 1080);
 		// (nbRows - 1) * (diameter + offset)
 		Vector3 cameraPosition = new Vector3(-(diameter/2 + offset), cameraDistanceFromMatrix, (nbColumns - 1) * (diameter + offset) / 2);
-		mainCamera.transform.position = cameraPosition;
+		SARCamera.transform.position = cameraPosition;
 
 		Vector3 cameraLookAtPosition = cameraPosition - new Vector3(0f, cameraDistanceFromMatrix, 0f);
-		mainCamera.transform.LookAt(cameraLookAtPosition);
-		mainCamera.transform.eulerAngles += new Vector3(0f, 90f, 0f);
+		SARCamera.transform.LookAt(cameraLookAtPosition);
+		SARCamera.transform.eulerAngles += new Vector3(0f, 90f, 0f);
 
 		// Safety Guardian Initialization
 
@@ -457,8 +457,8 @@ public class ExpanDialSticks : MonoBehaviour
 		/*Vector3 targetOrientationPosition = new Vector3(0, cameraDistanceFromMatrix, (nbColumns - 1) * (diameter + offset) / 2);
 		Vector3 targetOrientationDir = targetOrientationPosition - cameraPosition;
 		float zAngle = Vector3.Angle(targetOrientationDir, Vector3.up);
-		mainCamera.transform.Rotate(0f, 0f, zAngle, Space.Self);
-		mainCamera.transform.Rotate(0f, 0f, 180f, Space.Self);*/
+		SARCamera.transform.Rotate(0f, 0f, zAngle, Space.Self);
+		SARCamera.transform.Rotate(0f, 0f, 180f, Space.Self);*/
 
 		// Border Quads
 		/*GameObject topBorderBackground = GameObject.CreatePrimitive(PrimitiveType.Quad);
