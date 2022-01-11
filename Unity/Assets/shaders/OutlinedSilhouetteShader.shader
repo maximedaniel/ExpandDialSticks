@@ -202,7 +202,7 @@ Shader "Outlined/SilhouetteShader" {
 			Name "OUTLINE 1"
 			Tags { "LightMode" = "Always" }
 			Cull Front
-			Offset 0, 0
+			Offset 0,0
 			// you can choose what kind of blending mode you want for the outline
 			Blend SrcAlpha OneMinusSrcAlpha // Normal
 			//Blend One One // Additive
@@ -268,7 +268,7 @@ Shader "Outlined/SilhouetteShader" {
 				Name "OUTLINE 2"
 				Tags { "LightMode" = "Always" }
 				Cull Front
-				Offset 128,128
+				Offset 0, 0
 
 				// you can choose what kind of blending mode you want for the outline
 				Blend SrcAlpha OneMinusSrcAlpha // Normal

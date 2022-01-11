@@ -209,8 +209,8 @@ namespace Leap.Unity {
     private GameObject[] _handColliders;
     private GameObject [] _forearmColliders;
    // private float handColliderOffset = 2.5f; //6f
-    private float pinHalfWidth = 3f; //6f
-    private float forearmColliderOffset = 24f;
+    private float pinHalfWidth = 0.03f; //6f
+    private float forearmColliderOffset = 0.24f;
     private CombineInstance[] combine;
     private int _curSphereIndex, _curCylinderIndex;
 

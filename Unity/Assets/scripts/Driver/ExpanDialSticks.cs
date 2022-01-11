@@ -123,9 +123,10 @@ public class ExpanDialSticks : MonoBehaviour
 	public bool safeGuardOn = true;
 	public Material borderMaterial;
 	public bool SIMULATION = true;
-	public float diameter = 6.0f;
-	public float height = 10.0f;
-	public float offset = 0.1f;
+	public float diameter = 0.06f; // divide by 100
+	public float height = 0.1f;  // divide by 100
+	public float offset = 0.001f;  // divide by 100
+	public float borderOffset = 2.0f;
 
 	//public GameObject capsuleHandLeftPrefab;
 	//public GameObject capsuleHandRightPrefab;
@@ -159,14 +160,15 @@ public class ExpanDialSticks : MonoBehaviour
 	public float EVENT_INTERVAL = 0.25f; // 0.2f;
 	public const int nbColumns = 6;
 	public const int nbRows = 5;
-	float cameraDistanceFromMatrix = 70f;
+	float LeapMotionDistanceFromMatrix = 0.53f;
+	float SARCameraDistanceFromMatrix = 0.7f;
 	private const float maxSpeed = 20f; // 40f; 20f; 13.33f; // pos/seconds 1s, 2s, 3s
 
 
-	float borderOffset = 2.0f;
 
 	public GameObject expanDialStickPrefab;
 
+	public GameObject leapMotionObject;
 	public Camera SARCamera;
 
 	public MqttClient client;
@@ -281,9 +283,13 @@ public class ExpanDialSticks : MonoBehaviour
 	public int NbColumns{
 		get => nbColumns;
 	}
-	public float CameraDistanceFromPins
+	public float DistanceFromSARCamera
 	{
-		get => cameraDistanceFromMatrix;
+		get => SARCameraDistanceFromMatrix;
+	}
+	public float DistanceFromLMCamera
+	{
+		get => LeapMotionDistanceFromMatrix;
 	}
 	public float BorderOffset
 	{
@@ -430,13 +436,17 @@ public class ExpanDialSticks : MonoBehaviour
 			}
 		// Set camera
 		//SARCamera = Camera.main;
+		// Leap Motion Camera
+		leapMotionObject.transform.position = new Vector3( ((nbRows - 1) * diameter + offset)/2f + (diameter)/2f, LeapMotionDistanceFromMatrix, ((nbColumns - 1) * diameter + offset)/ 2f);
+		leapMotionObject.transform.localScale = new Vector3(1.4f, 1f, 1.4f);
+		// SAR Camera
 		SARCamera.enabled = true;
 		SARCamera.pixelRect = new Rect(0, 0, 1920, 1080);
 		// (nbRows - 1) * (diameter + offset)
-		Vector3 cameraPosition = new Vector3(-(diameter/2 + offset), cameraDistanceFromMatrix, (nbColumns - 1) * (diameter + offset) / 2);
+		Vector3 cameraPosition = new Vector3(-(diameter/2 + offset), SARCameraDistanceFromMatrix, (nbColumns - 1) * (diameter + offset) / 2);
 		SARCamera.transform.position = cameraPosition;
 
-		Vector3 cameraLookAtPosition = cameraPosition - new Vector3(0f, cameraDistanceFromMatrix, 0f);
+		Vector3 cameraLookAtPosition = cameraPosition - new Vector3(0f, SARCameraDistanceFromMatrix, 0f);
 		SARCamera.transform.LookAt(cameraLookAtPosition);
 		SARCamera.transform.eulerAngles += new Vector3(0f, 90f, 0f);
 
@@ -1066,7 +1076,7 @@ public class ExpanDialSticks : MonoBehaviour
 					modelMatrix[i, j].TargetProjectorTexture,
 					modelMatrix[i, j].TargetProjectorOffset,
 					modelMatrix[i, j].TargetProjectorRotation,
-					modelMatrix[i, j].TargetProjectorSize,
+					modelMatrix[i, j].TargetProjectorSizeTargetProjectorSize,
 					modelMatrix[i, j].TargetProjectorChangeDuration
 				);
 				modelMatrix[i, j].TargetProjectorChangeDuration = 0f;*/

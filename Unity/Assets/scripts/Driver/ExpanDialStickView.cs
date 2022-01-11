@@ -14,6 +14,7 @@ public class ExpanDialStickView : MonoBehaviour
 {
 	private float diameter = 4.0f;
 	private float height = 10.0f;
+	private const float maxHeight = 0.15f;
 	private float offset = 0.5f;
 	private int nbSeparationLevels = 2;
 
@@ -746,7 +747,7 @@ public class ExpanDialStickView : MonoBehaviour
 	void render()
 	{
 		float positionCurrentInverseLerp = Mathf.InverseLerp(0f, 40f, this.positionCurrent);
-		float positionCurrentLerp = Mathf.Lerp(0f, 10f, positionCurrentInverseLerp);
+		float positionCurrentLerp = Mathf.Lerp(0f, maxHeight, positionCurrentInverseLerp);
 		this.transform.position = new Vector3(i * (diameter + offset), positionCurrentLerp, j * (diameter + offset));
 
 		this.transform.localScale = new Vector3(diameter, height / 2, diameter);

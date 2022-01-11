@@ -8,12 +8,13 @@ using Unity.XRTools.Utils;
 
 public class SafeGuard : MonoBehaviour
 {
+
 	Projector projector;
 
 	public ExpanDialSticks pins;
 
-	private const float bodyOutlineWidth = 0.4f;
-	private const float bodySecondOutlineWidth = 0.8f;
+	private const float bodyOutlineWidth = 0.4f/100f;
+	private const float bodySecondOutlineWidth = 0.8f / 100f;
 	private Color bodyOutlineColor = new Color(0f, 0f, 0f, 1f);
 
 	public Mesh _handMesh;
@@ -121,6 +122,14 @@ public class SafeGuard : MonoBehaviour
 	private Color _rightDivergingColor = Color.white;
 	public static bool freeze = false;
 	private bool frozen = false;
+	private GameObject currLeftHandCollider = null;
+	private GameObject currLeftArmCollider = null;
+	private GameObject prevLeftHandCollider = null;
+	private GameObject prevLeftArmCollider = null;
+	private GameObject currRightHandCollider = null;
+	private GameObject currRightArmCollider = null;
+	private GameObject prevRightHandCollider = null;
+	private GameObject prevRightArmCollider = null;
 
 	public static Vector3 ProjectPointLine(Vector3 point, Vector3 lineStart, Vector3 lineEnd)
 	{
@@ -241,8 +250,8 @@ public class SafeGuard : MonoBehaviour
 	void Start()
 	{
 		// Configure transform
-		this.transform.position = new Vector3(((pins.NbRows - 1) * (pins.diameter + pins.offset)) / 2f + (pins.diameter - pins.BorderOffset) / 2f, pins.CameraDistanceFromPins, ((pins.NbColumns - 1) * (pins.diameter + pins.offset)) / 2f);
-		Vector3 safeCameraLookAtPosition = this.transform.position - new Vector3(0f, pins.CameraDistanceFromPins, 0f);
+		this.transform.position = new Vector3(((pins.NbRows - 1) * (pins.diameter + pins.offset)) / 2f + (pins.diameter - pins.BorderOffset) / 2f, pins.DistanceFromSARCamera, ((pins.NbColumns - 1) * (pins.diameter + pins.offset)) / 2f);
+		Vector3 safeCameraLookAtPosition = this.transform.position - new Vector3(0f, pins.DistanceFromSARCamera, 0f);
 		this.transform.LookAt(safeCameraLookAtPosition);
 		this.transform.eulerAngles += new Vector3(0f, 90f, 0f);
 
@@ -572,10 +581,27 @@ public class SafeGuard : MonoBehaviour
 
 	}
 
+	public void Freeze()
+	{
+		prevLeftHandCollider = (currLeftHandCollider!=null)?Instantiate(currLeftHandCollider):null;
+		prevLeftArmCollider = (currLeftArmCollider != null)?Instantiate(currLeftArmCollider) : null;
+		prevRightHandCollider = (currRightHandCollider != null) ? Instantiate(currRightHandCollider) : null;
+		prevRightArmCollider = (currRightArmCollider != null) ? Instantiate(currRightArmCollider) : null;
+		frozen = true;
+	}
+
+	public void UnFreeze()
+	{
+		Destroy(prevLeftHandCollider);
+		Destroy(prevLeftArmCollider);
+		Destroy(prevRightHandCollider);
+		Destroy(prevRightArmCollider);
+		frozen = false;
+	}
 	// Update is called once per frame
-	void Update()
+	public void Update()
     {
-		if (!freeze && frozen) // Unfreeze guardian
+		/*if (!freeze && frozen) // Unfreeze guardian
 		{
 			frozen = false;
 			projector.material.color = new Color(1f, 1f, 1f, 0f);
@@ -586,7 +612,8 @@ public class SafeGuard : MonoBehaviour
 			ProjectorEaseIn();
 			Render();
 			return;
-		}
+		}*/
+
 		_handIndex = _armIndex = _planeIndex = _dotIndex = _lineIndex = _hullIndex = 0;
 
 		bool toDraw = false;
@@ -599,63 +626,77 @@ public class SafeGuard : MonoBehaviour
 		{
 			case SafetyOverlayMode.Dot:
 				// set outlines width
-				minOrthographicSize = pins.diameter - 3f; // -1.5f / 2f;
-				maxOrthographicSize = minOrthographicSize * 3.3f; // 3.3f / 3.3f;
-				minOutlineWidth = 1f;
-				maxOutlineWidth = minOutlineWidth * 3.3f;
-				minSecondOutlineWidth = 2f;
-				maxSecondOutlineWidth = minSecondOutlineWidth * 3.3f;
-				minThirdOutlineWidth = 4f;
-				maxThirdOutlineWidth = minThirdOutlineWidth * 3.3f;
-				minFourthOutlineWidth = 5f;
-				maxFourthOutlineWidth = minFourthOutlineWidth * 3.3f;
-				minFifthOutlineWidth = 6f;
-				maxFifthOutlineWidth = minFifthOutlineWidth * 3.3f;
+				minOrthographicSize = pins.diameter - (3f / 100f); // -1.5f / 2f;
+				maxOrthographicSize = minOrthographicSize * (3.3f / 100f) ; // 3.3f / 3.3f;
+				minOutlineWidth = 1f/10000f;
+				maxOutlineWidth = minOutlineWidth * (3.3f / 100f);
+				minSecondOutlineWidth = 2f/10000f;
+				maxSecondOutlineWidth = minSecondOutlineWidth * (3.3f / 100f);
+				minThirdOutlineWidth = 4f / 10000f;
+				maxThirdOutlineWidth = minThirdOutlineWidth * (3.3f / 100f);
+				minFourthOutlineWidth = 5f /10000f;
+				maxFourthOutlineWidth = minFourthOutlineWidth * (3.3f / 100f);
+				minFifthOutlineWidth = 6f / 10000f;
+				maxFifthOutlineWidth = minFifthOutlineWidth * (3.3f / 100f);
+				/*minOrthographicSize = pins.diameter - (3f / 100f); // -1.5f / 2f;
+				Debug.Log("minOrthographicSize =>" + minOrthographicSize);
+				maxOrthographicSize =  minOrthographicSize * (3.3f / 100f) ; // 3.3f / 3.3f;
+				Debug.Log("maxOrthographicSize =>" + maxOrthographicSize);
+				minOutlineWidth = 0.0001f;
+				maxOutlineWidth = 0.0001f;
+				minSecondOutlineWidth = 0.0002f;
+				maxSecondOutlineWidth = 0.0002f;
+				minThirdOutlineWidth = 0.0f;
+				maxThirdOutlineWidth = 0.0f;
+				minFourthOutlineWidth = 0.0f;
+				maxFourthOutlineWidth = 0.0f;
+				minFifthOutlineWidth = 0.0f;
+				maxFifthOutlineWidth = 0.0f;*/
 				break;
 			case SafetyOverlayMode.Surface:
 				// set outlines width
-				minOrthographicSize = pins.diameter - 2f; // -1.5f / 2f;
-				maxOrthographicSize = minOrthographicSize * 3.3f; // 3.3f / 3.3f;
+				minOrthographicSize = pins.diameter - (2f / 100f); // -1.5f / 2f;
+				maxOrthographicSize = minOrthographicSize * (3.3f / 100f); // 3.3f / 3.3f;
 				minOutlineWidth = 0f;
-				maxOutlineWidth = minOutlineWidth * 3.3f;
+				maxOutlineWidth = minOutlineWidth * (3.3f / 100f);
 				minSecondOutlineWidth = 0f;
-				maxSecondOutlineWidth = minSecondOutlineWidth * 3.3f;
+				maxSecondOutlineWidth = minSecondOutlineWidth * (3.3f / 100f);
 				minThirdOutlineWidth = 0f;
-				maxThirdOutlineWidth = minThirdOutlineWidth * 3.3f;
-				minFourthOutlineWidth = 1.5f;
-				maxFourthOutlineWidth = minFourthOutlineWidth * 3.3f;
-				minFifthOutlineWidth = 2.9f;
-				maxFifthOutlineWidth = minFifthOutlineWidth * 3.3f;
+				maxThirdOutlineWidth = minThirdOutlineWidth * (3.3f / 100f);
+				minFourthOutlineWidth = 1.5f / 10000f;
+				maxFourthOutlineWidth = minFourthOutlineWidth * (3.3f / 100f);
+				minFifthOutlineWidth = 2.9f / 10000f;
+				maxFifthOutlineWidth = minFifthOutlineWidth * (3.3f / 100f);
 				break;
 			case SafetyOverlayMode.Hull:
 				// set outlines width
-				minOrthographicSize = pins.diameter - 2f; // -1.5f / 2f;
-				maxOrthographicSize = minOrthographicSize * 3.3f; // 3.3f / 3.3f;
-				minOutlineWidth = 0f;
-				maxOutlineWidth = minOutlineWidth * 3.3f;
-				minSecondOutlineWidth = 0f;
-				maxSecondOutlineWidth = minSecondOutlineWidth * 3.3f;
+				minOrthographicSize = pins.diameter - (2f / 100f); // -1.5f / 2f;
+				maxOrthographicSize = minOrthographicSize * (3.3f / 100f); // 3.3f / 3.3f;
+				minOutlineWidth = 1.5f / 10000f; //0f;
+				maxOutlineWidth = minOutlineWidth * (3.3f / 100f);
+				minSecondOutlineWidth = 2.9f / 10000f;
+				maxSecondOutlineWidth = minSecondOutlineWidth * (3.3f / 100f);
 				minThirdOutlineWidth = 0f;
-				maxThirdOutlineWidth = minThirdOutlineWidth * 3.3f;
-				minFourthOutlineWidth = 1.5f;
-				maxFourthOutlineWidth = minFourthOutlineWidth * 3.3f;
-				minFifthOutlineWidth = 2.9f;
-				maxFifthOutlineWidth = minFifthOutlineWidth * 3.3f;
+				maxThirdOutlineWidth = minThirdOutlineWidth * (3.3f / 100f);
+				minFourthOutlineWidth = 0f;
+				maxFourthOutlineWidth = minFourthOutlineWidth * (3.3f / 100f);
+				minFifthOutlineWidth = 0f;
+				maxFifthOutlineWidth = minFifthOutlineWidth * (3.3f / 100f);
 				break;
 			case SafetyOverlayMode.Zone:
 				// set outlines width
-				minOrthographicSize = pins.diameter - 2f; // -1.5f / 2f;
-				maxOrthographicSize = minOrthographicSize * 3.3f; // 3.3f / 3.3f;
+				minOrthographicSize = pins.diameter - (2f / 100f); // -1.5f / 2f;
+				maxOrthographicSize = minOrthographicSize * (3.3f / 100f); // 3.3f / 3.3f;
 				minOutlineWidth = 0f;
-				maxOutlineWidth = minOutlineWidth * 3.3f;
+				maxOutlineWidth = minOutlineWidth * (3.3f / 100f);
 				minSecondOutlineWidth = 0f;
-				maxSecondOutlineWidth = minSecondOutlineWidth * 3.3f;
+				maxSecondOutlineWidth = minSecondOutlineWidth * (3.3f / 100f);
 				minThirdOutlineWidth = 0f;
-				maxThirdOutlineWidth = minThirdOutlineWidth * 3.3f;
-				minFourthOutlineWidth = 1.5f;
-				maxFourthOutlineWidth = minFourthOutlineWidth * 3.3f;
-				minFifthOutlineWidth = 2.9f;
-				maxFifthOutlineWidth = minFifthOutlineWidth * 3.3f;
+				maxThirdOutlineWidth = minThirdOutlineWidth * (3.3f / 100f);
+				minFourthOutlineWidth = 0f;
+				maxFourthOutlineWidth = minFourthOutlineWidth * (3.3f / 100f);
+				minFifthOutlineWidth = 0f;
+				maxFifthOutlineWidth = minFifthOutlineWidth * (3.3f / 100f);
 				break;
 			case SafetyOverlayMode.None:
 				return;
@@ -669,13 +710,37 @@ public class SafeGuard : MonoBehaviour
 		float leftHandRadius, leftArmRadius;
 		leftHandPos = leftBackArmPos = leftFrontArmPos = Vector3.zero;
 		leftHandRadius = leftArmRadius = 0f;
+
+
+		if (frozen)
+		{
+
+			currLeftHandCollider = prevLeftHandCollider;
+			currLeftArmCollider = prevLeftArmCollider;
+			currRightHandCollider = prevRightHandCollider;
+			currRightArmCollider = prevRightArmCollider;
+		}
+		else
+		{
+			if (pins.leftHand != null && pins.leftHand.IsActive())
+			{
+
+				currLeftHandCollider = pins.leftHand.GetHandCollider();
+				currLeftArmCollider =  pins.leftHand.GetArmCollider();
+			}
+			if (pins.rightHand != null && pins.rightHand.IsActive())
+			{
+
+				currRightHandCollider = pins.rightHand.GetHandCollider();
+				currRightArmCollider = pins.rightHand.GetArmCollider();
+			}
+		}
 		// Generate Left Forearm Zone
-		if (pins.leftHand != null && pins.leftHand.IsActive())
+		if (currLeftHandCollider != null && currLeftArmCollider!=null)
 		{
 			// Left Hand Zone
-			GameObject handCollider = pins.leftHand.GetHandCollider();
-			SphereCollider sc = handCollider.GetComponent<SphereCollider>();
-			Vector3 handColliderPosition = handCollider.transform.position;
+			SphereCollider sc = currLeftHandCollider.GetComponent<SphereCollider>();
+			Vector3 handColliderPosition = currLeftHandCollider.transform.position;
 			backgroundDistance = - (sc.radius * 2.0f + pins.height);
 			handColliderPosition.y = backgroundDistance;
 			Vector3 handColliderScale = new Vector3(sc.radius * 2.0f, sc.radius * 2.0f, sc.radius * 2.0f);
@@ -693,10 +758,9 @@ public class SafeGuard : MonoBehaviour
 			_handIndex++;
 
 			// Left Arm Zone
-			GameObject armCollider = pins.leftHand.GetArmCollider();
-			CapsuleCollider capsuleCollider1 = armCollider.GetComponent<CapsuleCollider>();
-			Vector3 forwardArmColliderPosition = armCollider.transform.position + armCollider.transform.forward * (capsuleCollider1.height / 2.0f);
-			Vector3 backwardArmColliderPosition = armCollider.transform.position - armCollider.transform.forward * (capsuleCollider1.height / 2.0f);
+			CapsuleCollider capsuleCollider1 = currLeftArmCollider.GetComponent<CapsuleCollider>();
+			Vector3 forwardArmColliderPosition = currLeftArmCollider.transform.position + currLeftArmCollider.transform.forward * (capsuleCollider1.height / 2.0f);
+			Vector3 backwardArmColliderPosition = currLeftArmCollider.transform.position - currLeftArmCollider.transform.forward * (capsuleCollider1.height / 2.0f);
 			forwardArmColliderPosition.y = backgroundDistance; 
 			backwardArmColliderPosition.y = backgroundDistance; 
 			Vector3 armColliderPosition = backwardArmColliderPosition + (forwardArmColliderPosition - backwardArmColliderPosition) / 2.0f;
@@ -728,12 +792,12 @@ public class SafeGuard : MonoBehaviour
 		rightHandPos = rightBackArmPos = rightFrontArmPos = Vector3.zero;
 		rightHandRadius = rightArmRadius = 0f;
 		// Generate Right Hand Zone
-		if (pins.rightHand != null && pins.rightHand.IsActive())
+		if (currRightHandCollider != null && currRightArmCollider != null)
 		{
 			// Right Hand Zone
-			GameObject handCollider = pins.rightHand.GetHandCollider();
-			SphereCollider sc = handCollider.GetComponent<SphereCollider>();
-			Vector3 handColliderPosition = handCollider.transform.position;
+			// prevRightHandCollider = pins.rightHand.GetHandCollider();
+			SphereCollider sc = currRightHandCollider.GetComponent<SphereCollider>();
+			Vector3 handColliderPosition = currRightHandCollider.transform.position;
 			backgroundDistance = - (sc.radius * 2.0f + pins.height);
 			handColliderPosition.y = backgroundDistance;
 			Vector3 handColliderScale = new Vector3(sc.radius * 2.0f, sc.radius * 2.0f, sc.radius * 2.0f);
@@ -746,14 +810,14 @@ public class SafeGuard : MonoBehaviour
 			_handOutlineColors[_handIndex] = new Vector4(0f, 0f, 0f, 1f);
 			_handOutlineWidths[_handIndex] = bodyOutlineWidth;
 			_handSecondOutlineColors[_handIndex] = new Vector4(1f, 1f, 1f, 1f);
-			_handSecondOutlineWidths[_handIndex] = 2f;
+			_handSecondOutlineWidths[_handIndex] = 2f/100f;
 			_handIndex++;
 
 			// Right Arm Zone
-			GameObject armCollider = pins.rightHand.GetArmCollider();
-			CapsuleCollider capsuleCollider1 = armCollider.GetComponent<CapsuleCollider>();
-			Vector3 forwardArmColliderPosition = armCollider.transform.position + armCollider.transform.forward * (capsuleCollider1.height / 2.0f);
-			Vector3 backwardArmColliderPosition = armCollider.transform.position - armCollider.transform.forward * (capsuleCollider1.height / 2.0f);
+			// prevRightArmCollider = pins.rightHand.GetArmCollider();
+			CapsuleCollider capsuleCollider1 = currRightArmCollider.GetComponent<CapsuleCollider>();
+			Vector3 forwardArmColliderPosition = currRightArmCollider.transform.position + currRightArmCollider.transform.forward * (capsuleCollider1.height / 2.0f);
+			Vector3 backwardArmColliderPosition = currRightArmCollider.transform.position - currRightArmCollider.transform.forward * (capsuleCollider1.height / 2.0f);
 			forwardArmColliderPosition.y = backgroundDistance;
 			backwardArmColliderPosition.y = backgroundDistance;
 			Vector3 armColliderPosition = backwardArmColliderPosition + (forwardArmColliderPosition - backwardArmColliderPosition) / 2.0f;
@@ -841,9 +905,9 @@ public class SafeGuard : MonoBehaviour
 					// add pin to points for convex hull
 					points.Add(new Vector3(dotPos.x, 0f, dotPos.z));
 					// Generate Plane
-					Vector3 planePos = pin.position + pin.up * ((dotDiameter - minOrthographicSize + 0.1f) + pins.height / 2.0f);
+					Vector3 planePos = pin.position + pin.up * ((dotDiameter - minOrthographicSize + 0.01f) + pins.height / 2.0f);
 					Quaternion planeRot = pin.rotation * Quaternion.AngleAxis(90, pin.up);
-					Vector3 planeScale = new Vector3(minOrthographicSize + 0.1f, 0.1f, minOrthographicSize + 0.1f);
+					Vector3 planeScale = new Vector3(minOrthographicSize + 0.01f, 0.01f, minOrthographicSize + 0.01f);
 					_planeMatrices[_planeIndex] = Matrix4x4.TRS(
 						 planePos,
 						 planeRot,
@@ -941,17 +1005,17 @@ public class SafeGuard : MonoBehaviour
 				float length = dotToTarget.magnitude / 2.0f;
 				Vector3 linePos = dotPos + dotToTarget / 2.0f;
 				Quaternion lineRot = (dotToTarget == Vector3.zero) ? Quaternion.identity : Quaternion.LookRotation(targetPos - dotPos) * Quaternion.AngleAxis(90, Vector3.right);
-				Vector3 lineScale = new Vector3(pins.diameter - 2f, length, pins.diameter - 2f);
+				Vector3 lineScale = new Vector3(pins.diameter - 2f/100f, length, pins.diameter - 2f/100f);
 				_lineMatrices[_lineIndex] = Matrix4x4.TRS(
 					linePos,
 					lineRot,
 					lineScale
 				);
 				_lineColors[_lineIndex] = new Vector4(1f, 1f, 1f, 1f);
-				_lineOutlineColors[_lineIndex] = new Vector4(0f, 0f, 0f, 1f);
-				_lineOutlineWidths[_lineIndex] = 1.2f;
-				_lineSecondOutlineColors[_lineIndex] = new Vector4(1f, 1f, 1f, 1f);
-				_lineSecondOutlineWidths[_lineIndex] = 2.6f;
+				_lineOutlineColors[_lineIndex] = new Vector4(1f, 1f, 1f, 1f);
+				_lineOutlineWidths[_lineIndex] = 1.2f/10000f;
+				_lineSecondOutlineColors[_lineIndex] = new Vector4(0f, 0f, 0f, 1f);
+				_lineSecondOutlineWidths[_lineIndex] = 2.6f/10000f;
 				// left hand mask
 				_lineLeftHandCenters[_lineIndex] = leftHandPos;
 				_lineLeftHandRadius[_lineIndex] = leftHandRadius;
@@ -999,9 +1063,9 @@ public class SafeGuard : MonoBehaviour
 				);
 			_hullColors[_hullIndex] = new Vector4(1f, 1f, 1f, 1f);
 			_hullOutlineColors[_hullIndex] = new Vector4(0f, 0f, 0f, 1f);
-			_hullOutlineWidths[_hullIndex] = 1.2f;
+			_hullOutlineWidths[_hullIndex] = 1.2f/10000f;
 			_hullSecondOutlineColors[_hullIndex] = new Vector4(1f, 1f, 1f, 1f);
-			_hullSecondOutlineWidths[_hullIndex] = 2.6f;
+			_hullSecondOutlineWidths[_hullIndex] = 2.6f/10000f;
 			// left hand mask
 			_hullLeftHandCenters[_hullIndex] = leftHandPos;
 			_hullLeftHandRadius[_hullIndex] = leftHandRadius;
@@ -1075,7 +1139,7 @@ public class SafeGuard : MonoBehaviour
 		}
 		// Render graphics
 		Render();
-		if (freeze && toDraw && !frozen) frozen = true;
+		//if (freeze && toDraw && !frozen) frozen = true;
 		// Combine and Draw hand & arm zones
 		if (toDraw) ProjectorEaseIn();
 		else ProjectorEaseOut();

@@ -212,7 +212,7 @@ Shader "Outlined/DotOutlineShader" {
 					Name "OUTLINE 1"
 					Tags { "LightMode" = "Always" }
 					Cull Front
-					Offset 0, 0
+					Offset 0,995
 				// you can choose what kind of blending mode you want for the outline
 				Blend SrcAlpha OneMinusSrcAlpha // Normal
 				//Blend One One // Additive
@@ -278,7 +278,7 @@ Shader "Outlined/DotOutlineShader" {
 						Name "OUTLINE 2"
 						Tags { "LightMode" = "Always" }
 						Cull Front
-						Offset 0,0
+						Offset 0,996
 
 				// you can choose what kind of blending mode you want for the outline
 				Blend SrcAlpha OneMinusSrcAlpha // Normal
@@ -345,7 +345,7 @@ Shader "Outlined/DotOutlineShader" {
 						Name "OUTLINE 3"
 						Tags { "LightMode" = "Always" }
 						Cull Front
-						Offset 0,0
+						Offset 0,997
 
 				// you can choose what kind of blending mode you want for the outline
 				Blend SrcAlpha OneMinusSrcAlpha // Normal
@@ -413,7 +413,7 @@ Shader "Outlined/DotOutlineShader" {
 						Name "OUTLINE 3"
 						Tags { "LightMode" = "Always" }
 						Cull Front
-						Offset 0,0
+						Offset 0,998
 
 				// you can choose what kind of blending mode you want for the outline
 				Blend SrcAlpha OneMinusSrcAlpha // Normal
@@ -481,7 +481,7 @@ Shader "Outlined/DotOutlineShader" {
 						Name "OUTLINE 4"
 						Tags { "LightMode" = "Always" }
 						Cull Front
-						Offset 0,0
+						Offset 0,999
 
 				// you can choose what kind of blending mode you want for the outline
 				Blend SrcAlpha OneMinusSrcAlpha // Normal
@@ -549,7 +549,7 @@ Shader "Outlined/DotOutlineShader" {
 						Name "OUTLINE 5"
 						Tags { "LightMode" = "Always" }
 						Cull Front
-						Offset 0,0
+						Offset 0,1000
 
 				// you can choose what kind of blending mode you want for the outline
 				Blend SrcAlpha OneMinusSrcAlpha // Normal

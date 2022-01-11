@@ -38,8 +38,10 @@ public class XP2_P1 : MonoBehaviour
 	public GameObject expanDialSticksPrefab;
 	public GameObject capsuleHandLeftPrefab;
 	public GameObject capsuleHandRightPrefab;
+	public GameObject safeGuardPrefab;
 	private MyCapsuleHand leftHand;
 	private MyCapsuleHand rightHand;
+	private SafeGuard safeGuard;
 	private ExpanDialSticks expanDialSticks;
 	private bool connected;
 
@@ -88,6 +90,7 @@ public class XP2_P1 : MonoBehaviour
 		leftHand = capsuleHandLeftPrefab.GetComponent<MyCapsuleHand>();
 		rightHand = capsuleHandRightPrefab.GetComponent<MyCapsuleHand>();
 		expanDialSticks = expanDialSticksPrefab.GetComponent<ExpanDialSticks>();
+		safeGuard = safeGuardPrefab.GetComponent<SafeGuard>();
 		// Listen to events
 		expanDialSticks.OnConnecting += HandleConnecting;
 		expanDialSticks.OnConnected += HandleConnected;
@@ -115,18 +118,22 @@ public class XP2_P1 : MonoBehaviour
 			}
 		}
 		// Generate trials
-		overlays = new List<ExpanDialSticks.SafetyOverlayMode> { ExpanDialSticks.SafetyOverlayMode.Hull, ExpanDialSticks.SafetyOverlayMode.Zone, ExpanDialSticks.SafetyOverlayMode.Edge, ExpanDialSticks.SafetyOverlayMode.Fill};
+		overlays = new List<ExpanDialSticks.SafetyOverlayMode> { ExpanDialSticks.SafetyOverlayMode.Edge, ExpanDialSticks.SafetyOverlayMode.Fill, ExpanDialSticks.SafetyOverlayMode.Hull, ExpanDialSticks.SafetyOverlayMode.Zone};
 		currOverlay = ExpanDialSticks.SafetyOverlayMode.None;
 		difficulties = new List<Difficulty> { Difficulty.Easy, Difficulty.Medium, Difficulty.Hard };
 		trials = new Dictionary<Difficulty, List<List<int>>>();
 		nbTrials = 0;
+		
+	}
+	public void GenerateTrials()
+	{
 		foreach (Difficulty difficulty in difficulties)
 		{
 			List<List<int>> changes = new List<List<int>>();
 			switch (difficulty)
 			{
 				case Difficulty.Easy:
-					for(int i = 0; i < overlays.Count(); i++)
+					for (int i = 0; i < overlays.Count(); i++)
 					{
 						List<List<int>> overlayChanges = new List<List<int>>();
 						overlayChanges.Add(new List<int> { (int)overlays[i], 40, 27, 13 }); ;
@@ -169,6 +176,7 @@ public class XP2_P1 : MonoBehaviour
 		}
 		toNextTrial = true;
 	}
+
 
 
 	private void HandleConnecting(object sender, MqttConnectionEventArgs e)
@@ -417,7 +425,7 @@ public class XP2_P1 : MonoBehaviour
 		{
 			stringParticipant = GUI.TextField(new Rect(midX - 55, midY, 50, componentHeight), stringParticipant, 25);
 
-			if (GUI.Button(new Rect(midX + 5, midY, 150, componentHeight), "START"))
+			if (GUI.Button(new Rect(midX + 5, midY, 200, componentHeight), "START"))
 			{
 				numeroParticipant = int.Parse(stringParticipant);
 				int overlaySplitIndex = numeroParticipant % overlays.Count();
@@ -429,6 +437,7 @@ public class XP2_P1 : MonoBehaviour
 				overlays.AddRange(nextOverlays);
 				Debug.Log(overlays.ToArrayString());
 				unknownParticipant = false;
+				GenerateTrials();
 			}
 				/*if (GUI.Button(new Rect(midX + 5, midY - 50, 150, componentHeight), "Training Overlay"))
 				{
@@ -554,8 +563,7 @@ public class XP2_P1 : MonoBehaviour
 			}
 
 			expanDialSticks.triggerSafetyChange();
-			leftHand.Freeze();
-			rightHand.Freeze();
+			safeGuard.Freeze();
 			DisplayInstructions("Tourner les cylindres arrêtés <b>du plus descendant au plus ascendant</b>.");
 
 			string shapeChangeMsg = "SHAPE_CHANGE [";
@@ -582,7 +590,7 @@ public class XP2_P1 : MonoBehaviour
 				//Projector
 				expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "default";
 				expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
-				expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorSize = expanDialSticks.modelMatrix[i, j].Diameter / 3f;
 				expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
 				//Texture
 				expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
@@ -647,8 +655,7 @@ public class XP2_P1 : MonoBehaviour
 		if (trials.Count() > 0)
 		{
 			// Unfreeze hand tracking
-			leftHand.Unfreeze();
-			rightHand.Unfreeze();
+			safeGuard.UnFreeze();
 			// Extract difficulty and changes
 			KeyValuePair<Difficulty, List<List<int>>> difficultyChanges = trials.First();
 			currDifficulty = difficultyChanges.Key;
@@ -703,7 +710,7 @@ public class XP2_P1 : MonoBehaviour
 					}
 					// Projector
 					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = expanDialSticks.modelMatrix[i, j].Diameter/3f;
 					expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
 				}
 			}
