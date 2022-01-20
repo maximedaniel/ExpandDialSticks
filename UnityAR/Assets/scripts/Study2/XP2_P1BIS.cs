@@ -351,64 +351,34 @@ public class XP2_P1BIS : MonoBehaviour
 				unknownParticipant = false;
 			}
 
-			if (GUI.Button(new Rect(midX + 5, midY - 25, 150, componentHeight), "Edge Overlay"))
+			if (GUI.Button(new Rect(midX + 5, midY - 25, 150, componentHeight), "User Overlay"))
 			{
 
 				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
 				numeroParticipant = int.Parse(stringParticipant);
 				Debug.Log("Start");
 
-				currOverlay = ExpanDialSticks.SafetyOverlayMode.Edge;
+				currOverlay = ExpanDialSticks.SafetyOverlayMode.User;
 				expanDialSticks.SetOverlayMode(currOverlay);
 				expanDialSticks.triggerSafetyChange();
 
-				string identity = "USER_IDENTITY " + numeroParticipant + " EDGE_OVERLAY";
+				string identity = "USER_IDENTITY " + numeroParticipant + " USER_OVERLAY";
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				unknownParticipant = false;
 			}
 
-			if (GUI.Button(new Rect(midX + 5, midY, 150, componentHeight), "Surface Overlay"))
+			if (GUI.Button(new Rect(midX + 5, midY, 150, componentHeight), "System Overlay"))
 			{
 
 				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
 				numeroParticipant = int.Parse(stringParticipant);
 				Debug.Log("Start");
 
-				currOverlay = ExpanDialSticks.SafetyOverlayMode.Fill;
+				currOverlay = ExpanDialSticks.SafetyOverlayMode.System;
 				expanDialSticks.SetOverlayMode(currOverlay);
 				expanDialSticks.triggerSafetyChange();
 
-				string identity = "USER_IDENTITY " + numeroParticipant + " SURFACE_OVERLAY";
-				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-				unknownParticipant = false;
-			}
-			if (GUI.Button(new Rect(midX + 5, midY + 25, 150, componentHeight), "Hull Overlay"))
-			{
-
-				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
-				numeroParticipant = int.Parse(stringParticipant);
-				Debug.Log("Start");
-
-				currOverlay = ExpanDialSticks.SafetyOverlayMode.Hull;
-				expanDialSticks.SetOverlayMode(currOverlay);
-				expanDialSticks.triggerSafetyChange();
-
-				string identity = "USER_IDENTITY " + numeroParticipant + " HULL_OVERLAY";
-				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-				unknownParticipant = false;
-			}
-			if (GUI.Button(new Rect(midX + 5, midY + 50, 150, componentHeight), "Zone Overlay"))
-			{
-
-				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
-				numeroParticipant = int.Parse(stringParticipant);
-				Debug.Log("Start");
-
-				currOverlay = ExpanDialSticks.SafetyOverlayMode.Zone;
-				expanDialSticks.SetOverlayMode(currOverlay);
-				expanDialSticks.triggerSafetyChange();
-
-				string identity = "USER_IDENTITY " + numeroParticipant + " ZONE_OVERLAY";
+				string identity = "USER_IDENTITY " + numeroParticipant + " SYSTEM_OVERLAY";
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				unknownParticipant = false;
 			}

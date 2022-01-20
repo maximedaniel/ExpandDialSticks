@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
@@ -14,23 +15,6 @@ using Leap.Unity;
 using Random = UnityEngine.Random;
 using System.Linq;
 
-public static class ListExtension
-{
-	public static System.Random rng = new System.Random();
-
-	public static void Shuffle<T>(this IList<T> list)
-	{
-		int n = list.Count;
-		while (n > 1)
-		{
-			n--;
-			int k = rng.Next(n + 1);
-			T value = list[k];
-			list[k] = list[n];
-			list[n] = value;
-		}
-	}
-}
 public class XP2_P1 : MonoBehaviour
 {
 
@@ -46,14 +30,19 @@ public class XP2_P1 : MonoBehaviour
 	private bool connected;
 
 	private const float LOG_INTERVAL = 0.2f; // 0.2f;
+	private const float COMPLETION_INTERVAL = 0.5f; // 0.2f;
 	private float currTime;
 	private float prevRandomTextureTime;
 	private float prevMetricsTime;
+	private float prevDistractorTime;
+	private float distractorTriggerDelay = 2f;
 
 	private const int minPos = 0;
 	private const int maxPos = 20;
 	private const int targetPos = 30;
-	private const float shapeChangeDuration = 2f;
+	private const float shortShapeChangeDuration = 2f;
+	private const float longShapeChangeDuration = 6f;
+	private float shapeChangeDuration = 2f;
 	private const float safetyDistance = 6f;
 
 
@@ -63,27 +52,48 @@ public class XP2_P1 : MonoBehaviour
 	private int numeroParticipant = 0;
 	private bool unknownParticipant = true;
 	private bool overlayAppeared = false;
+	private bool training = false;
+	private bool triggerNextTrial = true;
+	private bool waitForNoHand = false;
+	private bool autoDistractorTrigger = false;
 
 	public const string MQTT_SYSTEM_RECORDER = "SYSTEM_RECORDER";
 	public const string CMD_START = "START";
 	public const string CMD_STOP = "STOP";
 
 
-	public enum Difficulty { Easy, Medium, Hard};
 	private List<ExpanDialSticks.SafetyOverlayMode> overlays;
-	private ExpanDialSticks.SafetyOverlayMode currOverlay;
-	private List<Difficulty> difficulties;
-	private Difficulty currDifficulty;
-	private Dictionary<Difficulty, List<List<int>>> trials;
-	private List<int> currSubChanges;
-	private Vector2Int target;
+	private ExpanDialSticks.SafetyOverlayMode currOverlay = ExpanDialSticks.SafetyOverlayMode.User;
+
+	private Vector2Int LEFT = new Vector2Int(-1, 0);
+	private Vector2Int LEFT_UP = new Vector2Int(-1, -1);
+	private Vector2Int UP = new Vector2Int(0, -1);
+	private Vector2Int RIGHT_UP = new Vector2Int(+1, -1);
+	private Vector2Int RIGHT = new Vector2Int(+1, 0);
+	private Vector2Int RIGHT_DOWN = new Vector2Int(+1, +1);
+	private Vector2Int DOWN = new Vector2Int(0, +1);
+	private Vector2Int LEFT_DOWN = new Vector2Int(-1, +1);
+
+	private List<List<Vector2Int>> distractorPositions = new List<List<Vector2Int>>();
+
+	//public enum DistractorPosition { LEFT, UP, RIGHT, DOWN, UP_LEFT, UP_RIGHT, DOWN_RIGHT, DOWN_LEFT };
+	private List<Vector2Int> currDistractorPositions;
+	private int currDistractorIndex;
+	private List<Vector2Int> targetPositions;
+	private Vector2Int currTargetPosition;
+	private int currTargetIndex;
+
+	public enum TaskMode { System, User };
+	private List<TaskMode> tasks;
+	private TaskMode currTask = TaskMode.User;
+	private Vector3 currTarget;
 	private List<Vector2Int> candidates;
-	private List<Vector3Int> diffCandidates;
-	private List<Vector3Int> orderedCandidates;
-	private Vector3Int prevOrderedCandidate;
-	private bool toNextTrial = true;
-	private int currTrial = 0;
-	private int nbTrials = int.MaxValue;
+
+	private Vector2Int prevSelectPosition;
+	private Vector2Int currSelectPosition;
+
+
+	private const int nbTrials = 3;
 
 	void Start()
 	{
@@ -103,11 +113,6 @@ public class XP2_P1 : MonoBehaviour
 		expanDialSticks.onHoldingChanged += HandleHoldingChanged;
 		expanDialSticks.onReachingChanged += HandleReachingChanged;
 
-		connected = false;
-		expanDialSticks.client_MqttConnect();
-		// generate potential candidates
-		orderedCandidates = new List<Vector3Int>();
-		prevOrderedCandidate = new Vector3Int(-1,-1,-1);
 		candidates = new List<Vector2Int>(); //= Enumerable.Range(0, nbPins).ToList<int>();
 											 // get pins inside matrix only
 		for (int i = 1; i < expanDialSticks.NbRows - 1; i++)
@@ -117,64 +122,53 @@ public class XP2_P1 : MonoBehaviour
 				candidates.Add(new Vector2Int(i, j));
 			}
 		}
-		// Generate trials
-		overlays = new List<ExpanDialSticks.SafetyOverlayMode> { ExpanDialSticks.SafetyOverlayMode.Edge, ExpanDialSticks.SafetyOverlayMode.Fill, ExpanDialSticks.SafetyOverlayMode.Hull, ExpanDialSticks.SafetyOverlayMode.Zone};
-		currOverlay = ExpanDialSticks.SafetyOverlayMode.None;
-		difficulties = new List<Difficulty> { Difficulty.Easy, Difficulty.Medium, Difficulty.Hard };
-		trials = new Dictionary<Difficulty, List<List<int>>>();
-		nbTrials = 0;
-		
+		distractorPositions = new List<List<Vector2Int>>();
+
+		connected = false;
+		training = false;
+		currOverlay = ExpanDialSticks.SafetyOverlayMode.User;
+		currTask = TaskMode.User;
+
+		currDistractorIndex = -1;
+		currDistractorPositions = new List<Vector2Int>();
+		currTargetIndex = -1;
+		currTargetPosition = new Vector2Int(-1, -1);
+		targetPositions = new List<Vector2Int>();
+
+		prevSelectPosition = currSelectPosition = new Vector2Int(-1, -1);
+
+		GenerateTrials();
+		triggerNextTrial = true;
+
+		expanDialSticks.client_MqttConnect();
+
 	}
 	public void GenerateTrials()
 	{
-		foreach (Difficulty difficulty in difficulties)
+		distractorPositions.Add(new List<Vector2Int> { LEFT, UP, RIGHT });
+		distractorPositions.Add(new List<Vector2Int> { UP, RIGHT, DOWN });
+		distractorPositions.Add(new List<Vector2Int> { RIGHT, DOWN, LEFT });
+		distractorPositions.Add(new List<Vector2Int> { DOWN, LEFT, UP });
+
+		distractorPositions.Add(new List<Vector2Int> { LEFT_UP, RIGHT_UP, RIGHT_DOWN });
+		distractorPositions.Add(new List<Vector2Int> { RIGHT_UP, RIGHT_DOWN, LEFT_DOWN });
+		distractorPositions.Add(new List<Vector2Int> { RIGHT_DOWN, LEFT_DOWN, LEFT_UP });
+		distractorPositions.Add(new List<Vector2Int> { LEFT_DOWN, LEFT_UP, RIGHT_UP });
+
+		distractorPositions.Add(new List<Vector2Int> { LEFT_DOWN, LEFT_UP, RIGHT });
+		distractorPositions.Add(new List<Vector2Int> { LEFT_UP, RIGHT_UP, DOWN });
+		distractorPositions.Add(new List<Vector2Int> { RIGHT_UP, RIGHT_DOWN, LEFT });
+		distractorPositions.Add(new List<Vector2Int> { RIGHT_DOWN, LEFT_DOWN, UP });
+
+		ListExtension.Shuffle(distractorPositions);
+
+		for(int i = 0; i < distractorPositions.Count(); i++)
 		{
-			List<List<int>> changes = new List<List<int>>();
-			switch (difficulty)
-			{
-				case Difficulty.Easy:
-					for (int i = 0; i < overlays.Count(); i++)
-					{
-						List<List<int>> overlayChanges = new List<List<int>>();
-						overlayChanges.Add(new List<int> { (int)overlays[i], 40, 27, 13 }); ;
-						overlayChanges.Add(new List<int> { (int)overlays[i], 27, 13, -13 });
-						overlayChanges.Add(new List<int> { (int)overlays[i], 13, -13, -27 });
-						overlayChanges.Add(new List<int> { (int)overlays[i], -13, -27, -40 });
-						ListExtension.Shuffle(overlayChanges);
-						changes.AddRange(overlayChanges);
-						nbTrials += 4;
-					}
-					break;
-				case Difficulty.Medium:
-					for (int i = 0; i < overlays.Count(); i++)
-					{
-						List<List<int>> overlayChanges = new List<List<int>>();
-						changes.Add(new List<int> { (int)overlays[i], 40, 32, 24, 16, 8 });
-						changes.Add(new List<int> { (int)overlays[i], 24, 16, 8, -8, -16 });
-						changes.Add(new List<int> { (int)overlays[i], 16, 8, -8, -16, -24 });
-						changes.Add(new List<int> { (int)overlays[i], -8, -16, -24, -32, -40 });
-						ListExtension.Shuffle(overlayChanges);
-						changes.AddRange(overlayChanges);
-						nbTrials += 4;
-					}
-					break;
-				case Difficulty.Hard:
-					for (int i = 0; i < overlays.Count(); i++)
-					{
-						List<List<int>> overlayChanges = new List<List<int>>();
-						changes.Add(new List<int> { (int)overlays[i], 40, 37, 34, 32, 29, 26, 24 });
-						changes.Add(new List<int> { (int)overlays[i], 10, 8, 5, 3, -3, -5, -8 });
-						changes.Add(new List<int> { (int)overlays[i], 8, 5, 3, -3, -5, -8, -10 });
-						changes.Add(new List<int> { (int)overlays[i], -24, -26, -29, -32, -34, -37, -40 });
-						ListExtension.Shuffle(overlayChanges);
-						changes.AddRange(overlayChanges);
-						nbTrials += 4;
-					}
-					break;
-			}
-			trials.Add(difficulty, changes);
+			//Debug.Log(i % candidates.Count());
+			//Debug.Log(candidates[i % candidates.Count()]);
+			targetPositions.Add(candidates[i % candidates.Count()]);
 		}
-		toNextTrial = true;
+		ListExtension.Shuffle(targetPositions);
 	}
 
 
@@ -216,49 +210,20 @@ public class XP2_P1 : MonoBehaviour
 
 	private void HandleRotationChanged(object sender, ExpanDialStickEventArgs e)
 	{
-		Vector3Int currOrderedCandidate = new Vector3Int(e.i, e.j, 0);
-		if (!overlayAppeared)
+		currSelectPosition = new Vector2Int(e.i, e.j);
+
+		if (currSelectPosition != prevSelectPosition)
 		{
-			if (currOrderedCandidate.x == target.x && currOrderedCandidate.y == target.y)
+			if(currTargetPosition == currSelectPosition)
 			{
-				Debug.Log("TargetRotated!");
-				string targetCandidateMsg = "USER_TARGET_ROTATION " + target;
-				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(targetCandidateMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-				TriggerOverlay(); 
-				target = new Vector2Int(-1, -1); 
-				
-				
+				StartCoroutine(TriggerDistractors());
 			}
-		} else
-		{
-			if(currOrderedCandidate != prevOrderedCandidate)
-			{
-				Vector3Int foundCandidate = diffCandidates.Find(diffCandidate => diffCandidate.x == e.i && diffCandidate.y == e.j);
-				if (foundCandidate != Vector3Int.zero)
-				{
-					Debug.Log("Right Candidate Rotated => " + currOrderedCandidate);
-					string rightCandidateMsg = "USER_RIGHT_ROTATION " + foundCandidate;
-					expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(rightCandidateMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-					diffCandidates.Remove(foundCandidate);
-					UpdateOverlay();
-					if (diffCandidates.Count() == 0)
-					{
-						toNextTrial = true;
-					}
-
-				}
-				else
-				{
-					Debug.Log("Wrong Candidate Rotated => " + currOrderedCandidate);
-					string wrongCandidateMsg = "USER_WRONG_ROTATION " + currOrderedCandidate;
-					expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(wrongCandidateMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-
-				}
-
-			}
-			
 		}
+		else
+		{
 
+		}
+		prevSelectPosition = currSelectPosition;
 	}
 
 	private void HandlePositionChanged(object sender, ExpanDialStickEventArgs e)
@@ -378,7 +343,8 @@ public class XP2_P1 : MonoBehaviour
 					float randomDuration = Random.Range(0.25f, 5f);
 					expanDialSticks.modelMatrix[i, j].TargetColor = randomColor;
 					expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = randomDuration;
-				} else
+				}
+				else
 				{
 					expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = expanDialSticks.viewMatrix[i, j].TargetTextureChangeDuration;
 				}
@@ -409,118 +375,70 @@ public class XP2_P1 : MonoBehaviour
 		float midX = Screen.width / 2.0f;
 		float midY = Screen.height / 2.0f;
 		float componentHeight = 20;
-
-		if (newOverlay)
-		{
-			string buttonLabel = "START " + currDifficulty.ToString().ToUpper() + " | " + currOverlay.ToString().ToUpper();
-			if (GUI.Button(new Rect(midX - 75, midY, 150, componentHeight), buttonLabel))
-			{
-				newOverlay = false;
-				toNextTrial = true;
-				landscapeGenerated = false;
-			}
-		}
+		float componentWidth = 250;
 
 		if (unknownParticipant)
 		{
 			stringParticipant = GUI.TextField(new Rect(midX - 55, midY, 50, componentHeight), stringParticipant, 25);
 
-			if (GUI.Button(new Rect(midX + 5, midY, 200, componentHeight), "START"))
+
+			if (GUI.Button(new Rect(midX + 5, midY - 50, componentWidth, componentHeight), "USER Overlay | USER Task"))
 			{
 				numeroParticipant = int.Parse(stringParticipant);
-				int overlaySplitIndex = numeroParticipant % overlays.Count();
-				List<ExpanDialSticks.SafetyOverlayMode> nextOverlays = overlays.GetRange(0, overlaySplitIndex);
-				List<ExpanDialSticks.SafetyOverlayMode> prevOverlays = overlays.GetRange(overlaySplitIndex, overlays.Count() - overlaySplitIndex);
-
-				overlays = new List<ExpanDialSticks.SafetyOverlayMode>();
-				overlays.AddRange(prevOverlays);
-				overlays.AddRange(nextOverlays);
-				Debug.Log(overlays.ToArrayString());
+				currTask = TaskMode.User;
+				shapeChangeDuration = shortShapeChangeDuration;
+				currOverlay = ExpanDialSticks.SafetyOverlayMode.User;
+				expanDialSticks.SetOverlayMode(currOverlay);
+				string identity = "USER_IDENTITY " + numeroParticipant + " | OVERLAY USER | TASK USER";
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+				Debug.Log(identity);
 				unknownParticipant = false;
-				GenerateTrials();
 			}
-				/*if (GUI.Button(new Rect(midX + 5, midY - 50, 150, componentHeight), "Training Overlay"))
-				{
-					training = true;
-					numeroParticipant = int.Parse(stringParticipant);
-					Debug.Log("TRAINING");
-					string identity = "USER_IDENTITY " + numeroParticipant + " TRAINING";
-					expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-					unknownParticipant = false;
-				}
 
-				if (GUI.Button(new Rect(midX + 5, midY - 25, 150, componentHeight), "Edge Overlay"))
-				{
-
-					expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
-					training = false;
-					numeroParticipant = int.Parse(stringParticipant);
-					Debug.Log("Start");
-
-					currOverlay = ExpanDialSticks.SafetyOverlayMode.Edge;
-					expanDialSticks.SetOverlayMode(currOverlay);
-					expanDialSticks.triggerSafetyChange();
-
-					string identity = "USER_IDENTITY " + numeroParticipant + " EDGE_OVERLAY";
-					expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-					unknownParticipant = false;
-				}
-
-				if (GUI.Button(new Rect(midX + 5, midY, 150, componentHeight), "Surface Overlay"))
-				{
-
-					expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
-					training = false;
-					numeroParticipant = int.Parse(stringParticipant);
-					Debug.Log("Start");
-
-					currOverlay = ExpanDialSticks.SafetyOverlayMode.Fill;
-					expanDialSticks.SetOverlayMode(currOverlay);
-					expanDialSticks.triggerSafetyChange();
-
-					string identity = "USER_IDENTITY " + numeroParticipant + " SURFACE_OVERLAY";
-					expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-					unknownParticipant = false;
-				}
-				if (GUI.Button(new Rect(midX + 5, midY + 25, 150, componentHeight), "Hull Overlay"))
-				{
-
-					expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
-					training = false;
-					numeroParticipant = int.Parse(stringParticipant);
-					Debug.Log("Start");
-
-					currOverlay = ExpanDialSticks.SafetyOverlayMode.Hull;
-					expanDialSticks.SetOverlayMode(currOverlay);
-					expanDialSticks.triggerSafetyChange();
-
-					string identity = "USER_IDENTITY " + numeroParticipant + " HULL_OVERLAY";
-					expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-					unknownParticipant = false;
-				}
-				if (GUI.Button(new Rect(midX + 5, midY + 50, 150, componentHeight), "Zone Overlay"))
-				{
-
-					expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
-					training = false;
-					numeroParticipant = int.Parse(stringParticipant);
-					Debug.Log("Start");
-
-					currOverlay = ExpanDialSticks.SafetyOverlayMode.Zone;
-					expanDialSticks.SetOverlayMode(currOverlay);
-					expanDialSticks.triggerSafetyChange();
-
-					string identity = "USER_IDENTITY " + numeroParticipant + " ZONE_OVERLAY";
-					expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-					unknownParticipant = false;
-				}*/
+			if (GUI.Button(new Rect(midX + 5, midY - 25, componentWidth, componentHeight), "USER Overlay | SYSTEM Task"))
+			{
+				numeroParticipant = int.Parse(stringParticipant);
+				currOverlay = ExpanDialSticks.SafetyOverlayMode.User;
+				currTask = TaskMode.System;
+				shapeChangeDuration = longShapeChangeDuration;
+				expanDialSticks.SetOverlayMode(currOverlay);
+				string identity = "USER_IDENTITY " + numeroParticipant + " | OVERLAY USER | TASK SYSTEM";
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+				Debug.Log(identity);
+				unknownParticipant = false;
 			}
+
+			if (GUI.Button(new Rect(midX + 5, midY, componentWidth, componentHeight), "SYSTEM Overlay | USER Task"))
+			{
+				numeroParticipant = int.Parse(stringParticipant);
+				currOverlay = ExpanDialSticks.SafetyOverlayMode.System;
+				currTask = TaskMode.User;
+				shapeChangeDuration = shortShapeChangeDuration;
+				expanDialSticks.SetOverlayMode(currOverlay);
+				string identity = "USER_IDENTITY " + numeroParticipant + " | OVERLAY SYSTEM | TASK USER";
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+				Debug.Log(identity);
+				unknownParticipant = false;
+			}
+			if (GUI.Button(new Rect(midX + 5, midY + 25, componentWidth, componentHeight), "SYSTEM Overlay | SYSTEM Task"))
+			{
+				numeroParticipant = int.Parse(stringParticipant);
+				currOverlay = ExpanDialSticks.SafetyOverlayMode.System;
+				currTask = TaskMode.System;
+				shapeChangeDuration = longShapeChangeDuration;
+				expanDialSticks.SetOverlayMode(currOverlay);
+				string identity = "USER_IDENTITY " + numeroParticipant + " | OVERLAY SYSTEM | TASK SYSTEM";
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+				Debug.Log(identity);
+				unknownParticipant = false;
+			}
+		}
 
 	}
 
 	private void DebugInSitu(string message, Color textColor, Color backgroundColor)
 	{
-		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 16, textColor, message, new Vector3(90f, -90f, 0f));
+		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 0.1f, textColor, message, new Vector3(90f, -90f, 0f));
 		expanDialSticks.setBorderBackground(backgroundColor);
 		expanDialSticks.triggerTextureChange();
 	}
@@ -530,7 +448,7 @@ public class XP2_P1 : MonoBehaviour
 		List<Vector2Int> candidatesAround = new List<Vector2Int>();
 		for (int i = Math.Max(0, target.x - 1); i < Math.Min(expanDialSticks.NbRows - 1, target.x + 1); i++)
 		{
-			for (int j = Math.Max(0, target.y - 1); j < Math.Min(expanDialSticks.NbColumns - 1, target.y+1); j++)
+			for (int j = Math.Max(0, target.y - 1); j < Math.Min(expanDialSticks.NbColumns - 1, target.y + 1); j++)
 			{
 				candidatesAround.Add(new Vector2Int(i, j));
 			}
@@ -539,47 +457,7 @@ public class XP2_P1 : MonoBehaviour
 	}
 	private void TriggerOverlay()
 	{
-		List<Vector2Int> unsafeCandidates = FindAllCandidatesAroundTarget(target);//FindAllUnsafesUnderDistance(safetyDistance);
-		if (currSubChanges.Count() <= unsafeCandidates.Count())
-		{
-			ListExtension.Shuffle(unsafeCandidates);
-			diffCandidates = new List<Vector3Int>();
-			for(int i = 0; i < currSubChanges.Count(); i++)
-				diffCandidates.Add(new Vector3Int(unsafeCandidates[i].x, unsafeCandidates[i].y, currSubChanges[i]));
 
-			// Output Control
-			for (int i = 0; i < expanDialSticks.NbRows; i++)
-			{
-				for (int j = 0; j < expanDialSticks.NbColumns; j++)
-				{
-					expanDialSticks.modelMatrix[i, j].CurrentFeedForwarded = 0;
-				}
-			}
-
-			foreach (Vector3Int diffCandidate in diffCandidates)
-			{
-
-				expanDialSticks.modelMatrix[diffCandidate.x, diffCandidate.y].CurrentFeedForwarded = diffCandidate.z;
-			}
-
-			expanDialSticks.triggerSafetyChange();
-			safeGuard.Freeze();
-			DisplayInstructions("Tourner les cylindres arrêtés <b>du plus descendant au plus ascendant</b>.");
-
-			string shapeChangeMsg = "SHAPE_CHANGE [";
-			foreach (Vector3Int diffCandidate in diffCandidates)
-			{
-				shapeChangeMsg += " "+ diffCandidate.ToString() + " ";
-			}
-			shapeChangeMsg += "]";
-			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(shapeChangeMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-
-			LogMetrics();
-			overlayAppeared = true;
-		} else
-		{
-			DisplayInstructions("Veuillez réessayer.");
-		}
 	}
 	private void ResetDisplay()
 	{
@@ -607,129 +485,146 @@ public class XP2_P1 : MonoBehaviour
 	}
 	private void UpdateOverlay()
 	{
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
-		{
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-			{
-				expanDialSticks.modelMatrix[i, j].CurrentFeedForwarded = 0;
-			}
-		}
 
-		foreach (Vector3Int diffCandidate in diffCandidates)
-		{
-
-			expanDialSticks.modelMatrix[diffCandidate.x, diffCandidate.y].CurrentFeedForwarded = diffCandidate.z;
-		}
-
-		expanDialSticks.triggerSafetyChange();
 	}
 
 	private void DisplayInstructions(string instructions)
 	{
 		string participantNumber = "P" + numeroParticipant;
-		string trialProgress =  currTrial + "/" + nbTrials;
+		//string trialProgress = currTrial + "/" + nbTrials;
 
 		expanDialSticks.setBorderBackground(Color.white);
 		expanDialSticks.setLeftCornerText(TextAlignmentOptions.Center, 12, Color.black, participantNumber, new Vector3(90f, -90f, 0f));
 		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 12, Color.black, instructions, new Vector3(90f, -90f, 0f));
-		expanDialSticks.setRightCornerText(TextAlignmentOptions.Center, 12, Color.black, trialProgress, new Vector3(90f, -90f, 0f));
+		//expanDialSticks.setRightCornerText(TextAlignmentOptions.Center, 12, Color.black, trialProgress, new Vector3(90f, -90f, 0f));
 
 		//expanDialSticks.triggerTextureChange();
 	}
 
-	private void TriggerNextTrial()
+	private IEnumerator TriggerDistractors()
 	{
-		if (!landscapeGenerated)
+
+		Debug.Log("TriggerDistractors()");
+		currDistractorIndex++;
+		if (currDistractorIndex < distractorPositions.Count())
 		{
+			currDistractorPositions = distractorPositions[currDistractorIndex];
+			//Debug.Log(currDistractorPositions.ToArrayString<Vector2Int>());
 
-			for (int i = 0; i < expanDialSticks.NbRows; i++)
+			foreach(Vector2Int distractorDelta in currDistractorPositions)
 			{
-				for (int j = 0; j < expanDialSticks.NbColumns; j++)
-				{
-					expanDialSticks.modelMatrix[i, j].TargetPosition = (sbyte)Random.Range(minPos, maxPos);
-					expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = shapeChangeDuration;
-				}
+				Vector2Int distractorPosition = currTargetPosition + distractorDelta;
+				expanDialSticks.modelMatrix[distractorPosition.x, distractorPosition.y].TargetPosition = (sbyte)targetPos;
+				expanDialSticks.modelMatrix[distractorPosition.x, distractorPosition.y].TargetShapeChangeDuration = shapeChangeDuration;
 			}
-			landscapeGenerated = true;
-		}
-		if (trials.Count() > 0)
-		{
-			// Unfreeze hand tracking
-			safeGuard.UnFreeze();
-			// Extract difficulty and changes
-			KeyValuePair<Difficulty, List<List<int>>> difficultyChanges = trials.First();
-			currDifficulty = difficultyChanges.Key;
-			Debug.Log("currDifficulty -> " + currDifficulty);
-			List<List<int>> changes = difficultyChanges.Value;
-			currSubChanges = changes.First();
-			ExpanDialSticks.SafetyOverlayMode nextOverlay = (ExpanDialSticks.SafetyOverlayMode)currSubChanges.First();
-			// new overlay detected
-			if(currOverlay != nextOverlay)
-			{
-				currOverlay = nextOverlay;
-				expanDialSticks.SetOverlayMode(currOverlay);
-				ResetDisplay();
-				newOverlay = true;
-				toNextTrial = false;
-				return;
-			}
-			// current trial;
-			currTrial++;
-			changes.RemoveAt(0);
-			currSubChanges.RemoveAt(0);
-			ListExtension.Shuffle(currSubChanges);
-			Debug.Log("currSubChanges -> " + currSubChanges);
 
-			// delete difficulty or if any reinsert remaining changes
-			if (changes.Count() > 0)
-			{
-				trials[currDifficulty] = changes;
-			} else
-			{
-				trials.Remove(currDifficulty);
-			}
-			// get a target for user
-			target = candidates[Random.Range(0, candidates.Count())];
-			// Output Control
-			List<int> randomIcons = new List<int>(); //= Enumerable.Range(0, nbPins).ToList<int>();
-			for (int i = 1; i < 30; i++)
-				randomIcons.Add(i);
-			ListExtension.Shuffle(randomIcons);
-
-			for (int i = 0; i < expanDialSticks.NbRows; i++)
-			{
-				for (int j = 0; j < expanDialSticks.NbColumns; j++)
-				{
-					if(target.x == i && target.y == j)
-					{
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture ="icon0";
-					} else
-					{
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon" + randomIcons.First();
-						randomIcons.RemoveAt(0);
-					}
-					// Projector
-					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = expanDialSticks.modelMatrix[i, j].Diameter/3f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
-				}
-			}
-			expanDialSticks.triggerProjectorChange();
 			expanDialSticks.triggerShapeChange();
 
-			DisplayInstructions("Tourner le cylindre avec l'icône <b>Avion</b>");
+			Debug.Log("triggerShapeChange()");
+			// wait for complete shape-change
+			yield return new WaitForSeconds(shapeChangeDuration);
+			bool shapeChangeCompleted = false;
+			int count = 0;
+			while (!shapeChangeCompleted)
+			{
+				DebugInSitu("Waiting for shape-change to complete("+ count + ")...", Color.black, Color.white);
+				shapeChangeCompleted = true;
+				foreach (Vector2Int distractorDelta in currDistractorPositions)
+				{
+					Vector2Int distractorPosition = currTargetPosition + distractorDelta;
+					sbyte currDistractorPos = expanDialSticks.modelMatrix[distractorPosition.x, distractorPosition.y].CurrentPosition;
+					Debug.Log(distractorPosition + " => " + currDistractorPos);
+					if (currDistractorPos < targetPos - 1 || currDistractorPos > targetPos + 1) // cannot get exact position, add tolerance (problem with Arduino Driver)
+					{
+						shapeChangeCompleted = false;
+					}
+				}
+				count++;
+				yield return new WaitForSeconds(COMPLETION_INTERVAL);
+			}
+			// reset shape-change
+			for (int i = 0; i < expanDialSticks.NbRows; i++)
+			{
+				for (int j = 0; j < expanDialSticks.NbColumns; j++)
+				{
+					expanDialSticks.modelMatrix[i, j].TargetPosition = 0; // (sbyte)Random.Range(minPos, maxPos);
+					expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = shortShapeChangeDuration;
+					expanDialSticks.modelMatrix[i, j].TargetColor = Color.black;
+					expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = shortShapeChangeDuration;
+				}
+			}
+			expanDialSticks.triggerShapeChange();
+			expanDialSticks.triggerTextureChange();
+			yield return new WaitForSeconds(shortShapeChangeDuration);
+			// trigger next trial
+			triggerNextTrial = true;
 
-			string trialMsg = "PARTICIPANT " + numeroParticipant + " DIFFICULTY " + currDifficulty + " OVERLAY " + currOverlay + " TARGET (" + target.x + ", " + target.y + ") ";
-			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(trialMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-
-			toNextTrial = false;
-			overlayAppeared = false;
-		}
-		else
+		} else
 		{
 			Quit();
 		}
+	}
+	private void TriggerShapeChange()
+	{
 
+	}
+	private void TriggerTarget()
+	{
+		Debug.Log("TriggerTarget()");
+		currTargetIndex++;
+		if(currTargetIndex < targetPositions.Count())
+		{
+			// Select Target
+			currTargetPosition = targetPositions[currTargetIndex];
+
+			Debug.Log("currTargetPosition=>" + currTargetPosition);
+			// Random Shape Change + Target
+			// Random Shape
+			for (int i = 0; i < expanDialSticks.NbRows; i++)
+			{
+				for (int j = 0; j < expanDialSticks.NbColumns; j++)
+				{
+					// Shape
+					if (i == currTargetPosition.x && j == currTargetPosition.y)
+					{
+						expanDialSticks.modelMatrix[i, j].TargetPosition = (sbyte)targetPos;
+					}
+					else
+					{
+						expanDialSticks.modelMatrix[i, j].TargetPosition = 0; // (sbyte)Random.Range(minPos, maxPos);
+					}
+					expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = shortShapeChangeDuration;
+
+					Color randomColor = Random.ColorHSV(0f, 1f, 0f, 1f, 0.5f, 1f);
+					expanDialSticks.modelMatrix[i, j].TargetColor = randomColor;
+					expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = shortShapeChangeDuration;
+				}
+			}
+			expanDialSticks.triggerShapeChange();
+			expanDialSticks.triggerTextureChange();
+			Debug.Log("triggerShapeChange()");
+
+			switch (currTask)
+			{
+				case TaskMode.User:
+					Debug.Log("USER TASK");
+					break;
+
+
+				case TaskMode.System:
+					Debug.Log("SYSTEM TASK");
+					autoDistractorTrigger = true;
+					prevDistractorTime = Time.time;
+					distractorTriggerDelay = Random.Range(shapeChangeDuration+shapeChangeDuration, shapeChangeDuration+longShapeChangeDuration);
+					break;
+				default:
+					break;
+			}
+
+		} else
+		{
+			Quit();
+		}
 	}
 
 
@@ -740,46 +635,49 @@ public class XP2_P1 : MonoBehaviour
 		{
 			currTime = Time.time;
 
-			if(toNextTrial == true)
+			if(triggerNextTrial == true)
 			{
-				TriggerNextTrial();
+				TriggerTarget();
+				triggerNextTrial = false;
 			}
-			if (!newOverlay)
+			/*if (currTime - prevMetricsTime >= LOG_INTERVAL)
 			{
-				// random texture every 3 secondes
-				if (currTime - prevRandomTextureTime >= 3f)
+				if (waitForNoHand)
 				{
-					//Debug.Log("RandomTexture!");
-					RandomColor();
-					prevRandomTextureTime = currTime;
-				}
-
-				/*if (currTime - prevMetricsTime >= LOG_INTERVAL)
-				{
-					LogMetrics();
-					prevMetricsTime = currTime;
-				}*/
-
-				if (Input.GetKey("escape"))
-				{
-					Quit();
-				}
-
-				if (Input.GetKeyDown(KeyCode.RightArrow))
-				{
-					HandleRotationChanged(this, new ExpanDialStickEventArgs(DateTime.Now, target.x, target.y, 0, 10, 10));
-				}
-				if (Input.GetKeyDown(KeyCode.UpArrow))
-				{
-					if (diffCandidates.Count() > 0)
+					if (FindAllUnsafes().Count() == 0)
 					{
-						Vector3Int selectedCandidate = diffCandidates.First();
-						HandleRotationChanged(this, new ExpanDialStickEventArgs(DateTime.Now, selectedCandidate.x, selectedCandidate.y, 0, 10, 10));
+						waitForNoHand = false;
+						triggerNextTrial = true;
 					}
+
 				}
+				prevMetricsTime = currTime;
+			}*/
+
+			if(autoDistractorTrigger && currTime - prevDistractorTime >= distractorTriggerDelay)
+			{
+				Debug.Log("Trigger distractor");
+				HandleRotationChanged(this, new ExpanDialStickEventArgs(DateTime.Now, currTargetPosition.x, currTargetPosition.y, 0, 10, 10));
+				autoDistractorTrigger = false;
 			}
 
-			
+			if (Input.GetKey("escape"))
+			{
+				Quit();
+			}
+
+			if (Input.GetKeyDown(KeyCode.RightArrow))
+			{
+				HandleRotationChanged(this, new ExpanDialStickEventArgs(DateTime.Now, currTargetPosition.x, currTargetPosition.y, 0, 10, 10));
+			}
+			if (Input.GetKeyDown(KeyCode.UpArrow))
+			{
+				/*if (diffCandidates.Count() > 0)
+				{
+					Vector3Int selectedCandidate = diffCandidates.First();
+					HandleRotationChanged(this, new ExpanDialStickEventArgs(DateTime.Now, selectedCandidate.x, selectedCandidate.y, 0, 10, 10));
+				}*/
+			}
 		}
 	}
 

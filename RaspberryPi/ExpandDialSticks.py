@@ -5,8 +5,24 @@ from bitarray import bitarray
 import time
 import struct
 import json
+from colorama import init, Fore, Back, Style
+init()
 
+# debug utils
+def verbose(msg=""):
+    print(msg)
+def info(msg = "", topic = " INFO "):
+    print("%s%s%s%s %s" % (Back.WHITE, Fore.BLACK, topic, Style.RESET_ALL, msg))
+def warn(msg = "", topic = " WARNING "):
+    print("%s%s%s%s %s" % (Back.YELLOW, Fore.BLACK, topic, Style.RESET_ALL, msg))
+def err(msg = "", topic = " ERROR "):
+    print("%s%s%s%s %s" % (Back.RED, Fore.BLACK, topic, Style.RESET_ALL, msg))
+def ok(msg = "", topic = " O ", nbSpace = 0):
+    print("%*s%s%s%s %s" % (nbSpace, Back.GREEN, Fore.BLACK, topic, Style.RESET_ALL, msg))
+def notOk(msg = "", topic = " X ", nbSpace = 0):
+    print("%*s%s%s%s %s" % (nbSpace, Back.RED, Fore.BLACK, topic, Style.RESET_ALL, msg))
 
+# constants and variables
 I2C_DELAY_MILLIS = 200
 NO_CMD = 0x00
 GET_CMD = 0x01
@@ -39,10 +55,13 @@ NACK_ADDR_ERR_ANS = 2
 NACK_DATA_ERR_ANS = 3
 OTHER_ERR_ANS = 4
 
-I2C_SLAVE_ADDRESS = [0x00, 0x01, 0x02, 0x03, 0x04]
+I2C_SLAVE_ADDRESS = [0x10, 0x11, 0x12, 0x13, 0x14]
 
 
+mqtt_verbose = False
+driver_verbose = True
 request = {}
+backup = {}
 state = {}
 state['xAxisValue'] = [0 for i in range(MAX_DIALSTICK * len(I2C_SLAVE_ADDRESS))]
 state['yAxisValue'] = [0 for i in range(MAX_DIALSTICK * len(I2C_SLAVE_ADDRESS))]
@@ -60,20 +79,35 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe(MQTT_TOPIC)
 
 def on_message(client, userdata, msg):
-    global request
-    print(msg.topic+" "+str(msg.payload))
+    global request, backup, mqtt_verbose, driver_verbose
+    str_payload = str(msg.payload)
+    if mqtt_verbose:
+        verbose(msg.topic+" "+ str_payload)
     if msg.topic == MQTT_TOPIC:
+        if 'mqtt verbose on' in str_payload:
+            info("mqtt verbose on")
+            mqtt_verbose = True
+            return
+        if 'mqtt verbose off' in str_payload:
+            info("mqtt verbose off")
+            mqtt_verbose = False
+            return
+        if 'driver verbose on' in str_payload:
+            info("mqtt driver on")
+            driver_verbose = True
+            return
+        if 'driver verbose off' in str_payload:
+            info("mqtt driver off")
+            driver_verbose = False
+            return
         try: 
             msg_dict = json.loads(msg.payload.decode("utf-8"))
-            
-            if request == {} and 'ANS' not in msg_dict:
-                
+            if 'ANS' not in msg_dict:
                     if 'GET' not in msg_dict and 'SET' not in msg_dict:
                             client.publish(MQTT_TOPIC, json.dumps({'ANS':{'status':MQTT_UNKNOWN_CMD, 'content':{}}}))
                             return
                             
                     if 'SET' in msg_dict:
-                        
                         if 'position' not in msg_dict['SET'] or 'duration' not in msg_dict['SET'] or 'holding' not in msg_dict['SET']:
                             client.publish(MQTT_TOPIC, json.dumps({'ANS':{'status':MQTT_MISSING_KEY, 'content':{}}}))
                             return
@@ -89,8 +123,23 @@ def on_message(client, userdata, msg):
                         ):
                             client.publish(MQTT_TOPIC, json.dumps({'ANS':{'status':MQTT_BAD_VALUES, 'content':{}}}))
                             return
-                    
-                    request = msg_dict
+                            
+                    if request == {}: # no conccurent command
+                        if backup != {}: # there is a backup command
+                            if driver_verbose:
+                                info("BACKUP SET request sended");
+                            request = backup
+                        else :
+                            request = msg_dict
+                    else: # concurrent command
+                        if 'SET' in msg_dict: # give priority to SET Command
+                                if backup != {}: # backup command already exists
+                                    if driver_verbose:
+                                        warn("Previous BACKUP SET request replaced : %s" %(backup))
+                                backup = msg_dict
+                                if driver_verbose:
+                                    info("BACKUP SET request saved")
+                        
                         
         except ValueError as e:
             client.publish(MQTT_TOPIC, json.dumps({'ANS':{'status':MQTT_VALUE_ERROR, 'content':{}}}))
@@ -110,6 +159,12 @@ status = 0
 with SMBus(1) as bus:
     # READ
     while True :
+        #mosquitto_pub -h localhost -t "ExpanDialSticks" -m '{"GET":[]}'
+        if request == {} and backup != {}:
+            if driver_verbose:
+                info("BACKUP SET request used");
+            request = backup
+            backup = {}
         if 'GET' in request:
             status = MQTT_SUCCESS
             for i, slaveAddress in enumerate(I2C_SLAVE_ADDRESS):
@@ -156,9 +211,8 @@ with SMBus(1) as bus:
                     for j in range (MAX_DIALSTICK):
                         state['holdingValue'][i*MAX_DIALSTICK + j] = int(bool(holdingByte & (1 << (7- j))))
                     
-                        
                 except OSError as err:
-                    #print(slaveAddress, err)
+                    print(slaveAddress, err)
                     status = SMBUS_IO_ERROR
                     
             request["ANS"] = {'status': status, 'content': state} 
@@ -177,13 +231,11 @@ with SMBus(1) as bus:
                 durationCmd = []
                 holdCmd = 0b00000000
                 for j in range(MAX_DIALSTICK):
-                    print(i*MAX_DIALSTICK + j)
                     positionCmd += list(struct.pack("b", request["SET"]["position"][i*MAX_DIALSTICK + j])) # integer
                     durationCmd += list(struct.pack("f", request["SET"]["duration"][i*MAX_DIALSTICK + j])) # float
                     holdCmd |= (request["SET"]["holding"][i*MAX_DIALSTICK + j] << (7- j)) # bool
                 
                 cmd = [SET_CMD] + positionCmd + durationCmd + [holdCmd]
-                print(cmd)
                 currAns = [NONE_ANS for j in range(MAX_DIALSTICK)]
                 try : 
                     write = i2c_msg.write(slaveAddress, cmd)
@@ -195,7 +247,6 @@ with SMBus(1) as bus:
                     #print(slaveAddress, err)
                     status = SMBUS_IO_ERROR
                 ans += currAns
-                
             request["ANS"] = {'status': status, 'content': ans} 
             client.publish(MQTT_TOPIC, json.dumps(request))
             request = {}

@@ -249,7 +249,8 @@ public class ExpanDialStickCollision: MonoBehaviour
 						separationLevel = level;
 						float coeff = Mathf.Max(0, level - 1)/(float)(nbSeparationLevels - 1f);
 						proximity = 1f - coeff;
-						//Debug.DrawLine(pinPoint - Vector3.up * 100, hitPoint, Color.HSVToRGB(coeff, 1f, 1f));
+						//Debug.Log(pinPoint + " => " + proximity);
+						//Debug.DrawLine(pinPoint - Vector3.up * 100, hitPoint, Color.HSVToRGB(coeff, 0f, 0f));
 						return;
 					}
 				}
