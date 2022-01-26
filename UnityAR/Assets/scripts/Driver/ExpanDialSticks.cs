@@ -737,9 +737,11 @@ public class ExpanDialSticks : MonoBehaviour
 												//float minShapeChangeDuration = 1f; // 20 pos per sec
 												//durations[i * nbColumns + j] = minShapeChangeDuration + (nextProximity * 3f);
 
+
+												float wantedSpeed = modelMatrix[i, j].StoredSpeed;
 												float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
-												float distance = Math.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition);
-												float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
+												float finalSpeed = Mathf.Min(wantedSpeed, safetySpeed);
+												float safetyDuration = Math.Max(finalSpeed, 0.1f);
 												durations[i * nbColumns + j] = safetyDuration;
 												Debug.Log("modelMatrix[" + i + "," + j + "] unpause from " + modelMatrix[i, j].TargetPosition
 													+ " to " + modelMatrix[i, j].CurrentPosition + " in " + safetyDuration + "s!");
@@ -752,9 +754,11 @@ public class ExpanDialSticks : MonoBehaviour
 											{
 												positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
 												holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
+
+												float wantedSpeed = modelMatrix[i, j].StoredSpeed;
 												float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
-												float distance = Math.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition);
-												float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
+												float finalSpeed = Mathf.Min(wantedSpeed, safetySpeed);
+												float safetyDuration = Math.Max(finalSpeed, 0.1f);
 												durations[i * nbColumns + j] = safetyDuration;
 
 												Debug.Log("modelMatrix[" + i + "," + j + "] change speed from " + modelMatrix[i, j].TargetPosition
@@ -930,6 +934,7 @@ public class ExpanDialSticks : MonoBehaviour
 			{
 				for(int j = 0; j < nbColumns; j++)
 				{
+					modelMatrix[i, j].StoredSpeed = Mathf.Abs((modelMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition) / modelMatrix[i, j].TargetShapeChangeDuration);
 					bool reaching = modelMatrix[i, j].TargetShapeChangeDuration > 0f &&  (modelMatrix[i, j].CurrentPosition != modelMatrix[i, j].TargetPosition);
 					modelMatrix[i, j].setShapeChangeCurrent(
 						modelMatrix[i, j].TargetAxisX,
@@ -960,15 +965,18 @@ public class ExpanDialSticks : MonoBehaviour
 				{
 					positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
 					holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
+
+					modelMatrix[i, j].StoredSpeed = Mathf.Abs((modelMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition) / modelMatrix[i, j].TargetShapeChangeDuration);
 					modelMatrix[i, j].CurrentProximity = collisionMatrix[i, j].Proximity();
 					if (safeGuardOn)
 					{
 						if (modelMatrix[i, j].CurrentProximity < 1f)
 						{
-						float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
-						float distance = Math.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition);
-						float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
-						durations[i * nbColumns + j] = Math.Max(safetyDuration, modelMatrix[i, j].TargetShapeChangeDuration);
+							float wantedSpeed = modelMatrix[i, j].StoredSpeed;
+							float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
+							float finalSpeed = Mathf.Min(wantedSpeed, safetySpeed);
+							float safetyDuration = Math.Max(finalSpeed, 0.1f);
+							durations[i * nbColumns + j] = Math.Max(safetyDuration, modelMatrix[i, j].TargetShapeChangeDuration);
 						} else {
 								Debug.Log("modelMatrix[" + i + "," + j + "] pause at start!");
 								modelMatrix[i, j].CurrentPaused = modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition;
@@ -1107,6 +1115,11 @@ public class ExpanDialSticks : MonoBehaviour
 						{
 							if (modelMatrix[i, j].CurrentPaused == 0)
 							{
+								/*modelMatrix[i, j].StoredSpeed = Mathf.Abs((viewMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition) / viewMatrix[i, j].TargetShapeChangeDuration);
+								Debug.Log("[" + i + "," + j + "] viewMatrix.CurrentPosition: " + viewMatrix[i, j].CurrentPosition); 
+								Debug.Log("[" + i + "," + j + "] viewMatrix.TargetPosition: " + viewMatrix[i, j].TargetPosition);
+								Debug.Log("[" + i + "," + j + "] viewMatrix.TargetShapeChangeDuration: " + viewMatrix[i, j].TargetShapeChangeDuration);
+								Debug.Log("[" + i + "," + j + "] StoredSpeed: " + modelMatrix[i, j].StoredSpeed);*/
 								modelMatrix[i, j].setShapeChangeCurrent(
 									modelMatrix[i, j].CurrentAxisX,
 									modelMatrix[i, j].CurrentAxisY,
@@ -1132,9 +1145,11 @@ public class ExpanDialSticks : MonoBehaviour
 							if (modelMatrix[i, j].CurrentPaused != 0)
 							{
 
+								float wantedSpeed = modelMatrix[i, j].StoredSpeed;
+								//Debug.Log("[" + i + "," + j + "] wantedSpeed(1): " + modelMatrix[i, j].StoredSpeed);
 								float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
-								float distance = Math.Abs(modelMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition);
-								float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
+								float finalSpeed = Mathf.Min(wantedSpeed, safetySpeed);
+								float safetyDuration = Math.Max(finalSpeed, 0.1f);
 								modelMatrix[i, j].setShapeChangeCurrent(
 										modelMatrix[i, j].CurrentAxisX,
 										modelMatrix[i, j].CurrentAxisY,
@@ -1156,9 +1171,11 @@ public class ExpanDialSticks : MonoBehaviour
 						{
 							if (prevProximity != nextProximity)
 							{
+								float wantedSpeed = modelMatrix[i, j].StoredSpeed;
+								//Debug.Log("[" + i + "," + j + "] wantedSpeed(2): " + modelMatrix[i, j].StoredSpeed);
 								float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
-								float distance = Math.Abs(modelMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition);
-								float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
+								float finalSpeed = Mathf.Min(wantedSpeed, safetySpeed);
+								float safetyDuration = Math.Max(finalSpeed, 0.1f);
 								modelMatrix[i, j].setShapeChangeCurrent(
 									modelMatrix[i, j].CurrentAxisX,
 									modelMatrix[i, j].CurrentAxisY,

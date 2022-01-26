@@ -12,12 +12,31 @@ public class SafeGuard : MonoBehaviour
 	Projector projector;
 
 	public ExpanDialSticks pins;
-
+	private const float warningZoneRadius = 0.06f;
 	private const float bodyOutlineWidth = 0.4f/100f;
 	private const float bodySecondOutlineWidth = 0.8f / 100f;
 	private const float pinOutlineWidth = 0.04f / 100f;
 	private const float pinSecondOutlineWidth = 0.08f / 100f;
 
+	private const float minStopDistance = 0.06f;
+	private const float maxStopDistance = 0.09f;
+
+
+	public Mesh _handMesh;
+	public Material _handMat;
+	private Matrix4x4[] _foreHandMatrices, _backHandMatrices;
+	private Vector4[] _foreHandColors, _foreHandOutlineColors, _foreHandSecondOutlineColors, _backHandColors, _backHandOutlineColors, _backHandSecondOutlineColors;
+	private float[] _foreHandOutlineWidths, _foreHandSecondOutlineWidths, _backHandOutlineWidths, _backHandSecondOutlineWidths;
+	private int _foreHandIndex = 0;
+	private int _backHandIndex = 0;
+
+	public Mesh _armMesh;
+	public Material _armMat;
+	private Matrix4x4[] _foreArmMatrices, _backArmMatrices;
+	private Vector4[] _foreArmColors, _foreArmOutlineColors, _foreArmSecondOutlineColors, _backArmColors, _backArmOutlineColors, _backArmSecondOutlineColors;
+	private float[] _foreArmOutlineWidths, _foreArmSecondOutlineWidths, _backArmOutlineWidths, _backArmSecondOutlineWidths;
+	private int _foreArmIndex = 0;
+	private int _backArmIndex = 0;
 
 	public Mesh _pinMesh;
 	public Material _pinMat;
@@ -25,21 +44,6 @@ public class SafeGuard : MonoBehaviour
 	private Vector4[] _pinColors, _pinOutlineColors, _pinSecondOutlineColors;
 	private float[] _pinOutlineWidths, _pinSecondOutlineWidths;
 	private int _pinIndex = 0;
-
-	public Mesh _handMesh;
-	public Material _handMat;
-	private Matrix4x4[] _handMatrices;
-	private Vector4[] _handColors, _handOutlineColors, _handSecondOutlineColors;
-	private float[] _handOutlineWidths, _handSecondOutlineWidths;
-	private int _handIndex = 0;
-
-	public Mesh _armMesh;
-	public Material _armMat;
-	private Matrix4x4[] _armMatrices;
-	private Vector4[] _armColors, _armOutlineColors, _armSecondOutlineColors;
-	private float[] _armOutlineWidths, _armSecondOutlineWidths;
-	private int _armIndex = 0;
-
 
 	private const int textureSize = 512;
 
@@ -132,6 +136,33 @@ public class SafeGuard : MonoBehaviour
 	private GameObject prevRightArmCollider = null;
 	private List<Vector3> currUnsafeTransitions = null;
 	private List<Vector3> nextUnsafeTransitions = null;
+
+	// LEFT HAND
+	private Vector3 leftHandPos = Vector3.zero;
+	private Vector3 leftHandScale = Vector3.zero;
+	private float leftHandRadius = 0f;
+	// RIGHT HAND
+	private Vector3 rightHandPos = Vector3.zero;
+	private Vector3 rightHandScale = Vector3.zero;
+	private float rightHandRadius = 0f;
+	// LEFT ARM
+	private Vector3 leftArmPos = Vector3.zero;
+	private Vector3 leftArmScale = Vector3.zero;
+	private Quaternion leftArmRotation = Quaternion.identity;
+	private Vector3 leftBackArmPos = Vector3.zero;
+	private Vector3 leftFrontArmPos = Vector3.zero;
+	private float leftArmRadius = 0f;
+	// RIGHT ARM
+	private Vector3 rightArmPos = Vector3.zero;
+	private Vector3 rightArmScale = Vector3.zero;
+	private Quaternion rightArmRotation = Quaternion.identity;
+	private Vector3 rightBackArmPos = Vector3.zero;
+	private Vector3 rightFrontArmPos = Vector3.zero;
+	private float rightArmRadius = 0f;
+
+
+	private const float backgroundDistance = -0.5f;
+	private const float foregroundDistance = 0.5f;
 	private float bodyGamma = 0f;
 
 	// Get current Unsafes Pins
@@ -144,6 +175,8 @@ public class SafeGuard : MonoBehaviour
 	public const float recoveryRateIn = (feedbackMaxGamma - feedbackMinGamma) / feedbackInDuration;
 	public const float recoveryRateOut = (feedbackMaxGamma - feedbackMinGamma) / feedbackOutDuration;
 
+
+	public float distanceFromSafetyCamera = 1f;
 	public static Vector3 ProjectPointLine(Vector3 point, Vector3 lineStart, Vector3 lineEnd)
 	{
 		Vector3 relativePoint = point - lineStart;
@@ -263,8 +296,8 @@ public class SafeGuard : MonoBehaviour
 	void Start()
 	{
 		// Configure transform
-		this.transform.position = new Vector3(((pins.NbRows - 1) * (pins.diameter + pins.offset)) / 2f + (pins.diameter - pins.BorderOffset) / 2f, pins.DistanceFromSARCamera, ((pins.NbColumns - 1) * (pins.diameter + pins.offset)) / 2f);
-		Vector3 safeCameraLookAtPosition = this.transform.position - new Vector3(0f, pins.DistanceFromSARCamera, 0f);
+		this.transform.position = new Vector3(((pins.NbRows - 1) * (pins.diameter + pins.offset)) / 2f + (pins.diameter - pins.BorderOffset) / 2f, distanceFromSafetyCamera, ((pins.NbColumns - 1) * (pins.diameter + pins.offset)) / 2f);
+		Vector3 safeCameraLookAtPosition = this.transform.position - new Vector3(0f, distanceFromSafetyCamera, 0f);
 		this.transform.LookAt(safeCameraLookAtPosition);
 		this.transform.eulerAngles += new Vector3(0f, 90f, 0f);
 
@@ -279,27 +312,32 @@ public class SafeGuard : MonoBehaviour
 
 		currUnsafeTransitions = new List<Vector3>();
 		nextUnsafeTransitions = new List<Vector3>();
-		//projector.material.renderQueue = 1000;
-		_pinMatrices = new Matrix4x4[32];
-		_pinColors = new Vector4[32];
-		_pinOutlineColors = new Vector4[32];
-		_pinOutlineWidths = new float[32];
-		_pinSecondOutlineColors = new Vector4[32];
-		_pinSecondOutlineWidths = new float[32];
 
-		_handMatrices = new Matrix4x4[32];
-		_handColors = new Vector4[32];
-		_handOutlineColors = new Vector4[32];
-		_handOutlineWidths = new float[32];
-		_handSecondOutlineColors = new Vector4[32];
-		_handSecondOutlineWidths = new float[32];
+		_foreHandMatrices =  new Matrix4x4[32];
+		_backHandMatrices = new Matrix4x4[32];
+		_foreHandColors = new Vector4[32];
+		_backHandColors = new Vector4[32];
+		_foreHandOutlineColors = new Vector4[32];
+		_backHandOutlineColors = new Vector4[32];
+		_foreHandOutlineWidths = new float[32];
+		_backHandOutlineWidths = new float[32];
+		_foreHandSecondOutlineColors = new Vector4[32]; 
+		_backHandSecondOutlineColors = new Vector4[32];
+		_foreHandSecondOutlineWidths = new float[32];
+		_backHandSecondOutlineWidths = new float[32];
 
-		_armMatrices = new Matrix4x4[32];
-		_armColors = new Vector4[32];
-		_armOutlineColors = new Vector4[32];
-		_armOutlineWidths = new float[32];
-		_armSecondOutlineColors = new Vector4[32];
-		_armSecondOutlineWidths = new float[32];
+		_foreArmMatrices = new Matrix4x4[32];
+		_backArmMatrices = new Matrix4x4[32];
+		_foreArmColors = new Vector4[32];
+		_backArmColors =  new Vector4[32];
+		_foreArmOutlineColors = new Vector4[32];
+		_backArmOutlineColors = new Vector4[32];
+		_foreArmOutlineWidths = new float[32];
+		_backArmOutlineWidths = new float[32];
+		_foreArmSecondOutlineColors = new Vector4[32];
+		_backArmSecondOutlineColors = new Vector4[32];
+		_foreArmSecondOutlineWidths = new float[32];
+		_backArmSecondOutlineWidths = new float[32];
 
 		// load used textures
 		_emptyTexture = Resources.Load<Texture2D>("white");
@@ -334,6 +372,13 @@ public class SafeGuard : MonoBehaviour
 				Graphics.CopyTexture(textures[i], 0, 0, textureArray, i, 0); // i is the index of the texture
 			}
 		*/
+		_pinMatrices = new Matrix4x4[32];
+		_pinColors = new Vector4[32];
+		_pinOutlineColors = new Vector4[32];
+		_pinOutlineWidths = new float[32];
+		_pinSecondOutlineColors = new Vector4[32];
+		_pinSecondOutlineWidths = new float[32];
+
 		_planeMatrices = new Matrix4x4[32];
 		_planeColors = new Vector4[32];
 		_planeOutlineColors = new Vector4[32];
@@ -403,43 +448,45 @@ public class SafeGuard : MonoBehaviour
 	}
 	private void Render()
 	{
-		// draw pins
+
+		// Draw background body
+		CombineInstance[] backCombine = new CombineInstance[_backHandIndex + _backArmIndex];
+		for (int i = 0; i < _backHandIndex; i++)
+		{
+			backCombine[i].mesh = _handMesh;
+			backCombine[i].transform = _backHandMatrices[i];
+		}
+		for (int i = 0; i < _backArmIndex; i++)
+		{
+			backCombine[_backHandIndex + i].mesh = _armMesh;
+			backCombine[_backHandIndex + i].transform = _backArmMatrices[i];
+		}
+		Mesh backBodyMesh = new Mesh();
+		backBodyMesh.CombineMeshes(backCombine);
+
+		MaterialPropertyBlock backBodyBlock = new MaterialPropertyBlock();
+		Matrix4x4[] _backBodyMatrices = new Matrix4x4[] { Matrix4x4.identity };
+		backBodyBlock.SetVectorArray("_Color", _backArmColors);
+		backBodyBlock.SetVectorArray("_OutlineColor", _backArmOutlineColors);
+		backBodyBlock.SetFloatArray("_Outline", _backArmOutlineWidths);
+		backBodyBlock.SetVectorArray("_SecondOutlineColor", _backArmSecondOutlineColors);
+		backBodyBlock.SetFloatArray("_SecondOutline", _backArmSecondOutlineWidths);
+
+		Graphics.DrawMeshInstanced(backBodyMesh, 0, _armMat, _backBodyMatrices, _backBodyMatrices.Length, backBodyBlock, UnityEngine.Rendering.ShadowCastingMode.Off, false, SEPARATION_LAYER);
+
+
+		// Draw middle pin zone
 		MaterialPropertyBlock pinBlock = new MaterialPropertyBlock();
 		pinBlock.SetVectorArray("_Color", _pinColors);
 		pinBlock.SetVectorArray("_OutlineColor", _pinOutlineColors);
 		pinBlock.SetFloatArray("_Outline", _pinOutlineWidths);
 		pinBlock.SetVectorArray("_SecondOutlineColor", _pinSecondOutlineColors);
 		pinBlock.SetFloatArray("_SecondOutline", _pinSecondOutlineWidths);
-
-		Graphics.DrawMeshInstanced(_pinMesh, 0, _armMat, _pinMatrices, _pinIndex, pinBlock, UnityEngine.Rendering.ShadowCastingMode.Off, false, SEPARATION_LAYER);
-
-
-		CombineInstance[] combine = new CombineInstance[_handIndex + _armIndex];
-		for (int i = 0; i < _handIndex; i++)
-		{
-			combine[i].mesh = _handMesh;
-			combine[i].transform = _handMatrices[i];
-		}
-		for (int i = 0; i < _armIndex; i++)
-		{
-			combine[_handIndex + i].mesh = _armMesh;
-			combine[_handIndex + i].transform = _armMatrices[i];
-		}
-		Mesh bodyMesh = new Mesh();
-		bodyMesh.CombineMeshes(combine);
-
-		MaterialPropertyBlock bodyBlock = new MaterialPropertyBlock();
-		Matrix4x4[] _bodyMatrices = new Matrix4x4[] { Matrix4x4.identity };
-		bodyBlock.SetVectorArray("_Color", _armColors);
-		bodyBlock.SetVectorArray("_OutlineColor", _armOutlineColors);
-		bodyBlock.SetFloatArray("_Outline", _armOutlineWidths);
-		bodyBlock.SetVectorArray("_SecondOutlineColor", _armSecondOutlineColors);
-		bodyBlock.SetFloatArray("_SecondOutline", _armSecondOutlineWidths);
-
-		Graphics.DrawMeshInstanced(bodyMesh, 0, _armMat, _bodyMatrices, _bodyMatrices.Length, bodyBlock, UnityEngine.Rendering.ShadowCastingMode.Off, false, SEPARATION_LAYER);
+		Graphics.DrawMeshInstanced(_pinMesh, 0, _pinMat, _pinMatrices, _pinIndex, pinBlock, UnityEngine.Rendering.ShadowCastingMode.Off, false, SEPARATION_LAYER);
 
 
-		// Draw dots
+
+		// Draw middle grounds
 		MaterialPropertyBlock dotBlock = new MaterialPropertyBlock();
 		dotBlock.SetFloatArray("_TextureIndex", _noTextureIndexes);
 		dotBlock.SetVectorArray("_Color", _dotColors);
@@ -466,8 +513,9 @@ public class SafeGuard : MonoBehaviour
 		dotBlock.SetFloatArray("_RightArmRadius", _dotRightArmRadius);
 		Graphics.DrawMeshInstanced(_dotMesh, 0, _dotMat, _dotMatrices, _dotIndex, dotBlock, UnityEngine.Rendering.ShadowCastingMode.Off, false, SEPARATION_LAYER);
 
+
 		// Draw lines
-		MaterialPropertyBlock lineBlock = new MaterialPropertyBlock();
+		/*MaterialPropertyBlock lineBlock = new MaterialPropertyBlock();
 		lineBlock.SetFloatArray("_TextureIndex", _noTextureIndexes);
 		lineBlock.SetVectorArray("_Color", _lineColors);
 		lineBlock.SetVectorArray("_OutlineColor", _lineOutlineColors);
@@ -485,7 +533,7 @@ public class SafeGuard : MonoBehaviour
 		lineBlock.SetVectorArray("_RightFrontArmCenter", _lineRightFrontArmCenters);
 		lineBlock.SetFloatArray("_RightArmRadius", _lineRightArmRadius);
 		Graphics.DrawMeshInstanced(_lineMesh, 0, _lineMat, _lineMatrices, _lineIndex, lineBlock, UnityEngine.Rendering.ShadowCastingMode.Off, false, SEPARATION_LAYER);
-
+		*/
 		// Draw planes
 		_planeMat.SetTexture("_Textures", _iconTextureArray);
 		MaterialPropertyBlock planeBlock = new MaterialPropertyBlock();
@@ -507,6 +555,30 @@ public class SafeGuard : MonoBehaviour
 		planeBlock.SetFloatArray("_RightArmRadius", _planeRightArmRadius);
 		Graphics.DrawMeshInstanced(_planeMesh, 0, _planeMat, _planeMatrices, _planeIndex, planeBlock, UnityEngine.Rendering.ShadowCastingMode.Off, false, SEPARATION_LAYER);
 
+		// Draw foreground body
+		CombineInstance[] foreCombine = new CombineInstance[_foreHandIndex + _foreArmIndex];
+		for (int i = 0; i < _foreHandIndex; i++)
+		{
+			foreCombine[i].mesh = _handMesh;
+			foreCombine[i].transform = _foreHandMatrices[i];
+		}
+		for (int i = 0; i < _foreArmIndex; i++)
+		{
+			foreCombine[_foreHandIndex + i].mesh = _armMesh;
+			foreCombine[_foreHandIndex + i].transform = _foreArmMatrices[i];
+		}
+		Mesh foreBodyMesh = new Mesh();
+		foreBodyMesh.CombineMeshes(foreCombine);
+
+		MaterialPropertyBlock foreBodyBlock = new MaterialPropertyBlock();
+		Matrix4x4[] _foreBodyMatrices = new Matrix4x4[] { Matrix4x4.identity };
+		foreBodyBlock.SetVectorArray("_Color", _foreArmColors);
+		foreBodyBlock.SetVectorArray("_OutlineColor", _foreArmOutlineColors);
+		foreBodyBlock.SetFloatArray("_Outline", _foreArmOutlineWidths);
+		foreBodyBlock.SetVectorArray("_SecondOutlineColor", _foreArmSecondOutlineColors);
+		foreBodyBlock.SetFloatArray("_SecondOutline", _foreArmSecondOutlineWidths);
+		Graphics.DrawMeshInstanced(foreBodyMesh, 0, _armMat, _foreBodyMatrices, _foreBodyMatrices.Length, foreBodyBlock, UnityEngine.Rendering.ShadowCastingMode.Off, false, SEPARATION_LAYER);
+
 	}
 
 	public void Freeze()
@@ -526,49 +598,43 @@ public class SafeGuard : MonoBehaviour
 		Destroy(prevRightArmCollider);
 		frozen = false;
 	}
-
-	private void GenerateSystemOverlay()
+	private void FetchUserBody()
 	{
-		float backgroundDistance = 0f;
-
-		Vector3 leftHandPos, leftBackArmPos, leftFrontArmPos;
-		float leftHandRadius, leftArmRadius;
-		leftHandPos = leftBackArmPos = leftFrontArmPos = Vector3.zero;
-		leftHandRadius = leftArmRadius = 0f;
-
-
-		// Generate Left Forearm Zone
 		if (currLeftHandCollider != null && currLeftArmCollider != null)
 		{
 			// Left Hand Zone
 			SphereCollider sc = currLeftHandCollider.GetComponent<SphereCollider>();
 			Vector3 handColliderPosition = currLeftHandCollider.transform.position;
-			backgroundDistance = -(sc.radius * 2.0f + pins.height);
-			handColliderPosition.y = backgroundDistance;
+			//backgroundDistance = +(sc.radius * 2.0f + pins.height);
+			//handColliderPosition.y = backgroundDistance;
 			Vector3 handColliderScale = new Vector3(sc.radius * 2.0f, sc.radius * 2.0f, sc.radius * 2.0f);
 
 			// Save for shader
 			leftHandPos = handColliderPosition;
+			leftHandScale = handColliderScale;
 			leftHandRadius = sc.radius;
 
 			// Left Arm Zone
 			CapsuleCollider capsuleCollider1 = currLeftArmCollider.GetComponent<CapsuleCollider>();
 			Vector3 forwardArmColliderPosition = currLeftArmCollider.transform.position + currLeftArmCollider.transform.forward * (capsuleCollider1.height / 2.0f);
 			Vector3 backwardArmColliderPosition = currLeftArmCollider.transform.position - currLeftArmCollider.transform.forward * (capsuleCollider1.height / 2.0f);
-			forwardArmColliderPosition.y = backgroundDistance;
-			backwardArmColliderPosition.y = backgroundDistance;
-			// Save for shader
+			forwardArmColliderPosition.y = 0f;
+			backwardArmColliderPosition.y = 0f;
+			Vector3 armColliderPosition = backwardArmColliderPosition + (forwardArmColliderPosition - backwardArmColliderPosition) / 2.0f;
+			Quaternion armColliderRotation = Quaternion.LookRotation(forwardArmColliderPosition - backwardArmColliderPosition) * Quaternion.AngleAxis(90, Vector3.right); ; // Quaternion.Euler(_forearmColliders[0].transform.rotation.eulerAngles.x, _forearmColliders[0].transform.rotation.eulerAngles.y, _forearmColliders[0].transform.rotation.eulerAngles.z);
+			Vector3 colliderScale = new Vector3(capsuleCollider1.radius * 2f, capsuleCollider1.height / 2.0f, capsuleCollider1.radius * 2f);
 			Vector3 frontToBackArm = Vector3.Normalize(backwardArmColliderPosition - forwardArmColliderPosition);
 			float distFrontArmOutOfHand = sc.radius - Vector3.Magnitude(handColliderPosition - forwardArmColliderPosition);
+
+
+			// Save for shader
 			leftFrontArmPos = forwardArmColliderPosition + frontToBackArm * distFrontArmOutOfHand;
 			leftBackArmPos = backwardArmColliderPosition;
 			leftArmRadius = capsuleCollider1.radius;
+			leftArmPos = armColliderPosition;
+			leftArmRotation = armColliderRotation;
+			leftArmScale = colliderScale;
 		}
-
-		Vector3 rightHandPos, rightBackArmPos, rightFrontArmPos;
-		float rightHandRadius, rightArmRadius;
-		rightHandPos = rightBackArmPos = rightFrontArmPos = Vector3.zero;
-		rightHandRadius = rightArmRadius = 0f;
 
 		// Generate Right Hand Zone
 		if (currRightHandCollider != null && currRightArmCollider != null)
@@ -577,11 +643,12 @@ public class SafeGuard : MonoBehaviour
 			// prevRightHandCollider = pins.rightHand.GetHandCollider();
 			SphereCollider sc = currRightHandCollider.GetComponent<SphereCollider>();
 			Vector3 handColliderPosition = currRightHandCollider.transform.position;
-			backgroundDistance = -(sc.radius * 2.0f + pins.height);
-			handColliderPosition.y = backgroundDistance;
+			//backgroundDistance = +(sc.radius * 2.0f + pins.height);
+			//handColliderPosition.y = backgroundDistance;
 			Vector3 handColliderScale = new Vector3(sc.radius * 2.0f, sc.radius * 2.0f, sc.radius * 2.0f);
 
 			rightHandPos = handColliderPosition;
+			rightHandScale = handColliderScale;
 			rightHandRadius = sc.radius;
 
 			// Right Arm Zone
@@ -589,22 +656,35 @@ public class SafeGuard : MonoBehaviour
 			CapsuleCollider capsuleCollider1 = currRightArmCollider.GetComponent<CapsuleCollider>();
 			Vector3 forwardArmColliderPosition = currRightArmCollider.transform.position + currRightArmCollider.transform.forward * (capsuleCollider1.height / 2.0f);
 			Vector3 backwardArmColliderPosition = currRightArmCollider.transform.position - currRightArmCollider.transform.forward * (capsuleCollider1.height / 2.0f);
-			forwardArmColliderPosition.y = backgroundDistance;
-			backwardArmColliderPosition.y = backgroundDistance;
-			// Save for shader
+			forwardArmColliderPosition.y = 0f;
+			backwardArmColliderPosition.y = 0f;
+
+			Vector3 armColliderPosition = backwardArmColliderPosition + (forwardArmColliderPosition - backwardArmColliderPosition) / 2.0f;
+			Quaternion armColliderRotation = Quaternion.LookRotation(forwardArmColliderPosition - backwardArmColliderPosition) * Quaternion.AngleAxis(90, Vector3.right); ; // Quaternion.Euler(_forearmColliders[0].transform.rotation.eulerAngles.x, _forearmColliders[0].transform.rotation.eulerAngles.y, _forearmColliders[0].transform.rotation.eulerAngles.z);
+			Vector3 colliderScale = new Vector3(capsuleCollider1.radius * 2f, capsuleCollider1.height / 2.0f, capsuleCollider1.radius * 2f);
 			Vector3 frontToBackArm = Vector3.Normalize(backwardArmColliderPosition - forwardArmColliderPosition);
 			float distFrontArmOutOfHand = sc.radius - Vector3.Magnitude(handColliderPosition - forwardArmColliderPosition);
+			
+			// Save for shader
 			rightFrontArmPos = forwardArmColliderPosition + frontToBackArm * distFrontArmOutOfHand;
 			rightBackArmPos = backwardArmColliderPosition;
 			rightArmRadius = capsuleCollider1.radius;
+			rightArmPos = armColliderPosition;
+			rightArmRotation = armColliderRotation;
+			rightArmScale = colliderScale;
 		}
 
-		for(int i = 0; i < currUnsafeTransitions.Count; i++)
+	}
+
+	private void GenerateSystemOverlay()
+	{
+
+		for (int i = 0; i < currUnsafeTransitions.Count; i++)
 		{
 			Vector3 unsafeTransition = currUnsafeTransitions[i];
 			int row = (int)unsafeTransition.x;
 			int column = (int)unsafeTransition.y;
-			float gamma = unsafeTransition.z;
+			float distanceGamma = unsafeTransition.z;
 			int paused = pins.viewMatrix[row, column].CurrentPaused;
 			int feedforwarded = pins.viewMatrix[row, column].CurrentFeedForwarded;
 			int displacement = (paused != 0) ? paused : feedforwarded;
@@ -618,19 +698,6 @@ public class SafeGuard : MonoBehaviour
 			float dotDiameter = Mathf.Lerp(minOrthographicSize, maxOrthographicSize, scaleDistanceCoeff);
 
 
-			// Generate Pin in background
-			float safetyRadius = (pins.diameter + MyCapsuleHand.SAFETY_RADIUS * 2f) / 2f;
-			Vector3 pinPos = new Vector3(dotPos.x, backgroundDistance, dotPos.z);
-			Vector3 pinScale = new Vector3(safetyRadius * 2f, safetyRadius * 2f, safetyRadius * 2f);
-			_pinMatrices[_pinIndex] = Matrix4x4.TRS(pinPos, Quaternion.identity, pinScale);
-			_pinColors[_pinIndex] = new Vector4(1f, 1f, 1f, gamma);
-			_pinOutlineColors[_pinIndex] = new Vector4(0f, 0f, 0f, gamma);
-			_pinOutlineWidths[_pinIndex] = pinOutlineWidth;
-			_pinSecondOutlineColors[_pinIndex] = new Vector4(1f, 1f, 1f, gamma);
-			_pinSecondOutlineWidths[_pinIndex] = pinSecondOutlineWidth;
-			_pinIndex++;
-
-
 			Vector3 dotScale = new Vector3(dotDiameter, dotDiameter, dotDiameter);
 			_dotMatrices[_dotIndex] = Matrix4x4.TRS(
 				dotPos,
@@ -639,17 +706,32 @@ public class SafeGuard : MonoBehaviour
 			);
 
 			//Color dotColor = (displacement > 0) ? Color.Lerp(_middleDivergingColor, _rightDivergingColor, displacement / 40f) : Color.Lerp(_middleDivergingColor, _leftDivergingColor, -displacement / 40f);
-			Color dotColor = new Color(1f, 0f, 0f, gamma);
+			Color dotColor = new Color(1f, 0f, 0f, distanceGamma);
+
+			Vector3 pinPos = new Vector3(pin.position.x, 0f, pin.position.z) ;
+			float safetyDiameter = pins.diameter + MyCapsuleHand.STOP_RADIUS * 2f;
+			float safetyRadius = safetyDiameter/2.0f;
+			Vector3 pinScale = new Vector3(safetyDiameter, 0.01f, safetyDiameter);
+
+			_pinMatrices[_pinIndex] = Matrix4x4.TRS(pinPos, Quaternion.identity, pinScale);
+			_pinColors[_pinIndex] = Color.white;
+			_pinOutlineColors[_pinIndex] = new Vector4(0f, 0f, 0f, distanceGamma);
+			_pinOutlineWidths[_pinIndex] =  pinOutlineWidth;
+			_pinSecondOutlineColors[_pinIndex] = new Vector4(1f, 1f, 1f, distanceGamma);
+			_pinSecondOutlineWidths[_pinIndex] =  pinSecondOutlineWidth;
+			_pinIndex++;
+
 			_dotColors[_dotIndex] = dotColor; //(feedbackMode != FeedbackMode.State) ? dotColor : new Color(1f, 1f, 1f, 0f);//Color.white;
-			_dotOutlineColors[_dotIndex] = new Vector4(1f, 1f, 1f, gamma);
+			_dotOutlineColors[_dotIndex] = new Vector4(1f, 1f, 1f, distanceGamma);
 			_dotOutlineWidths[_dotIndex] = Mathf.Lerp(minOutlineWidth, maxOutlineWidth, scaleDistanceCoeff);
-			_dotSecondOutlineColors[_dotIndex] = new Vector4(0f, 0f, 0f, gamma);
+			_dotSecondOutlineColors[_dotIndex] = new Vector4(0f, 0f, 0f, distanceGamma);
+			_dotSecondOutlineWidths[_dotIndex] = Mathf.Lerp(minSecondOutlineWidth, maxSecondOutlineWidth, scaleDistanceCoeff);
 			_dotSecondOutlineWidths[_dotIndex] = Mathf.Lerp(minSecondOutlineWidth, maxSecondOutlineWidth, scaleDistanceCoeff);
 			_dotThirdOutlineColors[_dotIndex] = dotColor;
 			_dotThirdOutlineWidths[_dotIndex] = Mathf.Lerp(minThirdOutlineWidth, maxThirdOutlineWidth, scaleDistanceCoeff);
-			_dotFourthOutlineColors[_dotIndex] = new Vector4(0f, 0f, 0f, gamma);
+			_dotFourthOutlineColors[_dotIndex] = new Vector4(0f, 0f, 0f, distanceGamma);
 			_dotFourthOutlineWidths[_dotIndex] = Mathf.Lerp(minFourthOutlineWidth, maxFourthOutlineWidth, scaleDistanceCoeff);
-			_dotFifthOutlineColors[_dotIndex] = new Vector4(1f, 1f, 1f, gamma);
+			_dotFifthOutlineColors[_dotIndex] = new Vector4(1f, 1f, 1f, distanceGamma);
 			_dotFifthOutlineWidths[_dotIndex] = Mathf.Lerp(minFifthOutlineWidth, maxFifthOutlineWidth, scaleDistanceCoeff);
 
 			// left hand mask
@@ -681,7 +763,7 @@ public class SafeGuard : MonoBehaviour
 			int directionAmount = Mathf.RoundToInt(Mathf.Lerp(0f, 30f, displacementPercent));
 			Graphics.CopyTexture(_shapeTextures[directionAmount], 0, 0, _iconTextureArray, _planeIndex, 0); // i is the index of the texture
 			_iconTextureIndexes[_planeIndex] = _planeIndex;
-			_planeColors[_planeIndex] = new Color(1f, 1f, 1f, gamma);//dotColor;
+			_planeColors[_planeIndex] = new Color(1f, 1f, 1f, distanceGamma);//dotColor;
 			_planeOutlineColors[_planeIndex] = Vector4.zero;
 			_planeOutlineWidths[_planeIndex] = 0;
 			_planeSecondOutlineColors[_planeIndex] = Vector4.zero;
@@ -703,123 +785,111 @@ public class SafeGuard : MonoBehaviour
 			_planeIndex++;
 		}
 	}
-
 	private void GenerateUserOverlay()
 	{
-		Vector3 leftHandPos, leftBackArmPos, leftFrontArmPos;
-		float leftHandRadius, leftArmRadius;
-		leftHandPos = leftBackArmPos = leftFrontArmPos = Vector3.zero;
-		leftHandRadius = leftArmRadius = 0f;
-		float backgroundDistance = 0f;
-
-
 		// Generate Left Forearm Zone
 		if (currLeftHandCollider != null && currLeftArmCollider != null)
 		{
-			// Left Hand Zone
-			SphereCollider sc = currLeftHandCollider.GetComponent<SphereCollider>();
-			Vector3 handColliderPosition = currLeftHandCollider.transform.position;
-			backgroundDistance = -(sc.radius * 2.0f + pins.height);
-			handColliderPosition.y = backgroundDistance;
-			Vector3 handColliderScale = new Vector3(sc.radius * 2.0f, sc.radius * 2.0f, sc.radius * 2.0f);
+			// Left Hand Background
+			Vector3 backLeftHandPos = new Vector3(leftHandPos.x, backgroundDistance, leftHandPos.z);
+			_backHandMatrices[_backHandIndex] = Matrix4x4.TRS(backLeftHandPos, Quaternion.identity, leftHandScale);
+			_backHandColors[_backHandIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_backHandOutlineColors[_backHandIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_backHandOutlineWidths[_backHandIndex] = 0f;
+			_backHandSecondOutlineColors[_backHandIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_backHandSecondOutlineWidths[_backHandIndex] = 0f;
+			_backHandIndex++;
 
-			// Save for shader
-			leftHandPos = handColliderPosition;
-			leftHandRadius = sc.radius;
-
-			_handMatrices[_handIndex] = Matrix4x4.TRS(handColliderPosition, Quaternion.identity, handColliderScale);
-			_handColors[_handIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
-			_handOutlineColors[_handIndex] = new Vector4(0f, 0f, 0f, bodyGamma);
-			_handOutlineWidths[_handIndex] = bodyOutlineWidth;
-			_handSecondOutlineColors[_handIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
-			_handSecondOutlineWidths[_handIndex] = bodySecondOutlineWidth;
-			_handIndex++;
-
-			// Left Arm Zone
-			CapsuleCollider capsuleCollider1 = currLeftArmCollider.GetComponent<CapsuleCollider>();
-			Vector3 forwardArmColliderPosition = currLeftArmCollider.transform.position + currLeftArmCollider.transform.forward * (capsuleCollider1.height / 2.0f);
-			Vector3 backwardArmColliderPosition = currLeftArmCollider.transform.position - currLeftArmCollider.transform.forward * (capsuleCollider1.height / 2.0f);
-			forwardArmColliderPosition.y = backgroundDistance;
-			backwardArmColliderPosition.y = backgroundDistance;
-			Vector3 armColliderPosition = backwardArmColliderPosition + (forwardArmColliderPosition - backwardArmColliderPosition) / 2.0f;
-			Quaternion armColliderRotation = Quaternion.LookRotation(forwardArmColliderPosition - backwardArmColliderPosition) * Quaternion.AngleAxis(90, Vector3.right); ; // Quaternion.Euler(_forearmColliders[0].transform.rotation.eulerAngles.x, _forearmColliders[0].transform.rotation.eulerAngles.y, _forearmColliders[0].transform.rotation.eulerAngles.z);
-			Vector3 colliderScale = new Vector3(capsuleCollider1.radius * 2f, capsuleCollider1.height / 2.0f, capsuleCollider1.radius * 2f);
-
-			// Save for shader
-			Vector3 frontToBackArm = Vector3.Normalize(backwardArmColliderPosition - forwardArmColliderPosition);
-			float distFrontArmOutOfHand = sc.radius - Vector3.Magnitude(handColliderPosition - forwardArmColliderPosition);
-			leftFrontArmPos = forwardArmColliderPosition + frontToBackArm * distFrontArmOutOfHand;
-			leftBackArmPos = backwardArmColliderPosition;
-			leftArmRadius = capsuleCollider1.radius;
+			// Left Hand Foreground
+			Vector3 foreLeftHandPos = new Vector3(leftHandPos.x, foregroundDistance, leftHandPos.z);
+			_foreHandMatrices[_foreHandIndex] = Matrix4x4.TRS(foreLeftHandPos, Quaternion.identity, leftHandScale);
+			_foreHandColors[_foreHandIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_foreHandOutlineColors[_foreHandIndex] = new Vector4(0f, 0f, 0f, bodyGamma);
+			_foreHandOutlineWidths[_foreHandIndex] = bodyOutlineWidth;
+			_foreHandSecondOutlineColors[_foreHandIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_foreHandSecondOutlineWidths[_foreHandIndex] = bodySecondOutlineWidth;
+			_foreHandIndex++;
 
 
-			_armMatrices[_armIndex] = Matrix4x4.TRS(
-				armColliderPosition,
-				armColliderRotation,
-				colliderScale
+			// Left Arm Background
+			Vector3 backLeftArmPos = new Vector3(leftArmPos.x, backgroundDistance, leftArmPos.z);
+			_backArmMatrices[_backArmIndex] = Matrix4x4.TRS(
+				backLeftArmPos,
+				leftArmRotation,
+				leftArmScale
 				);
-			_armColors[_armIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
-			_armOutlineColors[_armIndex] = new Vector4(0f, 0f, 0f, bodyGamma);
-			_armOutlineWidths[_armIndex] = bodyOutlineWidth;
-			_armSecondOutlineColors[_armIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
-			_armSecondOutlineWidths[_armIndex] = bodySecondOutlineWidth;
-			_armIndex++;
+			_backArmColors[_backArmIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_backArmOutlineColors[_backArmIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_backArmOutlineWidths[_backArmIndex] = 0f;
+			_backArmSecondOutlineColors[_backArmIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_backArmSecondOutlineWidths[_backArmIndex] = 0f;
+			_backArmIndex++;
+
+			// Left Arm Foreground
+			Vector3 foreLeftArmPos = new Vector3(leftArmPos.x, foregroundDistance, leftArmPos.z);
+			_foreArmMatrices[_foreArmIndex] = Matrix4x4.TRS(
+				foreLeftArmPos,
+				leftArmRotation,
+				leftArmScale
+				);
+			_foreArmColors[_foreArmIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_foreArmOutlineColors[_foreArmIndex] = new Vector4(0f, 0f, 0f, bodyGamma);
+			_foreArmOutlineWidths[_foreArmIndex] = bodyOutlineWidth;
+			_foreArmSecondOutlineColors[_foreArmIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_foreArmSecondOutlineWidths[_foreArmIndex] = bodySecondOutlineWidth;
+			_foreArmIndex++;
 		}
-		Vector3 rightHandPos, rightBackArmPos, rightFrontArmPos;
-		float rightHandRadius, rightArmRadius;
-		rightHandPos = rightBackArmPos = rightFrontArmPos = Vector3.zero;
-		rightHandRadius = rightArmRadius = 0f;
 		// Generate Right Hand Zone
 		if (currRightHandCollider != null && currRightArmCollider != null)
 		{
-			// Right Hand Zone
-			// prevRightHandCollider = pins.rightHand.GetHandCollider();
-			SphereCollider sc = currRightHandCollider.GetComponent<SphereCollider>();
-			Vector3 handColliderPosition = currRightHandCollider.transform.position;
-			backgroundDistance = -(sc.radius * 2.0f + pins.height);
-			handColliderPosition.y = backgroundDistance;
-			Vector3 handColliderScale = new Vector3(sc.radius * 2.0f, sc.radius * 2.0f, sc.radius * 2.0f);
+			// Right Hand Background
+			Vector3 backRightHandPos = new Vector3(rightHandPos.x, backgroundDistance, rightHandPos.z);
+			_backHandMatrices[_backHandIndex] = Matrix4x4.TRS(backRightHandPos, Quaternion.identity, rightHandScale);
+			_backHandColors[_backHandIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_backHandOutlineColors[_backHandIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_backHandOutlineWidths[_backHandIndex] = 0f;
+			_backHandSecondOutlineColors[_backHandIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_backHandSecondOutlineWidths[_backHandIndex] = 0f;
+			_backHandIndex++;
 
-			rightHandPos = handColliderPosition;
-			rightHandRadius = sc.radius;
+			// Right Hand Foreground
+			Vector3 foreRightHandPos = new Vector3(rightHandPos.x, foregroundDistance, rightHandPos.z);
+			_foreHandMatrices[_foreHandIndex] = Matrix4x4.TRS(foreRightHandPos, Quaternion.identity, rightHandScale);
+			_foreHandColors[_foreHandIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_foreHandOutlineColors[_foreHandIndex] = new Vector4(0f, 0f, 0f, bodyGamma);
+			_foreHandOutlineWidths[_foreHandIndex] = bodyOutlineWidth;
+			_foreHandSecondOutlineColors[_foreHandIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_foreHandSecondOutlineWidths[_foreHandIndex] = bodySecondOutlineWidth;
+			_foreHandIndex++;
 
-			_handMatrices[_handIndex] = Matrix4x4.TRS(handColliderPosition, Quaternion.identity, handColliderScale);
-			_handColors[_handIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
-			_handOutlineColors[_handIndex] = new Vector4(0f, 0f, 0f, bodyGamma);
-			_handOutlineWidths[_handIndex] = bodyOutlineWidth;
-			_handSecondOutlineColors[_handIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
-			_handSecondOutlineWidths[_handIndex] = 2f / 100f;
-			_handIndex++;
 
-			// Right Arm Zone
-			// prevRightArmCollider = pins.rightHand.GetArmCollider();
-			CapsuleCollider capsuleCollider1 = currRightArmCollider.GetComponent<CapsuleCollider>();
-			Vector3 forwardArmColliderPosition = currRightArmCollider.transform.position + currRightArmCollider.transform.forward * (capsuleCollider1.height / 2.0f);
-			Vector3 backwardArmColliderPosition = currRightArmCollider.transform.position - currRightArmCollider.transform.forward * (capsuleCollider1.height / 2.0f);
-			forwardArmColliderPosition.y = backgroundDistance;
-			backwardArmColliderPosition.y = backgroundDistance;
-			Vector3 armColliderPosition = backwardArmColliderPosition + (forwardArmColliderPosition - backwardArmColliderPosition) / 2.0f;
-			Quaternion armColliderRotation = Quaternion.LookRotation(forwardArmColliderPosition - backwardArmColliderPosition) * Quaternion.AngleAxis(90, Vector3.right); ; // Quaternion.Euler(_forearmColliders[0].transform.rotation.eulerAngles.x, _forearmColliders[0].transform.rotation.eulerAngles.y, _forearmColliders[0].transform.rotation.eulerAngles.z);
-			Vector3 colliderScale = new Vector3(capsuleCollider1.radius * 2f, capsuleCollider1.height / 2.0f, capsuleCollider1.radius * 2f);
-
-			// Save for shader
-			Vector3 frontToBackArm = Vector3.Normalize(backwardArmColliderPosition - forwardArmColliderPosition);
-			float distFrontArmOutOfHand = sc.radius - Vector3.Magnitude(handColliderPosition - forwardArmColliderPosition);
-			rightFrontArmPos = forwardArmColliderPosition + frontToBackArm * distFrontArmOutOfHand;
-			rightBackArmPos = backwardArmColliderPosition;
-			rightArmRadius = capsuleCollider1.radius;
-
-			_armMatrices[_armIndex] = Matrix4x4.TRS(
-				armColliderPosition,
-				armColliderRotation,
-				colliderScale
+			// Right Arm Background
+			Vector3 backRightArmPos = new Vector3(rightArmPos.x, backgroundDistance, rightArmPos.z);
+			_backArmMatrices[_backArmIndex] = Matrix4x4.TRS(
+				backRightArmPos,
+				rightArmRotation,
+				rightArmScale
 				);
-			_armColors[_armIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
-			_armOutlineColors[_armIndex] = new Vector4(0f, 0f, 0f, bodyGamma);
-			_armOutlineWidths[_armIndex] = bodyOutlineWidth;
-			_armSecondOutlineColors[_armIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
-			_armSecondOutlineWidths[_armIndex] = bodySecondOutlineWidth;
-			_armIndex++;
+			_backArmColors[_backArmIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_backArmOutlineColors[_backArmIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_backArmOutlineWidths[_backArmIndex] = 0f;
+			_backArmSecondOutlineColors[_backArmIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_backArmSecondOutlineWidths[_backArmIndex] = 0f;
+			_backArmIndex++;
+
+			// Right Arm Foreground
+			Vector3 foreRightArmPos = new Vector3(rightArmPos.x, foregroundDistance, rightArmPos.z);
+			_foreArmMatrices[_foreArmIndex] = Matrix4x4.TRS(
+				foreRightArmPos,
+				rightArmRotation,
+				rightArmScale
+				);
+			_foreArmColors[_foreArmIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_foreArmOutlineColors[_foreArmIndex] = new Vector4(0f, 0f, 0f, bodyGamma);
+			_foreArmOutlineWidths[_foreArmIndex] = bodyOutlineWidth;
+			_foreArmSecondOutlineColors[_foreArmIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_foreArmSecondOutlineWidths[_foreArmIndex] = bodySecondOutlineWidth;
+			_foreArmIndex++;
 		}
 
 
@@ -828,7 +898,7 @@ public class SafeGuard : MonoBehaviour
 			Vector3 unsafeTransition = currUnsafeTransitions[i];
 			int row = (int)unsafeTransition.x;
 			int column = (int)unsafeTransition.y;
-			float gamma = unsafeTransition.z;
+			float distanceGamma = unsafeTransition.z;
 			int paused = pins.viewMatrix[row, column].CurrentPaused;
 			int feedforwarded = pins.viewMatrix[row, column].CurrentFeedForwarded;
 			int displacement = (paused != 0) ? paused : feedforwarded;
@@ -836,7 +906,6 @@ public class SafeGuard : MonoBehaviour
 			// Generate dots adjust dot diameter under body
 			Vector3 dotPos = pin.position;
 			Quaternion dotRot = pin.rotation;
-			float distance = pins.viewMatrix[row, column].CurrentDistance;
 			float scaleDistanceCoeff = 0f; // 1f - (Mathf.Clamp(distance, minScaleDistance, maxScaleDistance) - minScaleDistance) / (maxScaleDistance - minScaleDistance);
 			float dotDiameter = Mathf.Lerp(minOrthographicSize, maxOrthographicSize, scaleDistanceCoeff);
 			Vector3 dotScale = new Vector3(dotDiameter, dotDiameter, dotDiameter);
@@ -847,33 +916,42 @@ public class SafeGuard : MonoBehaviour
 			);
 
 			//Color dotColor = (displacement > 0) ? Color.Lerp(_middleDivergingColor, _rightDivergingColor, displacement / 40f) : Color.Lerp(_middleDivergingColor, _leftDivergingColor, -displacement / 40f);
-			Color dotColor = new Color(1f, 0f, 0f, bodyGamma);
+			Color dotColor = new Color(1f, 0f, 0f, distanceGamma);
+
+			/*_pinMatrices[_pinIndex] = Matrix4x4.TRS(dotPos, Quaternion.identity, dotScale);
+			_pinColors[_pinIndex] = dotColor;
+			_pinOutlineColors[_pinIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_pinOutlineWidths[_pinIndex] = 0f;// pinOutlineWidth;
+			_pinSecondOutlineColors[_pinIndex] = new Vector4(1f, 1f, 1f, 0f);
+			_pinSecondOutlineWidths[_pinIndex] = 0f;// pinSecondOutlineWidth;
+			_pinIndex++;*/
+
 			_dotColors[_dotIndex] = dotColor; //(feedbackMode != FeedbackMode.State) ? dotColor : new Color(1f, 1f, 1f, 0f);//Color.white;
-			_dotOutlineColors[_dotIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_dotOutlineColors[_dotIndex] = new Vector4(1f, 1f, 1f, distanceGamma);
 			_dotOutlineWidths[_dotIndex] = Mathf.Lerp(minOutlineWidth, maxOutlineWidth, scaleDistanceCoeff);
-			_dotSecondOutlineColors[_dotIndex] = new Vector4(0f, 0f, 0f, bodyGamma);
+			_dotSecondOutlineColors[_dotIndex] = new Vector4(0f, 0f, 0f, distanceGamma);
 			_dotSecondOutlineWidths[_dotIndex] = Mathf.Lerp(minSecondOutlineWidth, maxSecondOutlineWidth, scaleDistanceCoeff);
 			_dotThirdOutlineColors[_dotIndex] = dotColor;
 			_dotThirdOutlineWidths[_dotIndex] = Mathf.Lerp(minThirdOutlineWidth, maxThirdOutlineWidth, scaleDistanceCoeff);
-			_dotFourthOutlineColors[_dotIndex] = new Vector4(0f, 0f, 0f, bodyGamma);
+			_dotFourthOutlineColors[_dotIndex] = new Vector4(0f, 0f, 0f, distanceGamma);
 			_dotFourthOutlineWidths[_dotIndex] = Mathf.Lerp(minFourthOutlineWidth, maxFourthOutlineWidth, scaleDistanceCoeff);
-			_dotFifthOutlineColors[_dotIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_dotFifthOutlineColors[_dotIndex] = new Vector4(1f, 1f, 1f, distanceGamma);
 			_dotFifthOutlineWidths[_dotIndex] = Mathf.Lerp(minFifthOutlineWidth, maxFifthOutlineWidth, scaleDistanceCoeff);
 
 			// left hand mask
-			_dotLeftHandCenters[_dotIndex] = leftHandPos;
-			_dotLeftHandRadius[_dotIndex] = leftHandRadius;
+			_dotLeftHandCenters[_dotIndex] = dotPos;// leftHandPos;
+			_dotLeftHandRadius[_dotIndex] = 1f;// leftHandRadius;
 			// left arm mask
-			_dotLeftBackArmCenters[_dotIndex] = leftBackArmPos;
-			_dotLeftFrontArmCenters[_dotIndex] = leftFrontArmPos;
-			_dotLeftArmRadius[_dotIndex] = leftArmRadius;
+			_dotLeftBackArmCenters[_dotIndex] = dotPos;//leftBackArmPos;
+			_dotLeftFrontArmCenters[_dotIndex] = dotPos;//leftFrontArmPos;
+			_dotLeftArmRadius[_dotIndex] = 1f;//leftArmRadius;
 			// right hand mask
-			_dotRightHandCenters[_dotIndex] = rightHandPos;
-			_dotRightHandRadius[_dotIndex] = rightHandRadius;
+			_dotRightHandCenters[_dotIndex] = dotPos;//rightHandPos;
+			_dotRightHandRadius[_dotIndex] = 1f;// rightHandRadius;
 			// right arm mask
-			_dotRightBackArmCenters[_dotIndex] = rightBackArmPos;
-			_dotRightFrontArmCenters[_dotIndex] = rightFrontArmPos;
-			_dotRightArmRadius[_dotIndex] = rightArmRadius;
+			_dotRightBackArmCenters[_dotIndex] = dotPos;//rightBackArmPos;
+			_dotRightFrontArmCenters[_dotIndex] = dotPos;//rightFrontArmPos;
+			_dotRightArmRadius[_dotIndex] = 1f;// rightArmRadius;
 			_dotIndex++;
 
 			// Generate Plane
@@ -889,32 +967,32 @@ public class SafeGuard : MonoBehaviour
 			int directionAmount = Mathf.RoundToInt(Mathf.Lerp(0f, 30f, displacementPercent));
 			Graphics.CopyTexture(_shapeTextures[directionAmount], 0, 0, _iconTextureArray, _planeIndex, 0); // i is the index of the texture
 			_iconTextureIndexes[_planeIndex] = _planeIndex;
-			_planeColors[_planeIndex] = new Color(1f, 1f, 1f, bodyGamma);//dotColor;
+			_planeColors[_planeIndex] = new Color(1f, 1f, 1f, distanceGamma);//dotColor;
 			_planeOutlineColors[_planeIndex] = Vector4.zero;
 			_planeOutlineWidths[_planeIndex] = 0;
 			_planeSecondOutlineColors[_planeIndex] = Vector4.zero;
 			_planeSecondOutlineWidths[_planeIndex] = 0;
 			// left hand mask
-			_planeLeftHandCenters[_planeIndex] = leftHandPos;
-			_planeLeftHandRadius[_planeIndex] = leftHandRadius;
-			// left arm mask
-			_planeLeftBackArmCenters[_planeIndex] = leftBackArmPos;
-			_planeLeftFrontArmCenters[_planeIndex] = leftFrontArmPos;
-			_planeLeftArmRadius[_planeIndex] = leftArmRadius;
-			// right hand mask
-			_planeRightHandCenters[_planeIndex] = rightHandPos;
-			_planeRightHandRadius[_planeIndex] = rightHandRadius;
-			// right arm mask
-			_planeRightBackArmCenters[_planeIndex] = rightBackArmPos;
-			_planeRightFrontArmCenters[_planeIndex] = rightFrontArmPos;
-			_planeRightArmRadius[_planeIndex] = rightArmRadius;
+			_planeLeftHandCenters[_planeIndex] = dotPos;// leftHandPos;
+			_planeLeftHandRadius[_planeIndex] = 1f;// leftHandRadius;
+												   // left arm mask
+			_planeLeftBackArmCenters[_planeIndex] = dotPos;// leftBackArmPos;
+			_planeLeftFrontArmCenters[_planeIndex] = dotPos;// leftFrontArmPos;
+			_planeLeftArmRadius[_planeIndex] = 1f;// leftArmRadius;
+												  // right hand mask
+			_planeRightHandCenters[_planeIndex] = dotPos;// rightHandPos;
+			_planeRightHandRadius[_planeIndex] = 1f;// rightHandRadius;
+													// right arm mask
+			_planeRightBackArmCenters[_planeIndex] = dotPos;// rightBackArmPos;
+			_planeRightFrontArmCenters[_planeIndex] = dotPos;// rightFrontArmPos;
+			_planeRightArmRadius[_planeIndex] = 1f;// rightArmRadius;
 			_planeIndex++;
 		}
 	}
 	// Update is called once per frame
 	public void Update()
     {
-		_pinIndex = _handIndex = _armIndex = _planeIndex = _dotIndex = _lineIndex = 0;
+		_backHandIndex = _foreHandIndex =  _backArmIndex = _foreArmIndex = _pinIndex = _planeIndex = _dotIndex = _lineIndex = 0;
 
 		// Handle Overlay Modes à priori
 		switch (overlayMode)
@@ -979,42 +1057,55 @@ public class SafeGuard : MonoBehaviour
 				currRightArmCollider = pins.rightHand.GetArmCollider();
 			}
 		}
+		FetchUserBody();
 		nextUnsafeTransitions.Clear();
+
+		float dynamicFeedbackMaxGamma = 0f;
 		for (int row = 0; row < pins.NbRows; row++)
 		{
 			for (int column = 0; column < pins.NbColumns; column++)
 			{
 				int paused = pins.viewMatrix[row, column].CurrentPaused;
 				int feedforwarded = pins.viewMatrix[row, column].CurrentFeedForwarded;
-				float proximity = pins.viewMatrix[row, column].CurrentProximity;
+				Transform pin = pins.viewMatrix[row, column].transform;
 				bool reaching = pins.viewMatrix[row, column].CurrentReaching;
-
 				int displacement = (paused != 0) ? paused : feedforwarded;
-				if (proximity > 0f && (reaching || displacement != 0))
+				if (reaching || displacement != 0) // if moving pins or paused or feedforwarded
 				{
-					Vector3 nextUnsafeTransition = new Vector3(row, column, proximity);
-					//Debug.Log("nextUnsafeTransition => " + nextUnsafeTransition);
-					nextUnsafeTransitions.Add(nextUnsafeTransition);
-					int matchIndex = currUnsafeTransitions.FindIndex(currUnsafeTransition => (currUnsafeTransition.x == nextUnsafeTransition.x && currUnsafeTransition.y == nextUnsafeTransition.y));
 
+					float distanceGamma = pins.collisionMatrix[row, column].Gamma();
+					float distance = pins.collisionMatrix[row, column].Distance();
 
-					if (matchIndex != -1) // next unsafe already exist then ease-in
+					if (distanceGamma > 0f)
 					{
-						Vector3 currUnsafeTransition = currUnsafeTransitions[matchIndex];
-						currUnsafeTransition.z = Mathf.MoveTowards(currUnsafeTransition.z, nextUnsafeTransition.z, recoveryRateIn * Time.deltaTime);
-						currUnsafeTransitions[matchIndex] = currUnsafeTransition;
-					}
-					else // next unsafe does not already exist then ease-in
-					{
-						Vector3 currUnsafeTransition = new Vector3(row, column, 0f);
-						currUnsafeTransition.z = Mathf.MoveTowards(currUnsafeTransition.z, nextUnsafeTransition.z, recoveryRateIn * Time.deltaTime);
-						currUnsafeTransitions.Add(currUnsafeTransition);
+						float finalGamma = distanceGamma; // (distanceGamma < 1f) ? 0.66f : distanceGamma;
+						dynamicFeedbackMaxGamma = Mathf.Max(finalGamma, dynamicFeedbackMaxGamma);
+						//Debug.Log(row + " " + column + " distance:" + distance + " gamma:" + distanceGamma);
+						Vector3 nextUnsafeTransition = new Vector3(row, column, finalGamma);
+						//Debug.Log("nextUnsafeTransition => " + nextUnsafeTransition);
+						nextUnsafeTransitions.Add(nextUnsafeTransition);
+						int matchIndex = currUnsafeTransitions.FindIndex(currUnsafeTransition => (currUnsafeTransition.x == nextUnsafeTransition.x && currUnsafeTransition.y == nextUnsafeTransition.y));
 
+
+						if (matchIndex != -1) // next unsafe already exist then ease-in
+						{
+							Vector3 currUnsafeTransition = currUnsafeTransitions[matchIndex];
+							currUnsafeTransition.z = Mathf.MoveTowards(currUnsafeTransition.z, nextUnsafeTransition.z, recoveryRateIn * Time.deltaTime);
+							currUnsafeTransitions[matchIndex] = currUnsafeTransition;
+						}
+						else // next unsafe does not already exist then ease-in
+						{
+							Vector3 currUnsafeTransition = new Vector3(row, column, 0f);
+							currUnsafeTransition.z = Mathf.MoveTowards(currUnsafeTransition.z, nextUnsafeTransition.z, recoveryRateIn * Time.deltaTime);
+							currUnsafeTransitions.Add(currUnsafeTransition);
+
+						}
 					}
+					
 				}
 			}
 		}
-		List<int> toRemoveIndexes = new List<int>();
+		List<Vector3> transitionsToRemove = new List<Vector3>();
 		for(int i = 0; i < currUnsafeTransitions.Count; i++)
 		{
 			Vector3 currUnsafeTransition = currUnsafeTransitions[i];
@@ -1031,16 +1122,14 @@ public class SafeGuard : MonoBehaviour
 					//Debug.Log(currUnsafeTransitions[i]);
 				} else
 				{
-					toRemoveIndexes.Add(i);
+					transitionsToRemove.Add(currUnsafeTransition);
 				}
 			}
 		}
-		for (int i = 0; i < toRemoveIndexes.Count; i++)
-		{
-			currUnsafeTransitions.RemoveAt(toRemoveIndexes[i]);
-		}
-		if(nextUnsafeTransitions.Count == 0) bodyGamma = Mathf.MoveTowards(bodyGamma, feedbackMinGamma, recoveryRateOut * Time.deltaTime);
-		else bodyGamma = Mathf.MoveTowards(bodyGamma, feedbackMaxGamma, recoveryRateIn * Time.deltaTime);
+		currUnsafeTransitions.RemoveAll(currUnsafeTransition => transitionsToRemove.Contains(currUnsafeTransition));
+
+		if (nextUnsafeTransitions.Count == 0) bodyGamma = Mathf.MoveTowards(bodyGamma, feedbackMinGamma, recoveryRateOut * Time.deltaTime);
+		else bodyGamma = Mathf.MoveTowards(bodyGamma, dynamicFeedbackMaxGamma, recoveryRateIn * Time.deltaTime);
 
 		if (currUnsafeTransitions.Count > 0)
 		{

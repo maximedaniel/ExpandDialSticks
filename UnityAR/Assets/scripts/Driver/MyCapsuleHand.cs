@@ -211,7 +211,8 @@ namespace Leap.Unity {
         private GameObject[] _forearmColliders;
         // private float handColliderOffset = 2.5f; //6f
        // private float pinHalfWidth = 0.03f; //6f
-        public static float SAFETY_RADIUS = 0.03f;
+        public static float STOP_RADIUS = 0.03f;
+        public static float WARNING_RADIUS = 0.06f;
         private float forearmColliderOffset = 0.24f;
         private CombineInstance[] combine;
         private int _curSphereIndex, _curCylinderIndex;
@@ -465,7 +466,7 @@ namespace Leap.Unity {
         {
             if (frozen) return;  // do nothing if frozen
 
-            Debug.Log(handedness + "BeginHand()");
+           // Debug.Log(handedness + "BeginHand()");
             base.BeginHand();
             if (_hand.IsLeft)
             {
@@ -491,7 +492,7 @@ namespace Leap.Unity {
         {
 
             if (frozen) return;  // do nothing if frozen
-            Debug.Log(handedness + "FinishHand()");
+           // Debug.Log(handedness + "FinishHand()");
             base.FinishHand();
             // If the other hand is still tracked
             if (otherHand.IsTracked)
@@ -596,7 +597,8 @@ namespace Leap.Unity {
 
         public override void UpdateHand()
         {
-            Debug.Log(handedness + "UpdateHand()");
+           // Debug.Log(handedness + "UpdateHand()");
+           // Debug.Log(handedness + "UpdateHand()");
             if (frozen) return;
             if (_fillColliders == null || _fingerColliders == null || _handColliders == null || _forearmColliders == null) return; //InstantiateGameObjects();
 
@@ -673,7 +675,7 @@ namespace Leap.Unity {
                 _handColliders[i].transform.position = centerPoint;
                 SphereCollider sc = _handColliders[i].GetComponent<SphereCollider>();
                 sc.radius = maxDistPoint; // + pinHalfWidth;
-                sc.radius += i * SAFETY_RADIUS;// sc.radius * (i * 0.5f);
+                sc.radius += i * STOP_RADIUS;// sc.radius * (i * 0.5f);
             }
             // drawing hand collider
             /*MaterialPropertyBlock block10 = new MaterialPropertyBlock();
@@ -773,7 +775,7 @@ namespace Leap.Unity {
                     _forearmColliders[i].transform.rotation = rotationForearm;
                     CapsuleCollider capsuleCollider = _forearmColliders[i].GetComponent<CapsuleCollider>();
                     capsuleCollider.radius = (Vector3.Distance(armFrontRight, armFrontLeft) + offsetExtends.x) / 2.0f + forearmColliderOffset / 4.0f;
-                    capsuleCollider.radius += i * SAFETY_RADIUS;// sc.radius * (i * 0.5f);
+                    capsuleCollider.radius += i * STOP_RADIUS;// sc.radius * (i * 0.5f);
                     //capsuleCollider.radius += capsuleCollider.radius * (i * 0.5f);
                     capsuleCollider.height = Vector3.Distance(armBackLeft, armFrontLeft) + offsetExtends.x + forearmColliderOffset;
                     capsuleCollider.direction = 2;

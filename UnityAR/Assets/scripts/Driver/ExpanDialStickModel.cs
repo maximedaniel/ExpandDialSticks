@@ -125,6 +125,8 @@ public class ExpanDialStickModel
 	private float projectorChangeDurationCurrent = 0f;
 	private float projectorChangeDurationTarget = 0f;
 
+	private float storedSpeed = 0f;
+
 
 	private bool init = false;
 
@@ -145,6 +147,11 @@ public class ExpanDialStickModel
 			this.feedforwardDiff += value - this.feedforwardCurrent;
 			this.feedforwardCurrent = value;
 		}
+	}
+	public float StoredSpeed
+	{
+		get => this.storedSpeed;
+		set => this.storedSpeed = value;
 	}
 
 	// Getters and Setters
