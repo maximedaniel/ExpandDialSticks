@@ -9,6 +9,7 @@ using Unity.XRTools.Utils;
 public class SafeGuard : MonoBehaviour
 {
 
+	
 	Projector projector;
 
 	public ExpanDialSticks pins;
@@ -110,7 +111,7 @@ public class SafeGuard : MonoBehaviour
 	private float[] _lineLeftArmRadius, _lineRightArmRadius;
 	private int _lineIndex = 0;
 
-	public enum SafetyOverlayMode {User, System};
+	public enum SafetyOverlayMode {User, System, Mixed};
 	private SafetyOverlayMode overlayMode = SafetyOverlayMode.User;
 	public enum SemioticMode { None, Index, Symbol, Icon};
 	private SemioticMode semioticMode = SemioticMode.Icon;
@@ -675,6 +676,114 @@ public class SafeGuard : MonoBehaviour
 		}
 
 	}
+	private void GenerateMixedOverlay()
+	{
+		// Generate Left Forearm Zone
+		if (currLeftHandCollider != null && currLeftArmCollider != null)
+		{
+			// Left Hand Background
+			Vector3 backLeftHandPos = new Vector3(leftHandPos.x, backgroundDistance, leftHandPos.z);
+			_backHandMatrices[_backHandIndex] = Matrix4x4.TRS(backLeftHandPos, Quaternion.identity, leftHandScale);
+			_backHandColors[_backHandIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_backHandOutlineColors[_backHandIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_backHandOutlineWidths[_backHandIndex] = 0f;
+			_backHandSecondOutlineColors[_backHandIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_backHandSecondOutlineWidths[_backHandIndex] = 0f;
+			_backHandIndex++;
+
+			// Left Hand Foreground
+			Vector3 foreLeftHandPos = new Vector3(leftHandPos.x, foregroundDistance, leftHandPos.z);
+			_foreHandMatrices[_foreHandIndex] = Matrix4x4.TRS(foreLeftHandPos, Quaternion.identity, leftHandScale);
+			_foreHandColors[_foreHandIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_foreHandOutlineColors[_foreHandIndex] = new Vector4(0f, 0f, 0f, bodyGamma);
+			_foreHandOutlineWidths[_foreHandIndex] = bodyOutlineWidth;
+			_foreHandSecondOutlineColors[_foreHandIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_foreHandSecondOutlineWidths[_foreHandIndex] = bodySecondOutlineWidth;
+			_foreHandIndex++;
+
+
+			// Left Arm Background
+			Vector3 backLeftArmPos = new Vector3(leftArmPos.x, backgroundDistance, leftArmPos.z);
+			_backArmMatrices[_backArmIndex] = Matrix4x4.TRS(
+				backLeftArmPos,
+				leftArmRotation,
+				leftArmScale
+				);
+			_backArmColors[_backArmIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_backArmOutlineColors[_backArmIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_backArmOutlineWidths[_backArmIndex] = 0f;
+			_backArmSecondOutlineColors[_backArmIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_backArmSecondOutlineWidths[_backArmIndex] = 0f;
+			_backArmIndex++;
+
+			// Left Arm Foreground
+			Vector3 foreLeftArmPos = new Vector3(leftArmPos.x, foregroundDistance, leftArmPos.z);
+			_foreArmMatrices[_foreArmIndex] = Matrix4x4.TRS(
+				foreLeftArmPos,
+				leftArmRotation,
+				leftArmScale
+				);
+			_foreArmColors[_foreArmIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_foreArmOutlineColors[_foreArmIndex] = new Vector4(0f, 0f, 0f, bodyGamma);
+			_foreArmOutlineWidths[_foreArmIndex] = bodyOutlineWidth;
+			_foreArmSecondOutlineColors[_foreArmIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_foreArmSecondOutlineWidths[_foreArmIndex] = bodySecondOutlineWidth;
+			_foreArmIndex++;
+		}
+		// Generate Right Hand Zone
+		if (currRightHandCollider != null && currRightArmCollider != null)
+		{
+			// Right Hand Background
+			Vector3 backRightHandPos = new Vector3(rightHandPos.x, backgroundDistance, rightHandPos.z);
+			_backHandMatrices[_backHandIndex] = Matrix4x4.TRS(backRightHandPos, Quaternion.identity, rightHandScale);
+			_backHandColors[_backHandIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_backHandOutlineColors[_backHandIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_backHandOutlineWidths[_backHandIndex] = 0f;
+			_backHandSecondOutlineColors[_backHandIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_backHandSecondOutlineWidths[_backHandIndex] = 0f;
+			_backHandIndex++;
+
+			// Right Hand Foreground
+			Vector3 foreRightHandPos = new Vector3(rightHandPos.x, foregroundDistance, rightHandPos.z);
+			_foreHandMatrices[_foreHandIndex] = Matrix4x4.TRS(foreRightHandPos, Quaternion.identity, rightHandScale);
+			_foreHandColors[_foreHandIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_foreHandOutlineColors[_foreHandIndex] = new Vector4(0f, 0f, 0f, bodyGamma);
+			_foreHandOutlineWidths[_foreHandIndex] = bodyOutlineWidth;
+			_foreHandSecondOutlineColors[_foreHandIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_foreHandSecondOutlineWidths[_foreHandIndex] = bodySecondOutlineWidth;
+			_foreHandIndex++;
+
+
+			// Right Arm Background
+			Vector3 backRightArmPos = new Vector3(rightArmPos.x, backgroundDistance, rightArmPos.z);
+			_backArmMatrices[_backArmIndex] = Matrix4x4.TRS(
+				backRightArmPos,
+				rightArmRotation,
+				rightArmScale
+				);
+			_backArmColors[_backArmIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_backArmOutlineColors[_backArmIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_backArmOutlineWidths[_backArmIndex] = 0f;
+			_backArmSecondOutlineColors[_backArmIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_backArmSecondOutlineWidths[_backArmIndex] = 0f;
+			_backArmIndex++;
+
+			// Right Arm Foreground
+			Vector3 foreRightArmPos = new Vector3(rightArmPos.x, foregroundDistance, rightArmPos.z);
+			_foreArmMatrices[_foreArmIndex] = Matrix4x4.TRS(
+				foreRightArmPos,
+				rightArmRotation,
+				rightArmScale
+				);
+			_foreArmColors[_foreArmIndex] = new Vector4(0f, 0f, 0f, 0f);
+			_foreArmOutlineColors[_foreArmIndex] = new Vector4(0f, 0f, 0f, bodyGamma);
+			_foreArmOutlineWidths[_foreArmIndex] = bodyOutlineWidth;
+			_foreArmSecondOutlineColors[_foreArmIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_foreArmSecondOutlineWidths[_foreArmIndex] = bodySecondOutlineWidth;
+			_foreArmIndex++;
+		}
+		GenerateSystemOverlay();
+	}
 
 	private void GenerateSystemOverlay()
 	{
@@ -917,6 +1026,7 @@ public class SafeGuard : MonoBehaviour
 
 			//Color dotColor = (displacement > 0) ? Color.Lerp(_middleDivergingColor, _rightDivergingColor, displacement / 40f) : Color.Lerp(_middleDivergingColor, _leftDivergingColor, -displacement / 40f);
 			Color dotColor = new Color(1f, 0f, 0f, distanceGamma);
+			//Debug.Log(row + " " + column + " dotColor:" + dotColor);
 
 			/*_pinMatrices[_pinIndex] = Matrix4x4.TRS(dotPos, Quaternion.identity, dotScale);
 			_pinColors[_pinIndex] = dotColor;
@@ -1078,9 +1188,9 @@ public class SafeGuard : MonoBehaviour
 
 					if (distanceGamma > 0f)
 					{
-						float finalGamma = distanceGamma; // (distanceGamma < 1f) ? 0.66f : distanceGamma;
+						float finalGamma = (distanceGamma < 1f) ? 0.6f : distanceGamma; 
 						dynamicFeedbackMaxGamma = Mathf.Max(finalGamma, dynamicFeedbackMaxGamma);
-						//Debug.Log(row + " " + column + " distance:" + distance + " gamma:" + distanceGamma);
+						//Debug.Log(row + " " + column + " finalGamma:" + finalGamma);
 						Vector3 nextUnsafeTransition = new Vector3(row, column, finalGamma);
 						//Debug.Log("nextUnsafeTransition => " + nextUnsafeTransition);
 						nextUnsafeTransitions.Add(nextUnsafeTransition);
@@ -1141,36 +1251,17 @@ public class SafeGuard : MonoBehaviour
 				case SafetyOverlayMode.System:
 					GenerateSystemOverlay();
 					break;
+				case SafetyOverlayMode.Mixed:
+					GenerateMixedOverlay();
+					break;
 			}
 
-
-			// Handle Overlay Modes à posteriori
-			switch (overlayMode)
+			for (int i = 0; i < _dotIndex; i++)
 			{
-				case SafetyOverlayMode.User:
-					// hide lines and hull
-					_lineIndex = 0;
-					// hide dots outlines
-					for (int i = 0; i < _dotIndex; i++)
-					{
-						_dotOutlineColors[i] = new Vector4(1f, 1f, 1f, 0f);
-						_dotSecondOutlineColors[i] = new Vector4(1f, 1f, 1f, 0f);
-						_dotThirdOutlineColors[i] = new Vector4(1f, 1f, 1f, 0f);
-					}
-					break;
-				case SafetyOverlayMode.System:
-					// hide lines and hull
-					_lineIndex = 0;
-					// hide dots outlines
-					for (int i = 0; i < _dotIndex; i++)
-					{
-						_dotOutlineColors[i] = new Vector4(1f, 1f, 1f, 0f);
-						_dotSecondOutlineColors[i] = new Vector4(1f, 1f, 1f, 0f);
-						_dotThirdOutlineColors[i] = new Vector4(1f, 1f, 1f, 0f);
-					}
-					break;
+				_dotOutlineColors[i] = new Vector4(1f, 1f, 1f, 0f);
+				_dotSecondOutlineColors[i] = new Vector4(1f, 1f, 1f, 0f);
+				_dotThirdOutlineColors[i] = new Vector4(1f, 1f, 1f, 0f);
 			}
-			// Render graphics
 			Render();
 		}
 

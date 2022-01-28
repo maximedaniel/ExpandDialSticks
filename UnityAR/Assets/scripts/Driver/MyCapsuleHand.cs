@@ -212,7 +212,7 @@ namespace Leap.Unity {
         // private float handColliderOffset = 2.5f; //6f
        // private float pinHalfWidth = 0.03f; //6f
         public static float STOP_RADIUS = 0.03f;
-        public static float WARNING_RADIUS = 0.06f;
+        public static float WARNING_RADIUS = 0.12f;
         private float forearmColliderOffset = 0.24f;
         private CombineInstance[] combine;
         private int _curSphereIndex, _curCylinderIndex;

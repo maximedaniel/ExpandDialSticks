@@ -32,6 +32,7 @@ public class XP2_P1 : MonoBehaviour
 	private const float LOG_INTERVAL = 0.2f; // 0.2f;
 	private const float COMPLETION_INTERVAL = 0.5f; // 0.2f;
 	private float currTime;
+	private float prevTime;
 	private float prevRandomTextureTime;
 	private float prevMetricsTime;
 	private float prevDistractorTime;
@@ -42,7 +43,7 @@ public class XP2_P1 : MonoBehaviour
 	private const int targetPos = 30;
 	private const float shortShapeChangeDuration = 2f;
 	private const float longShapeChangeDuration = 6f;
-	private float shapeChangeDuration = 2f;
+	private float shapeChangeWaitFor = 3f;
 	private const float safetyDistance = 6f;
 
 
@@ -57,6 +58,36 @@ public class XP2_P1 : MonoBehaviour
 	private bool waitForNoHand = false;
 	private bool autoDistractorTrigger = false;
 
+	// GAUGE GAME VARIABLES
+	private Vector2[] gaugePositions;
+
+	private int gaugeIndex;
+	private const int GAUGE_TO_APPEAR = 0;
+	private const int GAUGE_APPEARING = 1;
+	private const int GAUGE_APPEARED = 2;
+	private const int GAUGE_STARTED = 3;
+	private const int LANDSCAPE_IS_CHANGING = 4;
+
+	private int gaugeState = GAUGE_TO_APPEAR;
+	private const sbyte gaugeHeight = 20;
+	private float aiguilleRotation = 90f;
+	private float cadranRotation = 90f;
+	private float speedRotation = 1f;
+
+	private float directionTime = 0f;
+	private float directionDuration = 3f;
+	private float startGameTime = 0f;
+
+	private const float initGameDuration = 20f;
+	private float gameDuration = Mathf.Infinity;
+	private float motionDuration = 10f;
+
+	private const float anglePerStep = 360f / 24f;
+	private float startRotation = 90f - anglePerStep;
+	public enum DirectionRotation { CW, CCW, IDDLE };
+	private DirectionRotation directionRotation = DirectionRotation.CW;
+
+	// MQTT VARIABLES
 	public const string MQTT_SYSTEM_RECORDER = "SYSTEM_RECORDER";
 	public const string CMD_START = "START";
 	public const string CMD_STOP = "STOP";
@@ -107,6 +138,10 @@ public class XP2_P1 : MonoBehaviour
 		GenerateTrials();
 		triggerNextTrial = true;
 		connected = false;
+		/*for(float i = 0; i < 1.0f; i += 0.1f)
+		{
+			Debug.Log("Exponential(" + i + ") = > " + Transition.Exponential(i));
+		}*/
 		expanDialSticks.client_MqttConnect();
 
 	}
@@ -166,19 +201,22 @@ public class XP2_P1 : MonoBehaviour
 	private void HandleRotationChanged(object sender, ExpanDialStickEventArgs e)
 	{
 		currSelectPosition = new Vector2Int(e.i, e.j);
-
-		if (currSelectPosition != prevSelectPosition)
-		{
 			if(currTarget == currSelectPosition)
 			{
-				//StartCoroutine(TriggerDistractors());
+				float prevRotation = aiguilleRotation;
+				aiguilleRotation += e.diff * anglePerStep;
+				string msg = "";
+				msg += "USER_ROTATION " + prevRotation + " " + aiguilleRotation;
+				Debug.Log(msg);
+				if (gaugeState == GAUGE_APPEARED)
+				{
+					startGameTime = Time.time;
+					motionDuration = Random.Range(5f, initGameDuration - 5f);
+					gameDuration = initGameDuration;
+					gaugeState = GAUGE_STARTED;
+				}
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 			}
-		}
-		else
-		{
-
-		}
-		prevSelectPosition = currSelectPosition;
 	}
 
 	private void HandlePositionChanged(object sender, ExpanDialStickEventArgs e)
@@ -337,56 +375,54 @@ public class XP2_P1 : MonoBehaviour
 			stringParticipant = GUI.TextField(new Rect(midX - 55, midY, 50, componentHeight), stringParticipant, 25);
 
 
-			if (GUI.Button(new Rect(midX + 5, midY - 50, componentWidth, componentHeight), "USER Overlay | USER Task"))
+			if (GUI.Button(new Rect(midX + 5, midY - 50, componentWidth, componentHeight), "USER Overlay | USER Interrupt"))
 			{
 				numeroParticipant = int.Parse(stringParticipant);
 				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.User;
 				currTaskMode = TaskMode.User;
-				shapeChangeDuration = shortShapeChangeDuration;
 				expanDialSticks.SetOverlayMode(currOverlayMode);
-				string identity = "USER_IDENTITY " + numeroParticipant + " | OVERLAY USER | TASK USER";
+				string identity = "USER_IDENTITY " + numeroParticipant + " | USER OVERLAY | USER INTERRUPT";
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+				Debug.Log(identity);
+				unknownParticipant = false;
+			}
+			if (GUI.Button(new Rect(midX + 5, midY - 25, componentWidth, componentHeight), "USER Overlay | SYSTEM Interrupt"))
+			{
+				numeroParticipant = int.Parse(stringParticipant);
+				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.User;
+				currTaskMode = TaskMode.System;
+				expanDialSticks.SetOverlayMode(currOverlayMode);
+				string identity = "USER_IDENTITY " + numeroParticipant + " | SYSTEM OVERLAY | SYSTEM INTERRUPT";
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				Debug.Log(identity);
 				unknownParticipant = false;
 			}
 
-			if (GUI.Button(new Rect(midX + 5, midY - 25, componentWidth, componentHeight), "USER Overlay | SYSTEM Task"))
+			if (GUI.Button(new Rect(midX + 5, midY, componentWidth, componentHeight), "SYSTEM Overlay | USER Interrupt"))
 			{
 				numeroParticipant = int.Parse(stringParticipant);
-				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.User;
-				currTaskMode = TaskMode.System;
-				shapeChangeDuration = longShapeChangeDuration;
+				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.System;
+				currTaskMode = TaskMode.User;
 				expanDialSticks.SetOverlayMode(currOverlayMode);
-				string identity = "USER_IDENTITY " + numeroParticipant + " | OVERLAY USER | TASK SYSTEM";
+				string identity = "USER_IDENTITY " + numeroParticipant + " | SYSTEM OVERLAY | USER INTERRUPT";
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				Debug.Log(identity);
 				unknownParticipant = false;
 			}
 
-			if (GUI.Button(new Rect(midX + 5, midY, componentWidth, componentHeight), "SYSTEM Overlay | USER Task"))
+			if (GUI.Button(new Rect(midX + 5, midY + 25, componentWidth, componentHeight), "SYSTEM Overlay | SYSTEM Interrupt"))
 			{
 				numeroParticipant = int.Parse(stringParticipant);
 				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.System;
 				currTaskMode = TaskMode.User;
-				shapeChangeDuration = shortShapeChangeDuration;
 				expanDialSticks.SetOverlayMode(currOverlayMode);
-				string identity = "USER_IDENTITY " + numeroParticipant + " | OVERLAY SYSTEM | TASK USER";
+				string identity = "USER_IDENTITY " + numeroParticipant + " | SYSTEM OVERLAY | SYSTEM INTERRUPT";
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				Debug.Log(identity);
 				unknownParticipant = false;
 			}
-			if (GUI.Button(new Rect(midX + 5, midY + 25, componentWidth, componentHeight), "SYSTEM Overlay | SYSTEM Task"))
-			{
-				numeroParticipant = int.Parse(stringParticipant);
-				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.System;
-				currTaskMode = TaskMode.System;
-				shapeChangeDuration = longShapeChangeDuration;
-				expanDialSticks.SetOverlayMode(currOverlayMode);
-				string identity = "USER_IDENTITY " + numeroParticipant + " | OVERLAY SYSTEM | TASK SYSTEM";
-				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-				Debug.Log(identity);
-				unknownParticipant = false;
-			}
+
+
 		}
 
 	}
@@ -396,51 +432,6 @@ public class XP2_P1 : MonoBehaviour
 		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 0.1f, textColor, message, new Vector3(90f, -90f, 0f));
 		expanDialSticks.setBorderBackground(backgroundColor);
 		expanDialSticks.triggerTextureChange();
-	}
-	private List<Vector2Int> FindAllCandidatesAroundTarget(Vector2Int target)
-	{
-
-		List<Vector2Int> candidatesAround = new List<Vector2Int>();
-		for (int i = Math.Max(0, target.x - 1); i < Math.Min(expanDialSticks.NbRows - 1, target.x + 1); i++)
-		{
-			for (int j = Math.Max(0, target.y - 1); j < Math.Min(expanDialSticks.NbColumns - 1, target.y + 1); j++)
-			{
-				candidatesAround.Add(new Vector2Int(i, j));
-			}
-		}
-		return candidatesAround;
-	}
-	private void TriggerOverlay()
-	{
-
-	}
-	private void ResetDisplay()
-	{
-		for (int i = 0; i < expanDialSticks.NbRows; i++)
-		{
-			for (int j = 0; j < expanDialSticks.NbColumns; j++)
-			{
-				//Projector
-				expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "default";
-				expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
-				expanDialSticks.modelMatrix[i, j].TargetProjectorSize = expanDialSticks.modelMatrix[i, j].Diameter / 3f;
-				expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
-				//Texture
-				expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
-				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = 0.1f;
-				//Shape
-				//expanDialSticks.modelMatrix[i, j].TargetPosition = 0;
-				//expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = shapeChangeDuration;
-			}
-		}
-		expanDialSticks.triggerProjectorChange();
-		expanDialSticks.triggerTextureChange();
-		//expanDialSticks.triggerShapeChange();
-
-	}
-	private void UpdateOverlay()
-	{
-
 	}
 
 	private void DisplayInstructions(string instructions)
@@ -456,70 +447,6 @@ public class XP2_P1 : MonoBehaviour
 		//expanDialSticks.triggerTextureChange();
 	}
 
-	/*private IEnumerator TriggerDistractors()
-	{
-
-		Debug.Log("TriggerDistractors()");
-		currDistractorIndex++;
-		if (currDistractorIndex < distractorPositions.Count())
-		{
-			currDistractorPositions = distractorPositions[currDistractorIndex];
-			//Debug.Log(currDistractorPositions.ToArrayString<Vector2Int>());
-
-			foreach(Vector2Int distractorDelta in currDistractorPositions)
-			{
-				Vector2Int distractorPosition = currTargetPosition + distractorDelta;
-				expanDialSticks.modelMatrix[distractorPosition.x, distractorPosition.y].TargetPosition = (sbyte)targetPos;
-				expanDialSticks.modelMatrix[distractorPosition.x, distractorPosition.y].TargetShapeChangeDuration = shapeChangeDuration;
-			}
-
-			expanDialSticks.triggerShapeChange();
-
-			Debug.Log("triggerShapeChange()");
-			// wait for complete shape-change
-			yield return new WaitForSeconds(shapeChangeDuration);
-			bool shapeChangeCompleted = false;
-			int count = 0;
-			while (!shapeChangeCompleted)
-			{
-				DebugInSitu("Waiting for shape-change to complete("+ count + ")...", Color.black, Color.white);
-				shapeChangeCompleted = true;
-				foreach (Vector2Int distractorDelta in currDistractorPositions)
-				{
-					Vector2Int distractorPosition = currTargetPosition + distractorDelta;
-					sbyte currDistractorPos = expanDialSticks.modelMatrix[distractorPosition.x, distractorPosition.y].CurrentPosition;
-					Debug.Log(distractorPosition + " => " + currDistractorPos);
-					if (currDistractorPos < targetPos - 1 || currDistractorPos > targetPos + 1) // cannot get exact position, add tolerance (problem with Arduino Driver)
-					{
-						shapeChangeCompleted = false;
-					}
-				}
-				count++;
-				yield return new WaitForSeconds(COMPLETION_INTERVAL);
-			}
-			// reset shape-change
-			for (int i = 0; i < expanDialSticks.NbRows; i++)
-			{
-				for (int j = 0; j < expanDialSticks.NbColumns; j++)
-				{
-					expanDialSticks.modelMatrix[i, j].TargetPosition = 0; // (sbyte)Random.Range(minPos, maxPos);
-					expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = shortShapeChangeDuration;
-					expanDialSticks.modelMatrix[i, j].TargetColor = Color.black;
-					expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = shortShapeChangeDuration;
-				}
-			}
-			expanDialSticks.triggerShapeChange();
-			expanDialSticks.triggerTextureChange();
-			yield return new WaitForSeconds(shortShapeChangeDuration);
-			// trigger next trial
-			triggerNextTrial = true;
-
-		} else
-		{
-			Quit();
-		}
-	}*/
-
 	private void PrepareResetShapeChange(float shapeChangeDuration)
 	{
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
@@ -528,16 +455,28 @@ public class XP2_P1 : MonoBehaviour
 			{
 				expanDialSticks.modelMatrix[i, j].TargetPosition = 0; // (sbyte)Random.Range(minPos, maxPos);
 				expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = shapeChangeDuration;
+
+				expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
+				expanDialSticks.modelMatrix[i, j].TargetPlaneTexture = "default";
+				expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = 0f;
+				expanDialSticks.modelMatrix[i, j].TargetPlaneSize = 0f;
+				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = shapeChangeDuration;
+
+				expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "projector";
+				expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 0f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 0f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = shapeChangeDuration;
+
 			}
 		}
 	}
 
-	private void PrepareShapeChangeAtTarget(sbyte position, float shapeChangeDuration)
+	private void PrepareShapeChangeAtTarget(float shapeChangeDuration)
 	{
-		expanDialSticks.modelMatrix[currTarget.x, currTarget.y].TargetPosition = position;
+		expanDialSticks.modelMatrix[currTarget.x, currTarget.y].TargetPosition = targetPos;
 		expanDialSticks.modelMatrix[currTarget.x, currTarget.y].TargetShapeChangeDuration = shapeChangeDuration;
 	}
-	private void PrepareShapeChangeAroundTarget(sbyte position, float shapeChangeDuration)
+	private void PrepareShapeChangeAroundTarget(float shapeChangeDuration)
 	{
 		for(int i = currTarget.x - 1; i <= currTarget.x + 1; i++)
 		{
@@ -545,8 +484,8 @@ public class XP2_P1 : MonoBehaviour
 			{
 				if (currTarget.x != i || currTarget.y != j)
 				{
-					expanDialSticks.modelMatrix[i, j].TargetPosition = position;
-					expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = shortShapeChangeDuration;
+					expanDialSticks.modelMatrix[i, j].TargetPosition = targetPos;
+					expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = shapeChangeDuration;
 				}
 			}
 		}
@@ -554,9 +493,13 @@ public class XP2_P1 : MonoBehaviour
 
 	private IEnumerator TriggerSystemTask()
 	{
+
 		// Reset Shape
 		PrepareResetShapeChange(shortShapeChangeDuration);
 		expanDialSticks.triggerShapeChange();
+		expanDialSticks.triggerTextureChange();
+		expanDialSticks.triggerProjectorChange();
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("SYSTEM_RESET_SHAPE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		yield return new WaitForSeconds(shortShapeChangeDuration);
 
 		// Shape Distractors
@@ -571,6 +514,8 @@ public class XP2_P1 : MonoBehaviour
 			}
 		}
 		expanDialSticks.triggerShapeChange();
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("SYSTEM_TRIGGER_SHAPE_CHANGE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+
 		yield return new WaitForSeconds(longShapeChangeDuration);
 
 		// Wait for Shape-Change to Complete
@@ -583,7 +528,7 @@ public class XP2_P1 : MonoBehaviour
 			foreach (Vector2Int distractor in distractors)
 			{
 				sbyte currDistractorPos = expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentPosition;
-				Debug.Log(distractor + " => " + currDistractorPos);
+				//Debug.Log(distractor + " => " + currDistractorPos);
 				if (currDistractorPos < targetPos - 1 || currDistractorPos > targetPos + 1) // cannot get exact position, add tolerance (problem with Arduino Driver)
 				{
 					shapeChangeCompleted = false;
@@ -594,8 +539,165 @@ public class XP2_P1 : MonoBehaviour
 		}
 		PrepareResetShapeChange(shortShapeChangeDuration);
 		expanDialSticks.triggerShapeChange();
+		expanDialSticks.triggerTextureChange();
+		expanDialSticks.triggerProjectorChange();
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("SYSTEM_TRIGGER_UNSHAPE_CHANGE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+
 		yield return new WaitForSeconds(shortShapeChangeDuration);
 		triggerNextTrial = true;
+	}
+	private IEnumerator TriggerUserTask()
+	{
+		// Trigger Shape Reset
+		PrepareResetShapeChange(shortShapeChangeDuration);
+		expanDialSticks.triggerShapeChange();
+		expanDialSticks.triggerTextureChange();
+		expanDialSticks.triggerProjectorChange();
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("SYSTEM_RESET_SHAPE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+
+		yield return new WaitForSeconds(shortShapeChangeDuration);
+		// Wait for completion
+		bool wait = true;
+		while (wait)
+		{
+			wait = false;
+			for (int i = 0; i < expanDialSticks.NbRows; i++)
+			{
+				for (int j = 0; j < expanDialSticks.NbColumns; j++)
+				{
+					if (expanDialSticks.viewMatrix[i, j].CurrentPosition != 0) wait = true;
+				}
+			}
+			yield return new WaitForSeconds(COMPLETION_INTERVAL);
+		}
+
+		// Trigger Target Shape
+		PrepareShapeChangeAtTarget(shortShapeChangeDuration);
+		expanDialSticks.triggerShapeChange();
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("SYSTEM_SHAPE_TARGET"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		yield return new WaitForSeconds(shortShapeChangeDuration);
+		// Wait for completion
+		wait = true;
+		while (wait)
+		{
+			wait = (expanDialSticks.viewMatrix[currTarget.x, currTarget.y].CurrentPosition < targetPos-1 || expanDialSticks.viewMatrix[currTarget.x, currTarget.y].CurrentPosition > targetPos + 1);
+			yield return new WaitForSeconds(COMPLETION_INTERVAL);
+		}
+
+		cadranRotation = aiguilleRotation = startRotation;
+		ShowGaugeOnTarget(0.1f);
+		expanDialSticks.triggerTextureChange();
+		expanDialSticks.triggerProjectorChange();
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("SYSTEM_TEXTURE_TARGET"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		yield return new WaitForSeconds(shortShapeChangeDuration);
+		
+		// Loop Until Start
+		gaugeState = GAUGE_APPEARED;
+		bool finished = false;
+		// Game
+		while (!finished) {
+
+			if (gaugeState == GAUGE_STARTED) // User started task
+			{
+				if (Time.time - startGameTime >= gameDuration) // Game has ended
+				{
+					Debug.Log("Game has ended.");
+					gaugeState = GAUGE_APPEARING;
+					gameDuration = Mathf.Infinity;
+					finished = true;
+				}
+
+				if (Time.time - startGameTime >= motionDuration) // Distractor trigger
+				{
+					//gaugeState = LANDSCAPE_IS_CHANGING;
+					if (training)
+					{
+						//StartCoroutine(FakeEarthquake());
+					}
+					else
+					{
+
+						PrepareShapeChangeAroundTarget(shortShapeChangeDuration);
+						expanDialSticks.triggerShapeChange();
+						expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes("SYSTEM_TRIGGER_SHAPE_CHANGE"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+
+					}
+					motionDuration = Mathf.Infinity;
+				}
+				// Move it
+				float prevRotation = cadranRotation;
+				switch (directionRotation)
+				{
+					case DirectionRotation.CW:
+						cadranRotation += speedRotation * Time.deltaTime;
+						break;
+					case DirectionRotation.CCW:
+						cadranRotation -= speedRotation * Time.deltaTime;
+						break;
+					default:
+						break;
+				}
+				string msg = "SYSTEM_ROTATION " + prevRotation + " " + cadranRotation;
+				if ((int)prevRotation != (int)cadranRotation)
+				{
+					//Debug.Log(msg);
+				}
+				if (Time.time - directionTime >= directionDuration)
+				{
+					Debug.Log("Distractor has been updated.");
+					int nbDirections = Enum.GetNames(typeof(DirectionRotation)).Length - 1; // without IDDLE
+					directionRotation = (DirectionRotation)UnityEngine.Random.Range(0, nbDirections);
+					speedRotation = UnityEngine.Random.Range(5f, 15f);
+					directionDuration = UnityEngine.Random.Range(3f, 9f);
+					directionTime = Time.time;
+				}
+				MoveAiguilleCadran(0.1f);
+				expanDialSticks.triggerTextureChange();
+				expanDialSticks.triggerProjectorChange();
+			}
+			yield return new WaitForSeconds(0.1f);
+		}
+		// Wait for distractor completion
+		wait = true;
+		while (wait)
+		{
+			wait = false;
+			for (int i = currTarget.x - 1; i <= currTarget.x + 1; i++)
+			{
+				for (int j = currTarget.y - 1; j <= currTarget.y + 1; j++)
+				{
+					if (currTarget.x != i || currTarget.y != j)
+					{
+						wait = (expanDialSticks.viewMatrix[i, j].CurrentPosition < targetPos - 1 || expanDialSticks.viewMatrix[i, j].CurrentPosition > targetPos + 1);
+
+					}
+				}
+			}
+			yield return new WaitForSeconds(COMPLETION_INTERVAL);
+		}
+		triggerNextTrial = true;
+
+		PrepareResetShapeChange(shortShapeChangeDuration);
+		expanDialSticks.triggerShapeChange();
+		expanDialSticks.triggerTextureChange();
+		expanDialSticks.triggerProjectorChange();
+		yield return new WaitForSeconds(shortShapeChangeDuration);
+		// Wait for completion
+		wait = true;
+		while (wait)
+		{
+			wait = false;
+			for (int i = 0; i < expanDialSticks.NbRows; i++)
+			{
+				for (int j = 0; j < expanDialSticks.NbColumns; j++)
+				{
+					if (expanDialSticks.viewMatrix[i, j].CurrentPosition != 0) wait = true;
+				}
+			}
+			yield return new WaitForSeconds(COMPLETION_INTERVAL);
+		}
+		triggerNextTrial = true;
+
 	}
 
 	private void TriggerTarget()
@@ -636,18 +738,14 @@ public class XP2_P1 : MonoBehaviour
 			switch (currTaskMode)
 			{
 				case TaskMode.User:
-					Debug.Log("USER TASK");
+					Debug.Log("USER INTERRUPTION");
 					StartCoroutine(TriggerSystemTask());
 					break;
 
 
 				case TaskMode.System:
-					Debug.Log("SYSTEM TASK");
-					/*PrepareResetShapeChange();
-					PrepareShapeChangeAtTarget();
-					autoDistractorTrigger = true;
-					prevDistractorTime = Time.time;
-					distractorTriggerDelay = Random.Range(shapeChangeDuration+shapeChangeDuration, shapeChangeDuration+longShapeChangeDuration);*/
+					Debug.Log("SYSTEM INTERRUPTION");
+					StartCoroutine(TriggerUserTask());
 					break;
 				default:
 					break;
@@ -658,6 +756,111 @@ public class XP2_P1 : MonoBehaviour
 			Quit();
 		}
 	}
+	void AllBlack(float duration)
+	{
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+		{
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+			{
+				expanDialSticks.modelMatrix[i, j].TargetPlaneTexture = "default";
+				expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = aiguilleRotation;
+
+				expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "projector";
+				expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = cadranRotation;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 0f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorColor = Color.white;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = duration;
+
+				expanDialSticks.modelMatrix[i, j].TargetColor = Color.black;
+				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
+			}
+		}
+		expanDialSticks.setBorderBackground(Color.black);
+		expanDialSticks.triggerTextureChange();
+	}
+	bool IsGaugeUp()
+	{
+		Vector2 gaugePosition = gaugePositions[gaugeIndex];
+		return !expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentReaching && expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentPosition >= gaugeHeight -1 && expanDialSticks.viewMatrix[(int)gaugePosition.x, (int)gaugePosition.y].CurrentPosition <= gaugeHeight + 1;
+	
+	}
+
+	void GaugeUp(float duration)
+	{
+		Vector2 gaugePosition = gaugePositions[gaugeIndex];
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+		{
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+			{
+
+				if (i == (int)gaugePosition.x && j == (int)gaugePosition.y)
+				{
+					//Debug.Log("GaugeUp -> gauge Index: " + gaugePosition + " (" + (count++) + ")");
+					expanDialSticks.modelMatrix[i, j].TargetPosition = gaugeHeight;
+				}
+				else
+					expanDialSticks.modelMatrix[i, j].TargetPosition = 0;
+				expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = duration;
+			}
+		}
+		expanDialSticks.triggerShapeChange();
+	}
+
+
+	void ShowGaugeOnTarget(float duration)
+	{
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+		{
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+			{
+				expanDialSticks.modelMatrix[i, j].TargetColor = Color.white; //Color.green;
+				if (i == currTarget.x && j == currTarget.y)
+				{
+					expanDialSticks.modelMatrix[i, j].TargetPlaneTexture = "LightCadran";
+					expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = cadranRotation;
+					expanDialSticks.modelMatrix[i, j].TargetPlaneSize = 0.6f;
+					expanDialSticks.modelMatrix[i, j].TargetPlaneColor = Color.red;
+
+					expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "aiguille";
+					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = aiguilleRotation;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 0.02f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorColor = Color.black;
+				}
+
+				else
+				{
+					expanDialSticks.modelMatrix[i, j].TargetPlaneTexture = "default";
+					expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = cadranRotation;
+					expanDialSticks.modelMatrix[i, j].TargetPlaneSize = 0f;
+					expanDialSticks.modelMatrix[i, j].TargetPlaneColor = Color.white;
+
+					expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "projector";
+					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = aiguilleRotation;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 0f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorColor = Color.white;
+				}
+
+				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = duration;
+			}
+		}
+		string participantNumber = "<pos=0%><b>P" + numeroParticipant + "</b>";
+		string trialProgress = "<pos=90%><b>" + (currTargetIndex + 1) + "/" + targets.Count() + "</b>";
+		string legend = participantNumber + trialProgress;
+		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 0.1f, Color.black, legend, new Vector3(90f, -90f, 0f));
+		expanDialSticks.setBorderBackground(Color.white);
+	}
+
+
+	void MoveAiguilleCadran(float duration)
+	{
+		expanDialSticks.modelMatrix[currTarget.x, currTarget.y].TargetPlaneRotation = cadranRotation;
+		expanDialSticks.modelMatrix[currTarget.x, currTarget.y].TargetTextureChangeDuration = duration;
+		expanDialSticks.modelMatrix[currTarget.x, currTarget.y].TargetProjectorRotation = aiguilleRotation;
+		expanDialSticks.modelMatrix[currTarget.x, currTarget.y].TargetProjectorChangeDuration = duration;
+	}
+
+
 	void Update()
 	{
 		// check if ExpanDialSticks is connected
@@ -670,28 +873,11 @@ public class XP2_P1 : MonoBehaviour
 				TriggerTarget();
 				triggerNextTrial = false;
 			}
-			/*if (currTime - prevMetricsTime >= LOG_INTERVAL)
+			if (currTime - prevMetricsTime >= LOG_INTERVAL)
 			{
-				if (waitForNoHand)
-				{
-					if (FindAllUnsafes().Count() == 0)
-					{
-						waitForNoHand = false;
-						triggerNextTrial = true;
-					}
-
-				}
+				LogMetrics();
 				prevMetricsTime = currTime;
-			}*/
-
-			/*if(autoDistractorTrigger && currTime - prevDistractorTime >= distractorTriggerDelay)
-			{
-				Debug.Log("Trigger distractor");
-				PrepareShapeChangeAroundTarget();
-				expanDialSticks.triggerShapeChange()
-				HandleRotationChanged(this, new ExpanDialStickEventArgs(DateTime.Now, currTargetPosition.x, currTargetPosition.y, 0, 10, 10));
-				autoDistractorTrigger = false;
-			}*/
+			}
 
 			if (Input.GetKey("escape"))
 			{
@@ -700,7 +886,13 @@ public class XP2_P1 : MonoBehaviour
 
 			if (Input.GetKeyDown(KeyCode.RightArrow))
 			{
-				HandleRotationChanged(this, new ExpanDialStickEventArgs(DateTime.Now, currTarget.x, currTarget.y, 0, 10, 10));
+				HandleRotationChanged(new object(), new ExpanDialStickEventArgs(DateTime.Now, currTarget.x, currTarget.y, 0, 1, 1));
+				//currentRotation += anglePerStep;
+			}
+			if (Input.GetKeyDown(KeyCode.LeftArrow))
+			{
+				HandleRotationChanged(new object(), new ExpanDialStickEventArgs(DateTime.Now, currTarget.x, currTarget.y, 1, 0, -1));
+				//currentRotation -= anglePerStep;
 			}
 			if (Input.GetKeyDown(KeyCode.UpArrow))
 			{
@@ -716,9 +908,9 @@ public class XP2_P1 : MonoBehaviour
 	void LogMetrics()
 	{
 
-		//string colorString = "SYSTEM_COLOR ";
-		string proximityString = "SYSTEM_PROXIMITY ";
 		string positionString = "SYSTEM_POSITION ";
+		string reachingString = "SYSTEM_MOTION ";
+		string pauseString = "SYSTEM_STOP ";
 		string leftHandString = "USER_LEFT_HAND " + leftHand.ToString();
 		string rightHandString = "USER_RIGHT_HAND " + rightHand.ToString();
 
@@ -726,15 +918,15 @@ public class XP2_P1 : MonoBehaviour
 		{
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
-				//colorString += "0x" + ColorUtility.ToHtmlStringRGB(expanDialSticks.viewMatrix[i, j].CurrentColor) + " ";
-				proximityString += expanDialSticks.viewMatrix[i, j].CurrentProximity + " ";
 				positionString += expanDialSticks.viewMatrix[i, j].CurrentPosition + " ";
+				reachingString += expanDialSticks.viewMatrix[i, j].CurrentReaching + " ";
+				pauseString += expanDialSticks.viewMatrix[i, j].CurrentPaused + " ";
 			}
 		}
 
-		//expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(colorString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(proximityString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(positionString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(reachingString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(pauseString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(leftHandString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(rightHandString), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 	}

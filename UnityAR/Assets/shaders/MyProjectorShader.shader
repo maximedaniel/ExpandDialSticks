@@ -12,7 +12,8 @@ Shader "Custom/MyProjectorShader"
 
         Subshader
     {
-        Tags { "RenderType" = "Transparent"}
+        Tags {"Queue" = "Transparent" "IgnoreProjector" = "True" "RenderType" = "Transparent"}
+        //LOD 100
         Pass
         {
             ZWrite Off
@@ -21,10 +22,19 @@ Shader "Custom/MyProjectorShader"
             Fog { Mode Off }
 
             ColorMask RGB
-            Blend OneMinusSrcAlpha SrcAlpha
-            //Blend SrcColor DstColor 
-
-
+       // Blend DstColor Zero, Zero One
+       Blend SrcAlpha OneMinusSrcAlpha
+       // Blend SrcAlpha OneMinusSrcAlpha // Traditional transparency
+        //Blend One OneMinusSrcAlpha // Premultiplied transparency
+        //Blend SrcAlpha SrcAlpha
+        // Blend OneMinusSrcAlpha SrcAlpha
+       //  Blend SrcAlpha Zero
+       // Blend One Zero
+       // 
+             //Blend One One // Additive
+          // Blend OneMinusDstColor One // Soft additive
+          // Blend DstColor Zero // Multiplicative
+          //Blend DstColor SrcColor // 2x multiplicative
 
             CGPROGRAM
             #pragma vertex vert
@@ -67,11 +77,11 @@ Shader "Custom/MyProjectorShader"
             half4 frag(v2f i) : COLOR
             {
                 float4 tex = tex2D(_MainTex, i.uv) * _Color;
-                tex.a = 1 - tex.a;
-                if (i.uv.w < 0)
+               /* if (i.uv.w < 0)
                 {
                     tex = float4(0,0,0,1);
-                }
+                }*/
+
                 return tex;
             }
             ENDCG
