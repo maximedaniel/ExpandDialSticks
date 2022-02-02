@@ -513,7 +513,7 @@ public class SafeGuard : MonoBehaviour
 		dotBlock.SetVectorArray("_RightFrontArmCenter", _dotRightFrontArmCenters);
 		dotBlock.SetFloatArray("_RightArmRadius", _dotRightArmRadius);
 		Graphics.DrawMeshInstanced(_dotMesh, 0, _dotMat, _dotMatrices, _dotIndex, dotBlock, UnityEngine.Rendering.ShadowCastingMode.Off, false, SEPARATION_LAYER);
-
+		
 
 		// Draw lines
 		/*MaterialPropertyBlock lineBlock = new MaterialPropertyBlock();
@@ -555,7 +555,7 @@ public class SafeGuard : MonoBehaviour
 		planeBlock.SetVectorArray("_RightFrontArmCenter", _planeRightFrontArmCenters);
 		planeBlock.SetFloatArray("_RightArmRadius", _planeRightArmRadius);
 		Graphics.DrawMeshInstanced(_planeMesh, 0, _planeMat, _planeMatrices, _planeIndex, planeBlock, UnityEngine.Rendering.ShadowCastingMode.Off, false, SEPARATION_LAYER);
-
+		
 		// Draw foreground body
 		CombineInstance[] foreCombine = new CombineInstance[_foreHandIndex + _foreArmIndex];
 		for (int i = 0; i < _foreHandIndex; i++)
@@ -807,6 +807,7 @@ public class SafeGuard : MonoBehaviour
 			float dotDiameter = Mathf.Lerp(minOrthographicSize, maxOrthographicSize, scaleDistanceCoeff);
 
 
+			dotPos = new Vector3(pin.position.x, pins.height * 4f, pin.position.z);
 			Vector3 dotScale = new Vector3(dotDiameter, dotDiameter, dotDiameter);
 			_dotMatrices[_dotIndex] = Matrix4x4.TRS(
 				dotPos,
@@ -817,16 +818,17 @@ public class SafeGuard : MonoBehaviour
 			//Color dotColor = (displacement > 0) ? Color.Lerp(_middleDivergingColor, _rightDivergingColor, displacement / 40f) : Color.Lerp(_middleDivergingColor, _leftDivergingColor, -displacement / 40f);
 			Color dotColor = new Color(1f, 0f, 0f, distanceGamma);
 
-			Vector3 pinPos = new Vector3(pin.position.x, 0f, pin.position.z) ;
+			float ZDepth = (row * pins.NbColumns + column)/1000f;
+			Vector3 pinPos = new Vector3(pin.position.x, -pins.height * 4f, pin.position.z);
 			float safetyDiameter = pins.diameter + MyCapsuleHand.STOP_RADIUS * 2f;
 			float safetyRadius = safetyDiameter/2.0f;
-			Vector3 pinScale = new Vector3(safetyDiameter, 0.01f, safetyDiameter);
+			Vector3 pinScale = new Vector3(safetyDiameter, pin.localScale.y, safetyDiameter);
 
 			_pinMatrices[_pinIndex] = Matrix4x4.TRS(pinPos, Quaternion.identity, pinScale);
-			_pinColors[_pinIndex] = Color.white;
-			_pinOutlineColors[_pinIndex] = new Vector4(0f, 0f, 0f, distanceGamma);
+			_pinColors[_pinIndex] = new Vector4(1f, 1f, 1f, 0f);//distanceGamma); //Color.white;
+			_pinOutlineColors[_pinIndex] = dotColor;
 			_pinOutlineWidths[_pinIndex] =  pinOutlineWidth;
-			_pinSecondOutlineColors[_pinIndex] = new Vector4(1f, 1f, 1f, distanceGamma);
+			_pinSecondOutlineColors[_pinIndex] = dotColor;
 			_pinSecondOutlineWidths[_pinIndex] =  pinSecondOutlineWidth;
 			_pinIndex++;
 
@@ -860,7 +862,8 @@ public class SafeGuard : MonoBehaviour
 			_dotIndex++;
 
 			// Generate Plane
-			Vector3 planePos = pin.position + pin.up * ((dotDiameter - minOrthographicSize + 0.01f) + pins.height / 2.0f);
+			Vector3 planePos = dotPos;
+			planePos.y += dotDiameter + 0.01f;
 			Quaternion planeRot = pin.rotation * Quaternion.AngleAxis(90, pin.up);
 			Vector3 planeScale = new Vector3(minOrthographicSize + 0.01f, 0.01f, minOrthographicSize + 0.01f);
 			_planeMatrices[_planeIndex] = Matrix4x4.TRS(
@@ -902,7 +905,7 @@ public class SafeGuard : MonoBehaviour
 			// Left Hand Background
 			Vector3 backLeftHandPos = new Vector3(leftHandPos.x, backgroundDistance, leftHandPos.z);
 			_backHandMatrices[_backHandIndex] = Matrix4x4.TRS(backLeftHandPos, Quaternion.identity, leftHandScale);
-			_backHandColors[_backHandIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_backHandColors[_backHandIndex] = new Vector4(1f, 1f, 1f, 0f); //new Vector4(1f, 1f, 1f, bodyGamma);
 			_backHandOutlineColors[_backHandIndex] = new Vector4(0f, 0f, 0f, 0f);
 			_backHandOutlineWidths[_backHandIndex] = 0f;
 			_backHandSecondOutlineColors[_backHandIndex] = new Vector4(0f, 0f, 0f, 0f);
@@ -912,10 +915,10 @@ public class SafeGuard : MonoBehaviour
 			// Left Hand Foreground
 			Vector3 foreLeftHandPos = new Vector3(leftHandPos.x, foregroundDistance, leftHandPos.z);
 			_foreHandMatrices[_foreHandIndex] = Matrix4x4.TRS(foreLeftHandPos, Quaternion.identity, leftHandScale);
-			_foreHandColors[_foreHandIndex] = new Vector4(0f, 0f, 0f, 0f);
-			_foreHandOutlineColors[_foreHandIndex] = new Vector4(0f, 0f, 0f, bodyGamma);
+			_foreHandColors[_foreHandIndex] = new Vector4(1f, 1f, 1f, 0f); //new Vector4(1f, 1f, 1f, bodyGamma);
+			_foreHandOutlineColors[_foreHandIndex] = new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreHandOutlineWidths[_foreHandIndex] = bodyOutlineWidth;
-			_foreHandSecondOutlineColors[_foreHandIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_foreHandSecondOutlineColors[_foreHandIndex] = new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreHandSecondOutlineWidths[_foreHandIndex] = bodySecondOutlineWidth;
 			_foreHandIndex++;
 
@@ -927,7 +930,7 @@ public class SafeGuard : MonoBehaviour
 				leftArmRotation,
 				leftArmScale
 				);
-			_backArmColors[_backArmIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_backArmColors[_backArmIndex] = new Vector4(1f, 1f, 1f, 0f); //new Vector4(1f, 1f, 1f, bodyGamma);
 			_backArmOutlineColors[_backArmIndex] = new Vector4(0f, 0f, 0f, 0f);
 			_backArmOutlineWidths[_backArmIndex] = 0f;
 			_backArmSecondOutlineColors[_backArmIndex] = new Vector4(0f, 0f, 0f, 0f);
@@ -941,10 +944,10 @@ public class SafeGuard : MonoBehaviour
 				leftArmRotation,
 				leftArmScale
 				);
-			_foreArmColors[_foreArmIndex] = new Vector4(0f, 0f, 0f, 0f);
-			_foreArmOutlineColors[_foreArmIndex] = new Vector4(0f, 0f, 0f, bodyGamma);
+			_foreArmColors[_foreArmIndex] = new Vector4(1f, 1f, 1f, 0f); //new Vector4(1f, 1f, 1f, bodyGamma);
+			_foreArmOutlineColors[_foreArmIndex] = new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreArmOutlineWidths[_foreArmIndex] = bodyOutlineWidth;
-			_foreArmSecondOutlineColors[_foreArmIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_foreArmSecondOutlineColors[_foreArmIndex] = new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreArmSecondOutlineWidths[_foreArmIndex] = bodySecondOutlineWidth;
 			_foreArmIndex++;
 		}
@@ -954,7 +957,7 @@ public class SafeGuard : MonoBehaviour
 			// Right Hand Background
 			Vector3 backRightHandPos = new Vector3(rightHandPos.x, backgroundDistance, rightHandPos.z);
 			_backHandMatrices[_backHandIndex] = Matrix4x4.TRS(backRightHandPos, Quaternion.identity, rightHandScale);
-			_backHandColors[_backHandIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_backHandColors[_backHandIndex] = new Vector4(1f, 1f, 1f, 0f); //new Vector4(1f, 1f, 1f, bodyGamma);
 			_backHandOutlineColors[_backHandIndex] = new Vector4(0f, 0f, 0f, 0f);
 			_backHandOutlineWidths[_backHandIndex] = 0f;
 			_backHandSecondOutlineColors[_backHandIndex] = new Vector4(0f, 0f, 0f, 0f);
@@ -964,10 +967,10 @@ public class SafeGuard : MonoBehaviour
 			// Right Hand Foreground
 			Vector3 foreRightHandPos = new Vector3(rightHandPos.x, foregroundDistance, rightHandPos.z);
 			_foreHandMatrices[_foreHandIndex] = Matrix4x4.TRS(foreRightHandPos, Quaternion.identity, rightHandScale);
-			_foreHandColors[_foreHandIndex] = new Vector4(0f, 0f, 0f, 0f);
-			_foreHandOutlineColors[_foreHandIndex] = new Vector4(0f, 0f, 0f, bodyGamma);
+			_foreHandColors[_foreHandIndex] = new Vector4(1f, 1f, 1f, 0f); //new Vector4(1f, 1f, 1f, bodyGamma);
+			_foreHandOutlineColors[_foreHandIndex] = new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreHandOutlineWidths[_foreHandIndex] = bodyOutlineWidth;
-			_foreHandSecondOutlineColors[_foreHandIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_foreHandSecondOutlineColors[_foreHandIndex] = new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreHandSecondOutlineWidths[_foreHandIndex] = bodySecondOutlineWidth;
 			_foreHandIndex++;
 
@@ -979,7 +982,7 @@ public class SafeGuard : MonoBehaviour
 				rightArmRotation,
 				rightArmScale
 				);
-			_backArmColors[_backArmIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_backArmColors[_backArmIndex] = new Vector4(1f, 1f, 1f, 0f); //new Vector4(1f, 1f, 1f, bodyGamma);
 			_backArmOutlineColors[_backArmIndex] = new Vector4(0f, 0f, 0f, 0f);
 			_backArmOutlineWidths[_backArmIndex] = 0f;
 			_backArmSecondOutlineColors[_backArmIndex] = new Vector4(0f, 0f, 0f, 0f);
@@ -993,10 +996,10 @@ public class SafeGuard : MonoBehaviour
 				rightArmRotation,
 				rightArmScale
 				);
-			_foreArmColors[_foreArmIndex] = new Vector4(0f, 0f, 0f, 0f);
-			_foreArmOutlineColors[_foreArmIndex] = new Vector4(0f, 0f, 0f, bodyGamma);
+			_foreArmColors[_foreArmIndex] = new Vector4(1f, 1f, 1f, 0f); //new Vector4(1f, 1f, 1f, bodyGamma);
+			_foreArmOutlineColors[_foreArmIndex] = new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreArmOutlineWidths[_foreArmIndex] = bodyOutlineWidth;
-			_foreArmSecondOutlineColors[_foreArmIndex] = new Vector4(1f, 1f, 1f, bodyGamma);
+			_foreArmSecondOutlineColors[_foreArmIndex] = new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreArmSecondOutlineWidths[_foreArmIndex] = bodySecondOutlineWidth;
 			_foreArmIndex++;
 		}
@@ -1004,6 +1007,7 @@ public class SafeGuard : MonoBehaviour
 
 		for (int i = 0; i < currUnsafeTransitions.Count; i++)
 		{
+
 			Vector3 unsafeTransition = currUnsafeTransitions[i];
 			int row = (int)unsafeTransition.x;
 			int column = (int)unsafeTransition.y;
@@ -1012,12 +1016,17 @@ public class SafeGuard : MonoBehaviour
 			int feedforwarded = pins.viewMatrix[row, column].CurrentFeedForwarded;
 			int displacement = (paused != 0) ? paused : feedforwarded;
 			Transform pin = pins.viewMatrix[row, column].transform;
+
 			// Generate dots adjust dot diameter under body
 			Vector3 dotPos = pin.position;
 			Quaternion dotRot = pin.rotation;
+			float distance = pins.viewMatrix[row, column].CurrentDistance;
 			float scaleDistanceCoeff = 0f; // 1f - (Mathf.Clamp(distance, minScaleDistance, maxScaleDistance) - minScaleDistance) / (maxScaleDistance - minScaleDistance);
 			float dotDiameter = Mathf.Lerp(minOrthographicSize, maxOrthographicSize, scaleDistanceCoeff);
-			Vector3 dotScale = new Vector3(dotDiameter, dotDiameter, dotDiameter);
+
+
+			dotPos = new Vector3(pin.position.x, 0f, pin.position.z);
+			Vector3 dotScale = new Vector3(dotDiameter, 0.01f, dotDiameter);
 			_dotMatrices[_dotIndex] = Matrix4x4.TRS(
 				dotPos,
 				dotRot,
@@ -1026,52 +1035,46 @@ public class SafeGuard : MonoBehaviour
 
 			//Color dotColor = (displacement > 0) ? Color.Lerp(_middleDivergingColor, _rightDivergingColor, displacement / 40f) : Color.Lerp(_middleDivergingColor, _leftDivergingColor, -displacement / 40f);
 			Color dotColor = new Color(1f, 0f, 0f, distanceGamma);
-			//Debug.Log(row + " " + column + " dotColor:" + dotColor);
-
-			/*_pinMatrices[_pinIndex] = Matrix4x4.TRS(dotPos, Quaternion.identity, dotScale);
-			_pinColors[_pinIndex] = dotColor;
-			_pinOutlineColors[_pinIndex] = new Vector4(0f, 0f, 0f, 0f);
-			_pinOutlineWidths[_pinIndex] = 0f;// pinOutlineWidth;
-			_pinSecondOutlineColors[_pinIndex] = new Vector4(1f, 1f, 1f, 0f);
-			_pinSecondOutlineWidths[_pinIndex] = 0f;// pinSecondOutlineWidth;
-			_pinIndex++;*/
+			float safetyDiameter = pins.diameter + MyCapsuleHand.STOP_RADIUS * 2f;
+			float safetyRadius = safetyDiameter / 2.0f;
 
 			_dotColors[_dotIndex] = dotColor; //(feedbackMode != FeedbackMode.State) ? dotColor : new Color(1f, 1f, 1f, 0f);//Color.white;
 			_dotOutlineColors[_dotIndex] = new Vector4(1f, 1f, 1f, distanceGamma);
-			_dotOutlineWidths[_dotIndex] = Mathf.Lerp(minOutlineWidth, maxOutlineWidth, scaleDistanceCoeff);
+			_dotOutlineWidths[_dotIndex] = 0f;
 			_dotSecondOutlineColors[_dotIndex] = new Vector4(0f, 0f, 0f, distanceGamma);
-			_dotSecondOutlineWidths[_dotIndex] = Mathf.Lerp(minSecondOutlineWidth, maxSecondOutlineWidth, scaleDistanceCoeff);
+			_dotSecondOutlineWidths[_dotIndex] = 0f;
 			_dotThirdOutlineColors[_dotIndex] = dotColor;
-			_dotThirdOutlineWidths[_dotIndex] = Mathf.Lerp(minThirdOutlineWidth, maxThirdOutlineWidth, scaleDistanceCoeff);
+			_dotThirdOutlineWidths[_dotIndex] = 0f;
 			_dotFourthOutlineColors[_dotIndex] = new Vector4(0f, 0f, 0f, distanceGamma);
-			_dotFourthOutlineWidths[_dotIndex] = Mathf.Lerp(minFourthOutlineWidth, maxFourthOutlineWidth, scaleDistanceCoeff);
+			_dotFourthOutlineWidths[_dotIndex] = 0f;
 			_dotFifthOutlineColors[_dotIndex] = new Vector4(1f, 1f, 1f, distanceGamma);
-			_dotFifthOutlineWidths[_dotIndex] = Mathf.Lerp(minFifthOutlineWidth, maxFifthOutlineWidth, scaleDistanceCoeff);
+			_dotFifthOutlineWidths[_dotIndex] = 0f;
 
 			// left hand mask
-			_dotLeftHandCenters[_dotIndex] = dotPos;// leftHandPos;
-			_dotLeftHandRadius[_dotIndex] = 1f;// leftHandRadius;
+			_dotLeftHandCenters[_dotIndex] = dotPos;
+			_dotLeftHandRadius[_dotIndex] = safetyRadius;
 			// left arm mask
-			_dotLeftBackArmCenters[_dotIndex] = dotPos;//leftBackArmPos;
-			_dotLeftFrontArmCenters[_dotIndex] = dotPos;//leftFrontArmPos;
-			_dotLeftArmRadius[_dotIndex] = 1f;//leftArmRadius;
+			_dotLeftBackArmCenters[_dotIndex] = dotPos;
+			_dotLeftFrontArmCenters[_dotIndex] = dotPos;
+			_dotLeftArmRadius[_dotIndex] = safetyRadius;
 			// right hand mask
-			_dotRightHandCenters[_dotIndex] = dotPos;//rightHandPos;
-			_dotRightHandRadius[_dotIndex] = 1f;// rightHandRadius;
+			_dotRightHandCenters[_dotIndex] = dotPos;
+			_dotRightHandRadius[_dotIndex] = safetyRadius;
 			// right arm mask
-			_dotRightBackArmCenters[_dotIndex] = dotPos;//rightBackArmPos;
-			_dotRightFrontArmCenters[_dotIndex] = dotPos;//rightFrontArmPos;
-			_dotRightArmRadius[_dotIndex] = 1f;// rightArmRadius;
+			_dotRightBackArmCenters[_dotIndex] = dotPos;
+			_dotRightFrontArmCenters[_dotIndex] = dotPos;
+			_dotRightArmRadius[_dotIndex] = safetyRadius;
 			_dotIndex++;
-
+			
 			// Generate Plane
-			Vector3 planePos = pin.position + pin.up * ((dotDiameter - minOrthographicSize + 0.01f) + pins.height / 2.0f);
+
+			Vector3 planePos = new Vector3(pin.position.x, 0.03f, pin.position.z);
 			Quaternion planeRot = pin.rotation * Quaternion.AngleAxis(90, pin.up);
-			Vector3 planeScale = new Vector3(minOrthographicSize + 0.01f, 0.01f, minOrthographicSize + 0.01f);
+			Vector3 planeScale = new Vector3(minOrthographicSize, 0.01f, minOrthographicSize);
 			_planeMatrices[_planeIndex] = Matrix4x4.TRS(
-				 planePos,
-				 planeRot,
-				 planeScale
+					planePos,
+					planeRot,
+					planeScale
 			);
 			float displacementPercent = Mathf.InverseLerp(-40f, 40f, displacement);
 			int directionAmount = Mathf.RoundToInt(Mathf.Lerp(0f, 30f, displacementPercent));
@@ -1083,19 +1086,19 @@ public class SafeGuard : MonoBehaviour
 			_planeSecondOutlineColors[_planeIndex] = Vector4.zero;
 			_planeSecondOutlineWidths[_planeIndex] = 0;
 			// left hand mask
-			_planeLeftHandCenters[_planeIndex] = dotPos;// leftHandPos;
-			_planeLeftHandRadius[_planeIndex] = 1f;// leftHandRadius;
-												   // left arm mask
-			_planeLeftBackArmCenters[_planeIndex] = dotPos;// leftBackArmPos;
-			_planeLeftFrontArmCenters[_planeIndex] = dotPos;// leftFrontArmPos;
-			_planeLeftArmRadius[_planeIndex] = 1f;// leftArmRadius;
-												  // right hand mask
-			_planeRightHandCenters[_planeIndex] = dotPos;// rightHandPos;
-			_planeRightHandRadius[_planeIndex] = 1f;// rightHandRadius;
-													// right arm mask
-			_planeRightBackArmCenters[_planeIndex] = dotPos;// rightBackArmPos;
-			_planeRightFrontArmCenters[_planeIndex] = dotPos;// rightFrontArmPos;
-			_planeRightArmRadius[_planeIndex] = 1f;// rightArmRadius;
+			_planeLeftHandCenters[_planeIndex] = dotPos;
+			_planeLeftHandRadius[_planeIndex] = safetyRadius;
+			// left arm mask
+			_planeLeftBackArmCenters[_planeIndex] = dotPos;
+			_planeLeftFrontArmCenters[_planeIndex] = dotPos;
+			_planeLeftArmRadius[_planeIndex] = safetyRadius;
+			// right hand mask
+			_planeRightHandCenters[_planeIndex] = dotPos;
+			_planeRightHandRadius[_planeIndex] = safetyRadius;
+			// right arm mask
+			_planeRightBackArmCenters[_planeIndex] = dotPos;
+			_planeRightFrontArmCenters[_planeIndex] = dotPos;
+			_planeRightArmRadius[_planeIndex] = safetyRadius;
 			_planeIndex++;
 		}
 	}
@@ -1188,7 +1191,7 @@ public class SafeGuard : MonoBehaviour
 
 					if (distanceGamma > 0f)
 					{
-						float finalGamma = (distanceGamma < 1f) ? 0.6f : distanceGamma; 
+						float finalGamma = (distanceGamma < 1f) ? 0f: 1f; // (distanceGamma < 1f) ? 0.6f : distanceGamma; 
 						dynamicFeedbackMaxGamma = Mathf.Max(finalGamma, dynamicFeedbackMaxGamma);
 						//Debug.Log(row + " " + column + " finalGamma:" + finalGamma);
 						Vector3 nextUnsafeTransition = new Vector3(row, column, finalGamma);

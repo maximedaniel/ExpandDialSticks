@@ -40,7 +40,7 @@ Shader "Outlined/PinSilhouetteShader" {
 
 			SubShader {
 
-			Tags{ "RenderType" = "Transparent" "Queue" = "Transparent" }
+			Tags{ "RenderType" = "Transparent" "Queue" = "Transparent" "IgnoreProjector" = "True" }
 
 				//Blend SrcAlpha OneMinusSrcAlpha
 				//ZWrite off
@@ -48,7 +48,7 @@ Shader "Outlined/PinSilhouetteShader" {
 				Pass{
 					Name "BASE"
 					Cull back
-					Offset -1024, -1024
+					Offset 0, 0
 				//Blend Zero One
 				Blend SrcAlpha OneMinusSrcAlpha
 			CGPROGRAM
@@ -75,36 +75,18 @@ Shader "Outlined/PinSilhouetteShader" {
 					return col;
 				}
 			ENDCG
-					/*SetTexture[_OutlineColor] {
-						ConstantColor(0,0,0,0)
-						Combine constant
-					}*/
 			}
-				/*Pass {
-					Name "BASE"
-					Cull back
-					Blend Zero One
 
-
-					SetTexture[_OutlineColor] {
-						ConstantColor(0,0,0,0)
-						Combine constant
-					}
-				}*/
 
 				// note that a vertex shader is specified here but its using the one above
 					Pass{
 						Name "OUTLINE 1"
 						Tags { "LightMode" = "Always" }
 						Cull Front
-						Offset 0, 0
+					//Offset -2048,32 (for distinct circles)
+					Offset 32, 32
 
-					// you can choose what kind of blending mode you want for the outline
 					Blend SrcAlpha OneMinusSrcAlpha // Normal
-					//Blend One One // Additive
-					//Blend One OneMinusDstColor // Soft Additive
-					//Blend DstColor Zero // Multiplicative
-					//Blend DstColor SrcColor // 2x Multiplicative
 
 					CGPROGRAM
 					#pragma multi_compile_instancing
@@ -122,6 +104,7 @@ Shader "Outlined/PinSilhouetteShader" {
 					float2 offset = TransformViewToProjection(norm.xy);
 
 					o.pos.xy += offset * o.pos.z * UNITY_ACCESS_INSTANCED_PROP(Props, _Outline);
+
 					o.color = UNITY_ACCESS_INSTANCED_PROP(Props, _OutlineColor);
 					return o;
 				}
@@ -132,18 +115,13 @@ Shader "Outlined/PinSilhouetteShader" {
 				ENDCG
 				}
 					// note that a vertex shader is specified here but its using the one above
-					Pass{
+				/*	Pass{
 						Name "OUTLINE 2"
 						Tags { "LightMode" = "Always" }
 						Cull Front
-						Offset 32, 32
+						Offset 0, 0
 
-					// you can choose what kind of blending mode you want for the outline
-					Blend SrcAlpha OneMinusSrcAlpha // Normal
-					//Blend One One // Additive
-					//Blend One OneMinusDstColor // Soft Additive
-					//Blend DstColor Zero // Multiplicative
-					//Blend DstColor SrcColor // 2x Multiplicative
+					Blend SrcAlpha OneMinusSrcAlpha
 
 					CGPROGRAM
 					#pragma multi_compile_instancing
@@ -169,7 +147,9 @@ Shader "Outlined/PinSilhouetteShader" {
 					return i.color;
 				}
 				ENDCG
-				}
+				
+				}*/
+				
 
 		}
 

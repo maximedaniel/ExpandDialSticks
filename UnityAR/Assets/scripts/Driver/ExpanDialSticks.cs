@@ -719,7 +719,7 @@ public class ExpanDialSticks : MonoBehaviour
 										{
 											if (modelMatrix[i, j].CurrentPaused == 0) // PIN IS NOT ALREADY BEING PAUSED
 											{
-												Debug.Log("modelMatrix[" + i + "," + j + "] pause towards " + modelMatrix[i, j].TargetPosition + "!");
+												//Debug.Log("modelMatrix[" + i + "," + j + "] pause towards " + modelMatrix[i, j].TargetPosition + "!");
 												modelMatrix[i, j].CurrentPaused = modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition;
 												positions[i * nbColumns + j] = modelMatrix[i, j].CurrentPosition;
 												holdings[i * nbColumns + j] = 0;
@@ -1002,9 +1002,9 @@ public class ExpanDialSticks : MonoBehaviour
 							float safetyDuration = Math.Max(motionDuration, 0.1f);
 							durations[i * nbColumns + j] = Math.Max(safetyDuration, modelMatrix[i, j].TargetShapeChangeDuration);
 						} else {
-								Debug.Log("modelMatrix[" + i + "," + j + "] pause at start!");
+								//Debug.Log("modelMatrix[" + i + "," + j + "] pause at start!");
 								modelMatrix[i, j].CurrentPaused = (int)direction;
-								Debug.Log("modelMatrix[i, j].CurrentPaused: " + modelMatrix[i, j].CurrentPaused);
+								//Debug.Log("modelMatrix[i, j].CurrentPaused: " + modelMatrix[i, j].CurrentPaused);
 								durations[i * nbColumns + j] = 0f;
 						}
 					}
@@ -1170,7 +1170,7 @@ public class ExpanDialSticks : MonoBehaviour
 							{
 
 								float wantedSpeed = modelMatrix[i, j].StoredSpeed;
-								Debug.Log("[" + i + "," + j + "] wantedSpeed(1): " + modelMatrix[i, j].StoredSpeed);
+								//Debug.Log("[" + i + "," + j + "] wantedSpeed(1): " + modelMatrix[i, j].StoredSpeed);
 								float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
 								float finalSpeed = Mathf.Min(wantedSpeed, safetySpeed);
 								float motionDuration = Mathf.Abs(modelMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition) / finalSpeed;
@@ -1197,7 +1197,7 @@ public class ExpanDialSticks : MonoBehaviour
 							if (prevProximity != nextProximity)
 							{
 								float wantedSpeed = modelMatrix[i, j].StoredSpeed;
-								Debug.Log("[" + i + "," + j + "] wantedSpeed(2): " + modelMatrix[i, j].StoredSpeed);
+								//Debug.Log("[" + i + "," + j + "] wantedSpeed(2): " + modelMatrix[i, j].StoredSpeed);
 								float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
 								float finalSpeed = Mathf.Min(wantedSpeed, safetySpeed);
 								float motionDuration = Mathf.Abs(modelMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition) / finalSpeed;

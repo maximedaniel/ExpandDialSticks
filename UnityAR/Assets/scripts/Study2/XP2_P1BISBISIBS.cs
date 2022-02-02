@@ -164,8 +164,6 @@ public class XP2_P1BISBISBIS : MonoBehaviour
 
 		for (int i = 0; i < distractorPositions.Count(); i++)
 		{
-			//Debug.Log(i % candidates.Count());
-			//Debug.Log(candidates[i % candidates.Count()]);
 			targetPositions.Add(candidates[i % candidates.Count()]);
 		}
 		ListExtension.Shuffle(targetPositions);

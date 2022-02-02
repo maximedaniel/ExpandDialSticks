@@ -121,7 +121,7 @@ Shader "Outlined/DotOutlineShader" {
 				Pass{
 					Name "BASE"
 					Cull back
-					Offset 0, 0
+					Offset 0, -4880
 				//Blend Zero One
 				Blend SrcAlpha OneMinusSrcAlpha
 			CGPROGRAM
