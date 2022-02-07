@@ -14,10 +14,10 @@ public class SafeGuard : MonoBehaviour
 
 	public ExpanDialSticks pins;
 	private const float warningZoneRadius = 0.06f;
-	private const float bodyOutlineWidth = 0.4f/100f;
-	private const float bodySecondOutlineWidth = 0.8f / 100f;
-	private const float pinOutlineWidth = 0.04f / 100f;
-	private const float pinSecondOutlineWidth = 0.08f / 100f;
+	private const float bodyOutlineWidth = 0.8f/100f;
+	private const float bodySecondOutlineWidth = 0.16f / 100f;
+	private const float pinOutlineWidth = 0.08f / 100f;
+	private const float pinSecondOutlineWidth = 0.016f / 100f;
 
 	private const float minStopDistance = 0.06f;
 	private const float maxStopDistance = 0.09f;
@@ -1112,7 +1112,7 @@ public class SafeGuard : MonoBehaviour
 		{
 			case SafetyOverlayMode.User:
 				// set outlines width
-				minOrthographicSize = pins.diameter - (1f / 100f); // -1.5f / 2f;
+				minOrthographicSize = pins.diameter/2f; // -1.5f / 2f;
 				maxOrthographicSize = minOrthographicSize * (3.3f / 100f); // 3.3f / 3.3f;
 				minOutlineWidth = 0f;
 				maxOutlineWidth = minOutlineWidth * (3.3f / 100f);
@@ -1127,7 +1127,7 @@ public class SafeGuard : MonoBehaviour
 				break;
 			case SafetyOverlayMode.System:
 				// set outlines width
-				minOrthographicSize = pins.diameter - (1f / 100f); // -1.5f / 2f;
+				minOrthographicSize = pins.diameter / 2f; // -1.5f / 2f;
 				maxOrthographicSize = minOrthographicSize * (3.3f / 100f); // 3.3f / 3.3f;
 				minOutlineWidth = 0f;
 				maxOutlineWidth = minOutlineWidth * (3.3f / 100f);

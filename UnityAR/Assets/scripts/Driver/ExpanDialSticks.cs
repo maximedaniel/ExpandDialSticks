@@ -440,7 +440,8 @@ public class ExpanDialSticks : MonoBehaviour
 		SARCamera.enabled = true;
 		SARCamera.pixelRect = new Rect(0, 0, 1920, 1080);
 		// (nbRows - 1) * (diameter + offset)
-		Vector3 cameraPosition = new Vector3(-(diameter/2 + offset), SARCameraDistanceFromMatrix, (nbColumns - 1) * (diameter + offset) / 2);
+		//Vector3 cameraPosition = new Vector3(-(diameter/2 + offset), SARCameraDistanceFromMatrix, (nbColumns - 1) * (diameter + offset) / 2);
+		Vector3 cameraPosition = new Vector3(-0.03f, 0.69f, 0.155f);
 		SARCamera.transform.position = cameraPosition;
 
 		Vector3 cameraLookAtPosition = cameraPosition - new Vector3(0f, SARCameraDistanceFromMatrix, 0f);

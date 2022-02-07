@@ -14,7 +14,7 @@ public class ExpanDialStickView : MonoBehaviour
 {
 	private float diameter = 4.0f;
 	private float height = 10.0f;
-	private const float maxHeight = 0.15f;
+	private const float maxHeight = 0.10f;
 	private float offset = 0.5f;
 	private int nbSeparationLevels = 2;
 
@@ -952,8 +952,10 @@ public class ExpanDialStickView : MonoBehaviour
 			projector.material.mainTexture = Resources.Load<Texture2D>(this.projectorTextureTarget);
 			this.projectorTextureCurrent = this.projectorTextureTarget;
 		}
-		projector.transform.rotation = Quaternion.LookRotation(-transform.up, transform.forward);
-		projector.transform.Rotate(Vector3.forward, this.projectorRotationCurrent);
+		projector.transform.localRotation = Quaternion.Euler(90f, this.projectorRotationCurrent, 180f);
+
+		//Quaternion.LookRotation(-transform.up, transform.forward);
+		//projector.transform.Rotate(Vector3.forward, this.projectorRotationCurrent);
 
 		//if (feedbackMode == FeedbackMode.Debug)
 		//	meshRenderer.material.color = Color.Lerp(Color.white, Color.red, 1f - this.separationLevelCurrent/(float)this.nbSeparationLevels);

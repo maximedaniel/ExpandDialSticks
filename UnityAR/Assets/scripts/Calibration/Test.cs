@@ -19,6 +19,9 @@ public class Test : MonoBehaviour
 {
 
 	public GameObject expanDialSticksPrefab;
+	private ExpanDialSticks expanDialSticks;
+	public GameObject SARCameraPrefab;
+	private Camera SARCamera;
 	private MyCapsuleHand leftHand;
 	private MyCapsuleHand rightHand;
 	public GUISkin guiSkin;
@@ -26,7 +29,6 @@ public class Test : MonoBehaviour
 	public int[] engagementRows;
 	public int[] engagementColumns;
 	public bool logEnabled = true;
-	private ExpanDialSticks expanDialSticks;
 	private bool connected = false;
 
 	private CultureInfo en = CultureInfo.CreateSpecificCulture("en-US");
@@ -46,7 +48,13 @@ public class Test : MonoBehaviour
 
 	private const float JOYSTICK_THRESHOLD = 10f;
 
+	private string stringIndex = "";
+	private string stringPosition = "";
 	private int currentIndex = 0;
+
+	private string stringCameraX = "";
+	private string stringCameraY = "";
+	private string stringCameraZ = "";
 
 	//private FileLogger fileLogger;
 	public const float LOG_INTERVAL = 0.25f; // 0.2f;
@@ -60,6 +68,10 @@ public class Test : MonoBehaviour
 	void Start()
 	{
 		expanDialSticks = expanDialSticksPrefab.GetComponent<ExpanDialSticks>();
+		SARCamera = SARCameraPrefab.GetComponent<Camera>();
+		stringCameraX = SARCamera.transform.position.x.ToString();
+		stringCameraY = SARCamera.transform.position.y.ToString();
+		stringCameraZ = SARCamera.transform.position.z.ToString();
 		// Listen to events
 		expanDialSticks.OnConnecting += HandleConnecting;
 		expanDialSticks.OnConnected += HandleConnected;
@@ -153,6 +165,65 @@ public class Test : MonoBehaviour
 				Application.Quit();
 #endif
 	}
+	void OnGUI()
+	{
+		// Make a text field that modifies stringToEdit.
+		float midX = Screen.width / 2.0f;
+		float midY = Screen.height / 2.0f;
+		float componentHeight = 20;
+		float componentWidth = 50;
+
+		stringCameraX = GUI.TextField(new Rect(midX - 100, 50, 50, componentHeight), stringCameraX, 25);
+		stringCameraY = GUI.TextField(new Rect(midX - 50, 50, 50, componentHeight), stringCameraY, 25);
+		stringCameraZ = GUI.TextField(new Rect(midX     , 50, 50, componentHeight), stringCameraZ, 25);
+
+
+		if (GUI.Button(new Rect(midX + 50, 50, componentWidth, componentHeight), "CAMERA"))
+		{
+			float cameraX = float.Parse(stringCameraX);
+			float cameraY = float.Parse(stringCameraY);
+			float cameraZ = float.Parse(stringCameraZ);
+			SARCameraPrefab.transform.position = new Vector3(cameraX, cameraY, cameraZ);
+		}
+
+		int index = 0;
+		int position = 0;
+
+		stringIndex = GUI.TextField(new Rect(midX - 25, 25, 50, componentHeight), stringIndex, 25);
+		stringPosition = GUI.TextField(new Rect(midX + 25, 25, 50, componentHeight), stringPosition, 25);
+
+		if (GUI.Button(new Rect(midX+75, 25, componentWidth, componentHeight), "SEND"))
+			{
+				index = int.Parse(stringIndex);
+				position = int.Parse(stringPosition);
+				Debug.Log(index + " " + position);
+				int row = (int)(index / (float)expanDialSticks.NbColumns);
+				int column = index % expanDialSticks.NbColumns;
+				Debug.Log(row + " " + column);
+				expanDialSticks.modelMatrix[row, column].TargetPosition = (sbyte)position;
+				expanDialSticks.modelMatrix[row, column].TargetShapeChangeDuration = 2f;
+				expanDialSticks.triggerShapeChange();
+		
+		}
+		if (GUI.Button(new Rect(midX + 150, 25, componentWidth, componentHeight), "CROSS"))
+		{
+			for (int i = 0; i < expanDialSticks.NbRows; i++)
+			{
+				for (int j = 0; j < expanDialSticks.NbColumns; j++)
+				{
+					expanDialSticks.modelMatrix[i, j].TargetColor = Color.red;
+					expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = 0.1f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "cross-reverse";
+					expanDialSticks.modelMatrix[i, j].TargetProjectorColor = Color.white;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 0.02f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
+				}
+			}
+			expanDialSticks.triggerProjectorChange();
+			expanDialSticks.triggerTextureChange();
+		}
+	}
 
 	void Update()
 	{
@@ -162,26 +233,6 @@ public class Test : MonoBehaviour
 			if (Input.GetKey("escape") || (currentIndex > expanDialSticks.NbRows * expanDialSticks.NbColumns - 1))
 			{
 				Quit();
-			}
-
-			if (Input.GetKeyDown("i"))
-			{
-
-				for (int i = 0; i < expanDialSticks.NbRows; i++)
-				{
-					for (int j = 0; j < expanDialSticks.NbColumns; j++)
-					{
-						expanDialSticks.modelMatrix[i, j].TargetColor = Color.red;
-						expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = 0.1f;
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "cross-reverse";
-						expanDialSticks.modelMatrix[i, j].TargetProjectorColor = Color.white;
-						expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
-						expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
-						expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
-					}
-				}
-				expanDialSticks.triggerProjectorChange();
-				expanDialSticks.triggerTextureChange();
 			}
 
 			if (Input.GetKeyDown("n"))
