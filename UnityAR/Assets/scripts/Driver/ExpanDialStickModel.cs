@@ -112,18 +112,36 @@ public class ExpanDialStickModel
 	private float planeRotationCurrent= 0f;
 
 
-	private Color projectorColorCurrent = Color.black;
-	private Color projectorColorTarget = Color.black;
-	private string projectorTextureCurrent = "";
-	private string projectorTextureTarget = "";
-	private Vector2 projectorOffsetCurrent = Vector2.zero;
-	private Vector2 projectorOffsetTarget = Vector2.zero;
-	private float projectorRotationCurrent = 0f;
-	private float projectorRotationTarget = 0f;
-	private float projectorSizeCurrent = 0f;
-	private float projectorSizeTarget = 0f;
-	private float projectorChangeDurationCurrent = 0f;
-	private float projectorChangeDurationTarget = 0f;
+
+	private Color projectorFrontColorCurrent = Color.black;
+	private Color projectorFrontColorTarget = Color.black;
+	private string projectorFrontTextureCurrent = "";
+	private string projectorFrontTextureTarget = "";
+	private Vector2 projectorFrontOffsetCurrent = Vector2.zero;
+	private Vector2 projectorFrontOffsetTarget = Vector2.zero;
+	private float projectorFrontRotationCurrent = 0f;
+	private float projectorFrontRotationTarget = 0f;
+	private float projectorFrontSizeCurrent = 0f;
+	private float projectorFrontSizeTarget = 0f;
+	private float projectorFrontChangeDurationCurrent = 0f;
+	private float projectorFrontChangeDurationTarget = 0f;
+
+
+	private Color projectorBackColorCurrent = Color.black;
+	private Color projectorBackColorTarget = Color.black;
+	private string projectorBackTextureCurrent = "";
+	private string projectorBackTextureTarget = "";
+	private Vector2 projectorBackOffsetCurrent = Vector2.zero;
+	private Vector2 projectorBackOffsetTarget = Vector2.zero;
+	private float projectorBackRotationCurrent = 0f;
+	private float projectorBackRotationTarget = 0f;
+	private float projectorBackSizeCurrent = 0f;
+	private float projectorBackSizeTarget = 0f;
+	private float projectorBackChangeDurationCurrent = 0f;
+	private float projectorBackChangeDurationTarget = 0f;
+
+
+	private float storedSpeed = 0f;
 
 
 	private bool init = false;
@@ -145,6 +163,11 @@ public class ExpanDialStickModel
 			this.feedforwardDiff += value - this.feedforwardCurrent;
 			this.feedforwardCurrent = value;
 		}
+	}
+	public float StoredSpeed
+	{
+		get => this.storedSpeed;
+		set => this.storedSpeed = value;
 	}
 
 	// Getters and Setters
@@ -488,57 +511,127 @@ public class ExpanDialStickModel
 			this.textureChangeDurationCurrent = value;
 		}
 	}
-		public Color CurrentProjectorColor{
-		get => this.projectorColorCurrent;
-		set => this.projectorColorCurrent = value;
-	}
-	public Color TargetProjectorColor{
-		get => this.projectorColorTarget;
-		set => this.projectorColorTarget = value;
-	}
-	public string CurrentProjectorTexture{
-		get => this.projectorTextureCurrent;
-		set => this.projectorTextureCurrent = value;
-	}
-	public string TargetProjectorTexture{
-		get => this.projectorTextureTarget;
-		set => this.projectorTextureTarget = value;
-	}
-	public Vector2 CurrentProjectorOffset
+	public Color CurrentProjectorFrontColor
 	{
-		get => this.projectorOffsetCurrent;
-		set => this.projectorOffsetCurrent = value;
+		get => this.projectorFrontColorCurrent;
+		set => this.projectorFrontColorCurrent = value;
 	}
-	public Vector2 TargetProjectorOffset
+	public Color TargetProjectorFrontColor
 	{
-		get => this.projectorOffsetTarget;
-		set => this.projectorOffsetTarget = value;
+		get => this.projectorFrontColorTarget;
+		set => this.projectorFrontColorTarget = value;
 	}
-	public float CurrentProjectorRotation{
-		get => this.projectorRotationCurrent;
-		set => this.projectorRotationCurrent = value;
+	public string CurrentProjectorFrontTexture
+	{
+		get => this.projectorFrontTextureCurrent;
+		set => this.projectorFrontTextureCurrent = value;
 	}
-	public float TargetProjectorRotation{
-		get => this.projectorRotationTarget;
-		set => this.projectorRotationTarget = value;
+	public string TargetProjectorFrontTexture
+	{
+		get => this.projectorFrontTextureTarget;
+		set => this.projectorFrontTextureTarget = value;
 	}
-	public float CurrentProjectorSize{
-		get => this.projectorSizeCurrent;
-		set => this.projectorSizeCurrent = value;
+	public Vector2 CurrentProjectorFrontOffset
+	{
+		get => this.projectorFrontOffsetCurrent;
+		set => this.projectorFrontOffsetCurrent = value;
 	}
-	public float TargetProjectorSize{
-		get => this.projectorSizeTarget;
-		set => this.projectorSizeTarget = value;
+	public Vector2 TargetProjectorFrontOffset
+	{
+		get => this.projectorFrontOffsetTarget;
+		set => this.projectorFrontOffsetTarget = value;
 	}
-	public float CurrentProjectorChangeDuration{
-		get => this.projectorChangeDurationCurrent;
-		set => this.projectorChangeDurationCurrent = value;
+	public float CurrentProjectorFrontRotation
+	{
+		get => this.projectorFrontRotationCurrent;
+		set => this.projectorFrontRotationCurrent = value;
 	}
-	public float TargetProjectorChangeDuration{
-		get => this.projectorChangeDurationTarget;
-		set => this.projectorChangeDurationTarget = value;
+	public float TargetProjectorFrontRotation
+	{
+		get => this.projectorFrontRotationTarget;
+		set => this.projectorFrontRotationTarget = value;
 	}
-	
+	public float CurrentProjectorFrontSize
+	{
+		get => this.projectorFrontSizeCurrent;
+		set => this.projectorFrontSizeCurrent = value;
+	}
+	public float TargetProjectorFrontSize
+	{
+		get => this.projectorFrontSizeTarget;
+		set => this.projectorFrontSizeTarget = value;
+	}
+	public float CurrentProjectorFrontChangeDuration
+	{
+		get => this.projectorFrontChangeDurationCurrent;
+		set => this.projectorFrontChangeDurationCurrent = value;
+	}
+	public float TargetProjectorFrontChangeDuration
+	{
+		get => this.projectorFrontChangeDurationTarget;
+		set => this.projectorFrontChangeDurationTarget = value;
+	}
+
+	public Color CurrentProjectorBackColor
+	{
+		get => this.projectorBackColorCurrent;
+		set => this.projectorBackColorCurrent = value;
+	}
+	public Color TargetProjectorBackColor
+	{
+		get => this.projectorBackColorTarget;
+		set => this.projectorBackColorTarget = value;
+	}
+	public string CurrentProjectorBackTexture
+	{
+		get => this.projectorBackTextureCurrent;
+		set => this.projectorBackTextureCurrent = value;
+	}
+	public string TargetProjectorBackTexture
+	{
+		get => this.projectorBackTextureTarget;
+		set => this.projectorBackTextureTarget = value;
+	}
+	public Vector2 CurrentProjectorBackOffset
+	{
+		get => this.projectorBackOffsetCurrent;
+		set => this.projectorBackOffsetCurrent = value;
+	}
+	public Vector2 TargetProjectorBackOffset
+	{
+		get => this.projectorBackOffsetTarget;
+		set => this.projectorBackOffsetTarget = value;
+	}
+	public float CurrentProjectorBackRotation
+	{
+		get => this.projectorBackRotationCurrent;
+		set => this.projectorBackRotationCurrent = value;
+	}
+	public float TargetProjectorBackRotation
+	{
+		get => this.projectorBackRotationTarget;
+		set => this.projectorBackRotationTarget = value;
+	}
+	public float CurrentProjectorBackSize
+	{
+		get => this.projectorBackSizeCurrent;
+		set => this.projectorBackSizeCurrent = value;
+	}
+	public float TargetProjectorBackSize
+	{
+		get => this.projectorBackSizeTarget;
+		set => this.projectorBackSizeTarget = value;
+	}
+	public float CurrentProjectorBackChangeDuration
+	{
+		get => this.projectorBackChangeDurationCurrent;
+		set => this.projectorBackChangeDurationCurrent = value;
+	}
+	public float TargetProjectorBackChangeDuration
+	{
+		get => this.projectorBackChangeDurationTarget;
+		set => this.projectorBackChangeDurationTarget = value;
+	}
 	public void setShapeChangeTarget(sbyte xAxis, sbyte yAxis, byte selectCount, sbyte rotation, sbyte position, bool reaching, bool holding, int separationLevel, float proximity, float distance, int paused, float shapeChangeDuration)
 	{
 		TargetAxisX = xAxis;
@@ -583,23 +676,43 @@ public class ExpanDialStickModel
 			this.init = !this.init;
 		}
 	}
-	public void setProjectorChangeTarget(Color color, string textureName, Vector2 textureOffset, float textureRotation, float textureSize, float projectorChangeDuration )
+
+	public void setFrontProjectorChangeTarget(Color color, string textureName, Vector2 textureOffset, float textureRotation, float textureSize, float projectorChangeDuration)
 	{
-		TargetProjectorColor = color;
-		TargetProjectorTexture = textureName;
-		TargetProjectorOffset = textureOffset;
-		TargetProjectorRotation = textureRotation;
-		TargetProjectorSize = textureSize;
-		TargetProjectorChangeDuration = projectorChangeDuration;
+		TargetProjectorFrontColor = color;
+		TargetProjectorFrontTexture = textureName;
+		TargetProjectorFrontOffset = textureOffset;
+		TargetProjectorFrontRotation = textureRotation;
+		TargetProjectorFrontSize = textureSize;
+		TargetProjectorFrontChangeDuration = projectorChangeDuration;
 	}
-	public void setProjectorChangeCurrent(Color color, string textureName, Vector2 textureOffset, float textureRotation, float textureSize, float projectorChangeDuration )
+	public void setFrontProjectorChangeCurrent(Color color, string textureName, Vector2 textureOffset, float textureRotation, float textureSize, float projectorChangeDuration)
 	{
-		CurrentProjectorColor = color;
-		CurrentProjectorTexture = textureName;
-		CurrentProjectorOffset = textureOffset;
-		CurrentProjectorRotation = textureRotation;
-		CurrentProjectorSize = textureSize;
-		CurrentProjectorChangeDuration = projectorChangeDuration;
+		CurrentProjectorFrontColor = color;
+		CurrentProjectorFrontTexture = textureName;
+		CurrentProjectorFrontOffset = textureOffset;
+		CurrentProjectorFrontRotation = textureRotation;
+		CurrentProjectorFrontSize = textureSize;
+		CurrentProjectorFrontChangeDuration = projectorChangeDuration;
+	}
+
+	public void setBackProjectorChangeTarget(Color color, string textureName, Vector2 textureOffset, float textureRotation, float textureSize, float projectorChangeDuration)
+	{
+		TargetProjectorBackColor = color;
+		TargetProjectorBackTexture = textureName;
+		TargetProjectorBackOffset = textureOffset;
+		TargetProjectorBackRotation = textureRotation;
+		TargetProjectorBackSize = textureSize;
+		TargetProjectorBackChangeDuration = projectorChangeDuration;
+	}
+	public void setBackProjectorChangeCurrent(Color color, string textureName, Vector2 textureOffset, float textureRotation, float textureSize, float projectorChangeDuration)
+	{
+		CurrentProjectorBackColor = color;
+		CurrentProjectorBackTexture = textureName;
+		CurrentProjectorBackOffset = textureOffset;
+		CurrentProjectorBackRotation = textureRotation;
+		CurrentProjectorBackSize = textureSize;
+		CurrentProjectorBackChangeDuration = projectorChangeDuration;
 	}
 	public void setTextureChangeTarget(Color color, string textureName, Color textureColor, float textureSize, Vector2 textureOffset, float textureRotation, float textureChangeDuration )
 	{

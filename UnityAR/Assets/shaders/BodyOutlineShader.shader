@@ -131,7 +131,7 @@ Shader "Outlined/BodySilhouetteShader" {
 				}
 				ENDCG
 				}
-					// note that a vertex shader is specified here but its using the one above
+				/*	// note that a vertex shader is specified here but its using the one above
 					Pass{
 						Name "OUTLINE 2"
 						Tags { "LightMode" = "Always" }
@@ -169,7 +169,7 @@ Shader "Outlined/BodySilhouetteShader" {
 					return i.color;
 				}
 				ENDCG
-				}
+				}*/
 
 		}
 

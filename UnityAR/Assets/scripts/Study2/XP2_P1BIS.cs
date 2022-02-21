@@ -351,64 +351,34 @@ public class XP2_P1BIS : MonoBehaviour
 				unknownParticipant = false;
 			}
 
-			if (GUI.Button(new Rect(midX + 5, midY - 25, 150, componentHeight), "Edge Overlay"))
+			if (GUI.Button(new Rect(midX + 5, midY - 25, 150, componentHeight), "User Overlay"))
 			{
 
 				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
 				numeroParticipant = int.Parse(stringParticipant);
 				Debug.Log("Start");
 
-				currOverlay = ExpanDialSticks.SafetyOverlayMode.Edge;
+				currOverlay = ExpanDialSticks.SafetyOverlayMode.User;
 				expanDialSticks.SetOverlayMode(currOverlay);
 				expanDialSticks.triggerSafetyChange();
 
-				string identity = "USER_IDENTITY " + numeroParticipant + " EDGE_OVERLAY";
+				string identity = "USER_IDENTITY " + numeroParticipant + " USER_OVERLAY";
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				unknownParticipant = false;
 			}
 
-			if (GUI.Button(new Rect(midX + 5, midY, 150, componentHeight), "Surface Overlay"))
+			if (GUI.Button(new Rect(midX + 5, midY, 150, componentHeight), "System Overlay"))
 			{
 
 				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
 				numeroParticipant = int.Parse(stringParticipant);
 				Debug.Log("Start");
 
-				currOverlay = ExpanDialSticks.SafetyOverlayMode.Fill;
+				currOverlay = ExpanDialSticks.SafetyOverlayMode.System;
 				expanDialSticks.SetOverlayMode(currOverlay);
 				expanDialSticks.triggerSafetyChange();
 
-				string identity = "USER_IDENTITY " + numeroParticipant + " SURFACE_OVERLAY";
-				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-				unknownParticipant = false;
-			}
-			if (GUI.Button(new Rect(midX + 5, midY + 25, 150, componentHeight), "Hull Overlay"))
-			{
-
-				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
-				numeroParticipant = int.Parse(stringParticipant);
-				Debug.Log("Start");
-
-				currOverlay = ExpanDialSticks.SafetyOverlayMode.Hull;
-				expanDialSticks.SetOverlayMode(currOverlay);
-				expanDialSticks.triggerSafetyChange();
-
-				string identity = "USER_IDENTITY " + numeroParticipant + " HULL_OVERLAY";
-				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-				unknownParticipant = false;
-			}
-			if (GUI.Button(new Rect(midX + 5, midY + 50, 150, componentHeight), "Zone Overlay"))
-			{
-
-				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
-				numeroParticipant = int.Parse(stringParticipant);
-				Debug.Log("Start");
-
-				currOverlay = ExpanDialSticks.SafetyOverlayMode.Zone;
-				expanDialSticks.SetOverlayMode(currOverlay);
-				expanDialSticks.triggerSafetyChange();
-
-				string identity = "USER_IDENTITY " + numeroParticipant + " ZONE_OVERLAY";
+				string identity = "USER_IDENTITY " + numeroParticipant + " SYSTEM_OVERLAY";
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				unknownParticipant = false;
 			}
@@ -525,7 +495,7 @@ public class XP2_P1BIS : MonoBehaviour
 					{
 						Debug.Log("rightCandidate => " + rightCandidate);
 						// Projector
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon0";
+						expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "icon0";
 						// Shape
 						expanDialSticks.modelMatrix[i, j].TargetPosition = (sbyte)rightCandidate.z;
 						expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = shapeChangeDuration;
@@ -534,7 +504,7 @@ public class XP2_P1BIS : MonoBehaviour
 					{
 						Debug.Log("wrongCandidate => " + wrongCandidate);
 						// Projector
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon0";
+						expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "icon0";
 						// Shape
 						expanDialSticks.modelMatrix[i, j].TargetPosition = (sbyte)wrongCandidate.z;
 						expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = shapeChangeDuration;
@@ -543,7 +513,7 @@ public class XP2_P1BIS : MonoBehaviour
 					{
 						Debug.Log("movingCandidate => " + movingCandidate);
 						// Projector
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon" + randomIcons.First();
+						expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "icon" + randomIcons.First();
 						randomIcons.RemoveAt(0);
 						// Shape
 						expanDialSticks.modelMatrix[i, j].TargetPosition = (sbyte)movingCandidate.z;
@@ -553,13 +523,13 @@ public class XP2_P1BIS : MonoBehaviour
 					{
 						// Projector
 						//expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "default";
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon" + randomIcons.First();
+						expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "icon" + randomIcons.First();
 						randomIcons.RemoveAt(0);
 					}
 					// Projector
-					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontRotation = 90f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontSize = 2f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontChangeDuration = 0.1f;
 				}
 			}
 			expanDialSticks.triggerProjectorChange();

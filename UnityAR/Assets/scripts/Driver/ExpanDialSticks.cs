@@ -134,8 +134,8 @@ public class ExpanDialSticks : MonoBehaviour
 	public MyCapsuleHand rightHand;
 	public enum SafetyMotionMode {SafetyRatedMonitoredStop, SpeedAndSeparationMonitoring};
 	public SafetyMotionMode safetyMotionMode = SafetyMotionMode.SafetyRatedMonitoredStop;
-	public enum SafetyOverlayMode {None, Edge, Fill, Hull, Zone};
-	public SafetyOverlayMode safetyOverlayMode = SafetyOverlayMode.Edge;
+	public enum SafetyOverlayMode {User, System, Mixed};
+	public SafetyOverlayMode safetyOverlayMode = SafetyOverlayMode.User;
 	private int nbSeparationLevels = 1;
 
 
@@ -160,7 +160,7 @@ public class ExpanDialSticks : MonoBehaviour
 	public float EVENT_INTERVAL = 0.25f; // 0.2f;
 	public const int nbColumns = 6;
 	public const int nbRows = 5;
-	float LeapMotionDistanceFromMatrix = 0.53f;
+	float LeapMotionDistanceFromMatrix = 0.57f;
 	float SARCameraDistanceFromMatrix = 0.7f;
 	private const float maxSpeed = 20f; // 40f; 20f; 13.33f; // pos/seconds 1s, 2s, 3s
 
@@ -182,7 +182,7 @@ public class ExpanDialSticks : MonoBehaviour
 	private Vector3 textRotationTop;
 	private TextMeshPro textMeshTop;
 	private TextAlignmentOptions textAlignmentTop;
-	private int textSizeTop;
+	private float textSizeTop;
 	private Color textColorTop;
 	private string textTop;
 	private GameObject topBorderBackground;
@@ -192,7 +192,7 @@ public class ExpanDialSticks : MonoBehaviour
 	private Vector3 textRotationBottom;
 	private TextMeshPro textMeshBottom;
 	private TextAlignmentOptions textAlignmentBottom;
-	private int textSizeBottom;
+	private float textSizeBottom;
 	private Color textColorBottom;
 	private string textBottom;
 	private GameObject bottomBorderBackground;
@@ -202,7 +202,7 @@ public class ExpanDialSticks : MonoBehaviour
 	private Vector3 textRotationLeft;
 	private TextMeshPro textMeshLeft;
 	private TextAlignmentOptions textAlignmentLeft;
-	private int textSizeLeft;
+	private float textSizeLeft;
 	private Color textColorLeft;
 	private string textLeft;
 	private GameObject leftBorderBackground;
@@ -212,7 +212,7 @@ public class ExpanDialSticks : MonoBehaviour
 	private Vector3 textRotationRight;
 	private TextMeshPro textMeshRight;
 	private TextAlignmentOptions textAlignmentRight;
-	private int textSizeRight;
+	private float textSizeRight;
 	private Color textColorRight;
 	private string textRight;
 	private GameObject rightBorderBackground;
@@ -223,7 +223,7 @@ public class ExpanDialSticks : MonoBehaviour
 	private Vector3 textRotationRightCorner;
 	private TextMeshPro textMeshRightCorner;
 	private TextAlignmentOptions textAlignmentRightCorner;
-	private int textSizeRightCorner;
+	private float textSizeRightCorner;
 	private Color textColorRightCorner;
 	private string textRightCorner;
 	private GameObject rightCornerBackground;
@@ -235,7 +235,7 @@ public class ExpanDialSticks : MonoBehaviour
 	private Vector3 textRotationLeftCorner;
 	private TextMeshPro textMeshLeftCorner;
 	private TextAlignmentOptions textAlignmentLeftCorner;
-	private int textSizeLeftCorner;
+	private float textSizeLeftCorner;
 	private Color textColorLeftCorner;
 	private string textLeftCorner;
 	private GameObject leftCornerBackground;
@@ -331,23 +331,19 @@ public class ExpanDialSticks : MonoBehaviour
 	}
 	public void SetOverlayMode(SafetyOverlayMode overlayMode)
 	{
+
+		//Debug.Log("SetOverlayMode()");
 		safetyOverlayMode = overlayMode;
 		switch (safetyOverlayMode)
 		{
-			case SafetyOverlayMode.Edge:
-				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Dot, SafeGuard.SemioticMode.None, SafeGuard.FeedbackMode.State);
-
+			case SafetyOverlayMode.User:
+				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.User, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.State);
 				break;
-			case SafetyOverlayMode.Fill:
-				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Surface, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.Intent);
+			case SafetyOverlayMode.System:
+				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.System, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.State);
 				break;
-			case SafetyOverlayMode.Hull:
-				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Hull, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.Intent);
-				break;
-			case SafetyOverlayMode.Zone:
-				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Zone, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.Intent);
-				break;
-			default:
+			case SafetyOverlayMode.Mixed:
+				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Mixed, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.State);
 				break;
 		}
 	}
@@ -396,6 +392,7 @@ public class ExpanDialSticks : MonoBehaviour
 				break;
 
 		}
+
 		for (int i = 0; i < nbRows; i++)
 			for (int j = 0; j < nbColumns; j++)
 			{
@@ -443,7 +440,8 @@ public class ExpanDialSticks : MonoBehaviour
 		SARCamera.enabled = true;
 		SARCamera.pixelRect = new Rect(0, 0, 1920, 1080);
 		// (nbRows - 1) * (diameter + offset)
-		Vector3 cameraPosition = new Vector3(-(diameter/2 + offset), SARCameraDistanceFromMatrix, (nbColumns - 1) * (diameter + offset) / 2);
+		//Vector3 cameraPosition = new Vector3(-(diameter/2 + offset), SARCameraDistanceFromMatrix, (nbColumns - 1) * (diameter + offset) / 2);
+		Vector3 cameraPosition = new Vector3(-0.03f, 0.69f, 0.155f);
 		SARCamera.transform.position = cameraPosition;
 
 		Vector3 cameraLookAtPosition = cameraPosition - new Vector3(0f, SARCameraDistanceFromMatrix, 0f);
@@ -495,12 +493,12 @@ public class ExpanDialSticks : MonoBehaviour
 		rightBorderBackground.transform.Rotate(new Vector3(0f, 0f, 90f), Space.Self);
 		rightBorderText = Instantiate(rightBorderBackground);
 		rightBorderBackground.transform.localScale = new Vector3((diameter + borderOffset/2), nbRows * (diameter + offset) + 2*offset + 2*borderOffset, 1f);
-		rightBorderText.transform.position += new Vector3(0f, 1f, 0f);
+		rightBorderText.transform.position += new Vector3(0f, 0.001f, 0f);
 		//rightBorderText.transform.Rotate(new Vector3(0f, 0f, 90f), Space.Self);
 		textMeshRight = rightBorderText.AddComponent<TextMeshPro>();
 		rightBorderText.GetComponent<RectTransform>().sizeDelta = new Vector2(nbRows * diameter, diameter);
 		textMeshRight.alignment  = textAlignmentRight = TextAlignmentOptions.Center;
-		textMeshRight.fontSize = textSizeRight = 16;
+		textMeshRight.fontSize = textSizeRight = 0.1f;
 		textMeshRight.color = textColorRight = Color.black;
 		textMeshRight.text = textRight = "";
 		textRotationRight = new Vector3(90f, 180f, 0f);
@@ -512,11 +510,11 @@ public class ExpanDialSticks : MonoBehaviour
 		bottomBorderText = Instantiate(bottomBorderBackground);
 		bottomBorderBackground.transform.localScale = new Vector3(diameter  - borderOffset, nbColumns * (diameter + offset) + 2*offset + 1.5f * borderOffset, 1f);
 		//bottomBorderText.transform.Rotate(new Vector3(0f, 0f, 90f), Space.Self);
-		bottomBorderText.transform.position += new Vector3(0f, 1f, 0f);
+		bottomBorderText.transform.position += new Vector3(0f, 0.001f, 0f);
 		textMeshBottom = bottomBorderText.AddComponent<TextMeshPro>();
 		bottomBorderText.GetComponent<RectTransform>().sizeDelta = new Vector2(nbColumns * diameter, diameter  - borderOffset);
 		textMeshBottom.alignment = textAlignmentBottom = TextAlignmentOptions.Center;
-		textMeshBottom.fontSize = textSizeBottom = 16;
+		textMeshBottom.fontSize = textSizeBottom = 0.1f;
 		textMeshBottom.color = textColorBottom = Color.black;
 		textMeshBottom.text = textBottom = "";
 		textRotationBottom = new Vector3(90f, 0f, 0f);
@@ -529,11 +527,11 @@ public class ExpanDialSticks : MonoBehaviour
 		leftBorderText = Instantiate(leftBorderBackground);
 		leftBorderBackground.transform.Rotate(new Vector3(0f, 0f, -90f), Space.Self);
 		leftBorderBackground.transform.localScale = new Vector3((diameter + borderOffset/2), nbRows * (diameter + offset) + 2*offset + 2*borderOffset, 1f);
-		leftBorderText.transform.position += new Vector3(0f, 1f, 0f);
+		leftBorderText.transform.position += new Vector3(0f, 0.001f, 0f);
 		textMeshLeft = leftBorderText.AddComponent<TextMeshPro>();
 		leftBorderText.GetComponent<RectTransform>().sizeDelta = new Vector2(nbRows * diameter, diameter);
 		textMeshLeft.alignment = textAlignmentLeft = TextAlignmentOptions.Center;
-		textMeshLeft.fontSize = textSizeLeft = 16;
+		textMeshLeft.fontSize = textSizeLeft = 0.1f;
 		textMeshLeft.color = textColorLeft = Color.black;
 		textMeshLeft.text = textLeft = "";
 		textRotationLeft = new Vector3(90f, 0f, 0f);
@@ -548,13 +546,13 @@ public class ExpanDialSticks : MonoBehaviour
 		rightCornerBackground.transform.LookAt(Vector3.down);
 		rightCornerBackground.transform.position = new Vector3(nbRows * (diameter + offset) + borderOffset/2, height/2,  nbColumns * (diameter + offset) + borderOffset);
 		rightCornerText = Instantiate(rightCornerBackground);
-		rightCornerText.transform.position += new Vector3(0f, 1f, 0f);
+		rightCornerText.transform.position += new Vector3(0f, 0.001f, 0f);
 		rightCornerText.transform.localScale = new Vector3(1, 1, 1);
 		textMeshRightCorner = rightCornerText.AddComponent<TextMeshPro>();
 		rightCornerText.GetComponent<RectTransform>().sizeDelta = new Vector2(nbRows * diameter, diameter);
 
 		textMeshRightCorner.alignment = textAlignmentRightCorner = TextAlignmentOptions.Center;
-		textMeshRightCorner.fontSize = textSizeRightCorner = 16;
+		textMeshRightCorner.fontSize = textSizeRightCorner = 0.1f;
 		textMeshRightCorner.color = textColorRightCorner = Color.black;
 		textMeshRightCorner.text = textRightCorner = "";
 		textRotationRightCorner = new Vector3(90f, 0f, 0f);
@@ -567,12 +565,12 @@ public class ExpanDialSticks : MonoBehaviour
 		leftCornerBackground.transform.LookAt(Vector3.down);
 		leftCornerBackground.transform.position = new Vector3(nbRows * (diameter + offset) + borderOffset/2, height/2, -(diameter + offset + borderOffset));
 		leftCornerText = Instantiate(leftCornerBackground);
-		leftCornerText.transform.position += new Vector3(0f, 1f, 0f);
+		leftCornerText.transform.position += new Vector3(0f, 0.001f, 0f);
 		leftCornerText.transform.localScale = new Vector3(1, 1, 1);
 		textMeshLeftCorner = leftCornerText.AddComponent<TextMeshPro>();
 		leftCornerText.GetComponent<RectTransform>().sizeDelta = new Vector2(nbRows * diameter, diameter);
 		textMeshLeftCorner.alignment = textAlignmentLeftCorner = TextAlignmentOptions.Center;
-		textMeshLeftCorner.fontSize = textSizeLeftCorner = 16;
+		textMeshLeftCorner.fontSize = textSizeLeftCorner = 0.1f;
 		textMeshLeftCorner.color = textColorLeftCorner = Color.black;
 		textMeshLeftCorner.text = textLeftCorner = "";
 		textRotationLeftCorner = new Vector3(90f, 0f, 0f);
@@ -712,6 +710,9 @@ public class ExpanDialSticks : MonoBehaviour
 									holdings[i * nbColumns + j] = modelMatrix[i, j].CurrentHolding ? 1 : 0;
 									durations[i * nbColumns + j] = 0f;
 
+									// Computing useful values
+									//float direction = modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition;
+									//float distance = Mathf.Abs(direction);
 									// handle proximity
 									if (nextProximity >= 1f) // PIN MUST STOP
 									{
@@ -719,7 +720,7 @@ public class ExpanDialSticks : MonoBehaviour
 										{
 											if (modelMatrix[i, j].CurrentPaused == 0) // PIN IS NOT ALREADY BEING PAUSED
 											{
-												Debug.Log("modelMatrix[" + i + "," + j + "] pause towards " + modelMatrix[i, j].TargetPosition + "!");
+												//Debug.Log("modelMatrix[" + i + "," + j + "] pause towards " + modelMatrix[i, j].TargetPosition + "!");
 												modelMatrix[i, j].CurrentPaused = modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition;
 												positions[i * nbColumns + j] = modelMatrix[i, j].CurrentPosition;
 												holdings[i * nbColumns + j] = 0;
@@ -743,12 +744,15 @@ public class ExpanDialSticks : MonoBehaviour
 												//float minShapeChangeDuration = 1f; // 20 pos per sec
 												//durations[i * nbColumns + j] = minShapeChangeDuration + (nextProximity * 3f);
 
+
+												float wantedSpeed = modelMatrix[i, j].StoredSpeed;
 												float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
-												float distance = Math.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition);
-												float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
+												float finalSpeed = Mathf.Min(wantedSpeed, safetySpeed);
+												float motionDuration = Mathf.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition) / finalSpeed;
+												float safetyDuration = Math.Max(motionDuration, 0.1f);
 												durations[i * nbColumns + j] = safetyDuration;
-												Debug.Log("modelMatrix[" + i + "," + j + "] unpause from " + modelMatrix[i, j].TargetPosition
-													+ " to " + modelMatrix[i, j].CurrentPosition + " in " + safetyDuration + "s!");
+											/*	Debug.Log("modelMatrix[" + i + "," + j + "] unpause from " + modelMatrix[i, j].TargetPosition
+													+ " to " + modelMatrix[i, j].CurrentPosition + " in " + safetyDuration + "s!");*/
 												safe = false;
 											}
 										}
@@ -758,13 +762,16 @@ public class ExpanDialSticks : MonoBehaviour
 											{
 												positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
 												holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
+
+												float wantedSpeed = modelMatrix[i, j].StoredSpeed;
 												float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
-												float distance = Math.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition);
-												float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
+												float finalSpeed = Mathf.Min(wantedSpeed, safetySpeed);
+												float motionDuration = Mathf.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition) / finalSpeed;
+												float safetyDuration = Math.Max(motionDuration, 0.1f);
 												durations[i * nbColumns + j] = safetyDuration;
 
-												Debug.Log("modelMatrix[" + i + "," + j + "] change speed from " + modelMatrix[i, j].TargetPosition
-													+ " to " + modelMatrix[i, j].CurrentPosition + " in " + safetyDuration  + "s!");
+												/*Debug.Log("modelMatrix[" + i + "," + j + "] change speed from " + modelMatrix[i, j].TargetPosition
+													+ " to " + modelMatrix[i, j].CurrentPosition + " in " + safetyDuration  + "s!");*/
 												//float minShapeChangeDuration = 1f; // 20 pos per sec
 												//durations[i * nbColumns + j] = minShapeChangeDuration + (nextProximity * 3f);
 												safe = false;
@@ -854,7 +861,7 @@ public class ExpanDialSticks : MonoBehaviour
 			Debug.LogException(e3, this);
 		}
 	}
-	public void setBottomBorderText(TextAlignmentOptions textAlignment, int textSize, Color textColor, string text, Vector3 textRotation){
+	public void setBottomBorderText(TextAlignmentOptions textAlignment, float textSize, Color textColor, string text, Vector3 textRotation){
 		this.textAlignmentBottom = textAlignment;
 		this.textSizeBottom = textSize;
 		this.textColorBottom = textColor;
@@ -862,7 +869,7 @@ public class ExpanDialSticks : MonoBehaviour
 		this.textRotationBottom = textRotation;
 	}
 
-	public void setRightBorderText(TextAlignmentOptions textAlignment, int textSize, Color textColor, string text, Vector3 textRotation){
+	public void setRightBorderText(TextAlignmentOptions textAlignment, float textSize, Color textColor, string text, Vector3 textRotation){
 		this.textAlignmentRight = textAlignment;
 		this.textSizeRight = textSize;
 		this.textColorRight = textColor;
@@ -870,7 +877,7 @@ public class ExpanDialSticks : MonoBehaviour
 		this.textRotationRight = textRotation;
 	}
 
-	public void setRightCornerText(TextAlignmentOptions textAlignment, int textSize, Color textColor, string text, Vector3 textRotation)
+	public void setRightCornerText(TextAlignmentOptions textAlignment, float textSize, Color textColor, string text, Vector3 textRotation)
 	{
 		this.textAlignmentRightCorner = textAlignment;
 		this.textSizeRightCorner = textSize;
@@ -879,7 +886,7 @@ public class ExpanDialSticks : MonoBehaviour
 		this.textRotationRightCorner = textRotation;
 	}
 
-	public void setLeftBorderText(TextAlignmentOptions textAlignment, int textSize, Color textColor, string text, Vector3 textRotation){
+	public void setLeftBorderText(TextAlignmentOptions textAlignment, float textSize, Color textColor, string text, Vector3 textRotation){
 		this.textAlignmentLeft = textAlignment;
 		this.textSizeLeft = textSize;
 		this.textColorLeft = textColor;
@@ -887,7 +894,7 @@ public class ExpanDialSticks : MonoBehaviour
 		this.textRotationLeft = textRotation;
 	}
 
-	public void setLeftCornerText(TextAlignmentOptions textAlignment, int textSize, Color textColor, string text, Vector3 textRotation)
+	public void setLeftCornerText(TextAlignmentOptions textAlignment, float textSize, Color textColor, string text, Vector3 textRotation)
 	{
 		this.textAlignmentLeftCorner = textAlignment;
 		this.textSizeLeftCorner = textSize;
@@ -936,7 +943,16 @@ public class ExpanDialSticks : MonoBehaviour
 			{
 				for(int j = 0; j < nbColumns; j++)
 				{
-					bool reaching = modelMatrix[i, j].TargetShapeChangeDuration > 0f &&  (modelMatrix[i, j].CurrentPosition != modelMatrix[i, j].TargetPosition);
+
+					float direction = modelMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition;
+					float distance = Mathf.Abs(direction);
+
+					bool reaching = modelMatrix[i, j].TargetShapeChangeDuration > 0f &&  distance > 0f;
+					if (reaching)
+					{
+						modelMatrix[i, j].StoredSpeed = distance / modelMatrix[i, j].TargetShapeChangeDuration;
+					}
+
 					modelMatrix[i, j].setShapeChangeCurrent(
 						modelMatrix[i, j].TargetAxisX,
 						modelMatrix[i, j].TargetAxisY,
@@ -964,21 +980,32 @@ public class ExpanDialSticks : MonoBehaviour
 			{
 				for(int j = 0; j < nbColumns; j++)
 				{
+					float direction = modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition;
+					float distance = Mathf.Abs(direction);
+					if (distance > 0f)
+					{
+						modelMatrix[i, j].StoredSpeed = distance / modelMatrix[i, j].TargetShapeChangeDuration;
+					}
+
+					modelMatrix[i, j].CurrentProximity = collisionMatrix[i, j].Proximity();
+
 					positions[i * nbColumns + j] = modelMatrix[i, j].TargetPosition;
 					holdings[i * nbColumns + j] = modelMatrix[i, j].TargetHolding ? 1 : 0;
-					modelMatrix[i, j].CurrentProximity = collisionMatrix[i, j].Proximity();
 					if (safeGuardOn)
 					{
+
 						if (modelMatrix[i, j].CurrentProximity < 1f)
 						{
-						float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
-						float distance = Math.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition);
-						float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
-						durations[i * nbColumns + j] = Math.Max(safetyDuration, modelMatrix[i, j].TargetShapeChangeDuration);
+							float wantedSpeed = modelMatrix[i, j].StoredSpeed;
+							float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
+							float finalSpeed = Mathf.Min(wantedSpeed, safetySpeed);
+							float motionDuration = distance / finalSpeed;
+							float safetyDuration = Math.Max(motionDuration, 0.1f);
+							durations[i * nbColumns + j] = Math.Max(safetyDuration, modelMatrix[i, j].TargetShapeChangeDuration);
 						} else {
-								Debug.Log("modelMatrix[" + i + "," + j + "] pause at start!");
-								modelMatrix[i, j].CurrentPaused = modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition;
-								Debug.Log("modelMatrix[i, j].CurrentPaused: " + modelMatrix[i, j].CurrentPaused);
+								//Debug.Log("modelMatrix[" + i + "," + j + "] pause at start!");
+								modelMatrix[i, j].CurrentPaused = (int)direction;
+								//Debug.Log("modelMatrix[i, j].CurrentPaused: " + modelMatrix[i, j].CurrentPaused);
 								durations[i * nbColumns + j] = 0f;
 						}
 					}
@@ -1031,15 +1058,25 @@ public class ExpanDialSticks : MonoBehaviour
 		{
 			for (int j = 0; j < nbColumns; j++)
 			{
-				modelMatrix[i, j].setProjectorChangeCurrent(
-					modelMatrix[i, j].TargetProjectorColor,
-					modelMatrix[i, j].TargetProjectorTexture,
-					modelMatrix[i, j].TargetProjectorOffset,
-					modelMatrix[i, j].TargetProjectorRotation,
-					modelMatrix[i, j].TargetProjectorSize,
-					modelMatrix[i, j].TargetProjectorChangeDuration
+				modelMatrix[i, j].setFrontProjectorChangeCurrent(
+					modelMatrix[i, j].TargetProjectorFrontColor,
+					modelMatrix[i, j].TargetProjectorFrontTexture,
+					modelMatrix[i, j].TargetProjectorFrontOffset,
+					modelMatrix[i, j].TargetProjectorFrontRotation,
+					modelMatrix[i, j].TargetProjectorFrontSize,
+					modelMatrix[i, j].TargetProjectorFrontChangeDuration
 				);
-				modelMatrix[i, j].TargetProjectorChangeDuration = 0f;
+				modelMatrix[i, j].TargetProjectorFrontChangeDuration = 0f;
+
+				modelMatrix[i, j].setBackProjectorChangeCurrent(
+					modelMatrix[i, j].TargetProjectorBackColor,
+					modelMatrix[i, j].TargetProjectorBackTexture,
+					modelMatrix[i, j].TargetProjectorBackOffset,
+					modelMatrix[i, j].TargetProjectorBackRotation,
+					modelMatrix[i, j].TargetProjectorBackSize,
+					modelMatrix[i, j].TargetProjectorBackChangeDuration
+				);
+				modelMatrix[i, j].TargetProjectorBackChangeDuration = 0f;
 			}
 		}
 		projectorChanging = true;
@@ -1113,6 +1150,11 @@ public class ExpanDialSticks : MonoBehaviour
 						{
 							if (modelMatrix[i, j].CurrentPaused == 0)
 							{
+								/*modelMatrix[i, j].StoredSpeed = Mathf.Abs((viewMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition) / viewMatrix[i, j].TargetShapeChangeDuration);
+								Debug.Log("[" + i + "," + j + "] viewMatrix.CurrentPosition: " + viewMatrix[i, j].CurrentPosition); 
+								Debug.Log("[" + i + "," + j + "] viewMatrix.TargetPosition: " + viewMatrix[i, j].TargetPosition);
+								Debug.Log("[" + i + "," + j + "] viewMatrix.TargetShapeChangeDuration: " + viewMatrix[i, j].TargetShapeChangeDuration);
+								Debug.Log("[" + i + "," + j + "] StoredSpeed: " + modelMatrix[i, j].StoredSpeed);*/
 								modelMatrix[i, j].setShapeChangeCurrent(
 									modelMatrix[i, j].CurrentAxisX,
 									modelMatrix[i, j].CurrentAxisY,
@@ -1138,9 +1180,12 @@ public class ExpanDialSticks : MonoBehaviour
 							if (modelMatrix[i, j].CurrentPaused != 0)
 							{
 
+								float wantedSpeed = modelMatrix[i, j].StoredSpeed;
+								//Debug.Log("[" + i + "," + j + "] wantedSpeed(1): " + modelMatrix[i, j].StoredSpeed);
 								float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
-								float distance = Math.Abs(modelMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition);
-								float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
+								float finalSpeed = Mathf.Min(wantedSpeed, safetySpeed);
+								float motionDuration = Mathf.Abs(modelMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition) / finalSpeed;
+								float safetyDuration = Math.Max(motionDuration, 0.1f);
 								modelMatrix[i, j].setShapeChangeCurrent(
 										modelMatrix[i, j].CurrentAxisX,
 										modelMatrix[i, j].CurrentAxisY,
@@ -1162,9 +1207,12 @@ public class ExpanDialSticks : MonoBehaviour
 						{
 							if (prevProximity != nextProximity)
 							{
+								float wantedSpeed = modelMatrix[i, j].StoredSpeed;
+								//Debug.Log("[" + i + "," + j + "] wantedSpeed(2): " + modelMatrix[i, j].StoredSpeed);
 								float safetySpeed = maxSpeed * (1f - modelMatrix[i, j].CurrentProximity); // 20 pos per sec max
-								float distance = Math.Abs(modelMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition);
-								float safetyDuration = Math.Max(distance / safetySpeed, 0.1f);
+								float finalSpeed = Mathf.Min(wantedSpeed, safetySpeed);
+								float motionDuration = Mathf.Abs(modelMatrix[i, j].TargetPosition - viewMatrix[i, j].CurrentPosition) / finalSpeed;
+								float safetyDuration = Math.Max(motionDuration, 0.1f);
 								modelMatrix[i, j].setShapeChangeCurrent(
 									modelMatrix[i, j].CurrentAxisX,
 									modelMatrix[i, j].CurrentAxisY,
@@ -1321,13 +1369,21 @@ public class ExpanDialSticks : MonoBehaviour
 			{
 				for (int j = 0; j < nbColumns; j++)
 				{
-					viewMatrix[i, j].setProjectorChangeTarget(
-						modelMatrix[i, j].CurrentProjectorColor,
-						modelMatrix[i, j].CurrentProjectorTexture,
-						modelMatrix[i, j].CurrentProjectorOffset,
-						modelMatrix[i, j].CurrentProjectorRotation,
-						modelMatrix[i, j].CurrentProjectorSize,
-						modelMatrix[i, j].CurrentProjectorChangeDuration
+					viewMatrix[i, j].setFrontProjectorChangeTarget(
+						modelMatrix[i, j].CurrentProjectorFrontColor,
+						modelMatrix[i, j].CurrentProjectorFrontTexture,
+						modelMatrix[i, j].CurrentProjectorFrontOffset,
+						modelMatrix[i, j].CurrentProjectorFrontRotation,
+						modelMatrix[i, j].CurrentProjectorFrontSize,
+						modelMatrix[i, j].CurrentProjectorFrontChangeDuration
+					);
+					viewMatrix[i, j].setBackProjectorChangeTarget(
+						modelMatrix[i, j].CurrentProjectorBackColor,
+						modelMatrix[i, j].CurrentProjectorBackTexture,
+						modelMatrix[i, j].CurrentProjectorBackOffset,
+						modelMatrix[i, j].CurrentProjectorBackRotation,
+						modelMatrix[i, j].CurrentProjectorBackSize,
+						modelMatrix[i, j].CurrentProjectorBackChangeDuration
 					);
 				}
 			}

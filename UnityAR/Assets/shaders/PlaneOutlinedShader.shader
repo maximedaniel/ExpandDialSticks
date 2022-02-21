@@ -1,6 +1,6 @@
 ﻿// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
 
-Shader "Outlined/SilhouetteShader" {
+Shader "Outlined/PlaneOutlineShader" {
 	Properties{
 		 _MainTex("Main Color", 2d) = "white" {}
 		 _Color("Main Color", Color) = (0.5,0.5,0.5,1)
@@ -111,7 +111,10 @@ Shader "Outlined/SilhouetteShader" {
 		Pass{
 			Name "BASE"
 			Cull back
-			Offset 0, 0
+
+			//Offset 0, -4880 // (2) Ok for System OVERLAY
+			//Offset -1000, -4532 // (1)
+			Offset 0, -10000 // (3) Ok for User OVERLAY
 			//Blend Zero One
 			Blend SrcAlpha OneMinusSrcAlpha
 		CGPROGRAM
