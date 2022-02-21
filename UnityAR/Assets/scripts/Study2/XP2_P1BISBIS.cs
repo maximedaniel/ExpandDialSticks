@@ -592,10 +592,10 @@ public class XP2_P1BISBIS : MonoBehaviour
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
 				//Projector
-				expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "default";
-				expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
-				expanDialSticks.modelMatrix[i, j].TargetProjectorSize = expanDialSticks.modelMatrix[i, j].Diameter / 3f;
-				expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "default";
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontRotation = 90f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontSize = expanDialSticks.modelMatrix[i, j].Diameter / 3f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontChangeDuration = 0.1f;
 				//Texture
 				expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
 				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = 0.1f;
@@ -707,17 +707,17 @@ public class XP2_P1BISBIS : MonoBehaviour
 				{
 					if (target.x == i && target.y == j)
 					{
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon0";
+						expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "icon0";
 					}
 					else
 					{
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon" + randomIcons.First();
+						expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "icon" + randomIcons.First();
 						randomIcons.RemoveAt(0);
 					}
 					// Projector
-					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = expanDialSticks.modelMatrix[i, j].Diameter / 3f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontRotation = 90f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontSize = expanDialSticks.modelMatrix[i, j].Diameter / 3f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontChangeDuration = 0.1f;
 				}
 			}
 			expanDialSticks.triggerProjectorChange();

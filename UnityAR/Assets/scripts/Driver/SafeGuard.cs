@@ -14,13 +14,17 @@ public class SafeGuard : MonoBehaviour
 
 	public ExpanDialSticks pins;
 	private const float warningZoneRadius = 0.06f;
-	private const float bodyOutlineWidth = 0.8f/100f;
-	private const float bodySecondOutlineWidth = 0.16f / 100f;
-	private const float pinOutlineWidth = 0.08f / 100f;
-	private const float pinSecondOutlineWidth = 0.016f / 100f;
+	private const float bodyOutlineWidth = 0.4f/100f;
+	private const float bodySecondOutlineWidth = 0.8f / 100f;
+	private const float pinOutlineWidth = 0.04f / 100f;
+	private const float pinSecondOutlineWidth = 0.08f / 100f;
 
 	private const float minStopDistance = 0.06f;
 	private const float maxStopDistance = 0.09f;
+
+	Gradient gradient;
+	GradientColorKey[] colorKey;
+	GradientAlphaKey[] alphaKey;
 
 
 	public Mesh _handMesh;
@@ -442,6 +446,31 @@ public class SafeGuard : MonoBehaviour
 		ColorUtility.TryParseHtmlString("#ffffff", out _middleDivergingColor);
 		ColorUtility.TryParseHtmlString("#b50021", out _rightDivergingColor);
 
+
+		gradient = new Gradient();
+
+		// Populate the color keys at the relative time 0 and 1 (0 and 100%)
+		colorKey = new GradientColorKey[3];
+		colorKey[0].color = Color.green;
+		colorKey[0].time = 0.0f;
+		colorKey[1].color = Color.yellow;
+		colorKey[1].time = 0.5f;
+		colorKey[2].color = Color.red;
+		colorKey[2].time = 1.0f;
+
+		// Populate the alpha  keys at relative time 0 and 1  (0 and 100%)
+		alphaKey = new GradientAlphaKey[3];
+		alphaKey[0].alpha = 1.0f;
+		alphaKey[0].time = 0.0f;
+		alphaKey[1].alpha = 1.0f;
+		alphaKey[1].time = 0.5f;
+		alphaKey[2].alpha = 1.0f;
+		alphaKey[2].time = 1.0f;
+
+
+		gradient.SetKeys(colorKey, alphaKey);
+
+
 		freeze = frozen = toDraw = false;
 
 
@@ -608,7 +637,7 @@ public class SafeGuard : MonoBehaviour
 			Vector3 handColliderPosition = currLeftHandCollider.transform.position;
 			//backgroundDistance = +(sc.radius * 2.0f + pins.height);
 			//handColliderPosition.y = backgroundDistance;
-			Vector3 handColliderScale = new Vector3(sc.radius * 2.0f, sc.radius * 2.0f, sc.radius * 2.0f);
+			Vector3 handColliderScale = new Vector3((sc.radius + MyCapsuleHand.STOP_RADIUS) * 2.0f, (sc.radius + MyCapsuleHand.STOP_RADIUS) * 2.0f, (sc.radius + MyCapsuleHand.STOP_RADIUS) * 2.0f);
 
 			// Save for shader
 			leftHandPos = handColliderPosition;
@@ -623,7 +652,7 @@ public class SafeGuard : MonoBehaviour
 			backwardArmColliderPosition.y = 0f;
 			Vector3 armColliderPosition = backwardArmColliderPosition + (forwardArmColliderPosition - backwardArmColliderPosition) / 2.0f;
 			Quaternion armColliderRotation = Quaternion.LookRotation(forwardArmColliderPosition - backwardArmColliderPosition) * Quaternion.AngleAxis(90, Vector3.right); ; // Quaternion.Euler(_forearmColliders[0].transform.rotation.eulerAngles.x, _forearmColliders[0].transform.rotation.eulerAngles.y, _forearmColliders[0].transform.rotation.eulerAngles.z);
-			Vector3 colliderScale = new Vector3(capsuleCollider1.radius * 2f, capsuleCollider1.height / 2.0f, capsuleCollider1.radius * 2f);
+			Vector3 colliderScale = new Vector3((capsuleCollider1.radius + MyCapsuleHand.STOP_RADIUS) * 2f, capsuleCollider1.height / 2.0f, (capsuleCollider1.radius + MyCapsuleHand.STOP_RADIUS) * 2f);
 			Vector3 frontToBackArm = Vector3.Normalize(backwardArmColliderPosition - forwardArmColliderPosition);
 			float distFrontArmOutOfHand = sc.radius - Vector3.Magnitude(handColliderPosition - forwardArmColliderPosition);
 
@@ -646,7 +675,7 @@ public class SafeGuard : MonoBehaviour
 			Vector3 handColliderPosition = currRightHandCollider.transform.position;
 			//backgroundDistance = +(sc.radius * 2.0f + pins.height);
 			//handColliderPosition.y = backgroundDistance;
-			Vector3 handColliderScale = new Vector3(sc.radius * 2.0f, sc.radius * 2.0f, sc.radius * 2.0f);
+			Vector3 handColliderScale = new Vector3((sc.radius + MyCapsuleHand.STOP_RADIUS) * 2.0f, (sc.radius + MyCapsuleHand.STOP_RADIUS) * 2.0f, (sc.radius + MyCapsuleHand.STOP_RADIUS) * 2.0f);
 
 			rightHandPos = handColliderPosition;
 			rightHandScale = handColliderScale;
@@ -662,7 +691,7 @@ public class SafeGuard : MonoBehaviour
 
 			Vector3 armColliderPosition = backwardArmColliderPosition + (forwardArmColliderPosition - backwardArmColliderPosition) / 2.0f;
 			Quaternion armColliderRotation = Quaternion.LookRotation(forwardArmColliderPosition - backwardArmColliderPosition) * Quaternion.AngleAxis(90, Vector3.right); ; // Quaternion.Euler(_forearmColliders[0].transform.rotation.eulerAngles.x, _forearmColliders[0].transform.rotation.eulerAngles.y, _forearmColliders[0].transform.rotation.eulerAngles.z);
-			Vector3 colliderScale = new Vector3(capsuleCollider1.radius * 2f, capsuleCollider1.height / 2.0f, capsuleCollider1.radius * 2f);
+			Vector3 colliderScale = new Vector3((capsuleCollider1.radius + MyCapsuleHand.STOP_RADIUS) * 2f, capsuleCollider1.height / 2.0f, (capsuleCollider1.radius + MyCapsuleHand.STOP_RADIUS) * 2f);
 			Vector3 frontToBackArm = Vector3.Normalize(backwardArmColliderPosition - forwardArmColliderPosition);
 			float distFrontArmOutOfHand = sc.radius - Vector3.Magnitude(handColliderPosition - forwardArmColliderPosition);
 			
@@ -816,7 +845,7 @@ public class SafeGuard : MonoBehaviour
 			);
 
 			//Color dotColor = (displacement > 0) ? Color.Lerp(_middleDivergingColor, _rightDivergingColor, displacement / 40f) : Color.Lerp(_middleDivergingColor, _leftDivergingColor, -displacement / 40f);
-			Color dotColor = new Color(1f, 0f, 0f, distanceGamma);
+			Color dotColor = gradient.Evaluate(distanceGamma); // new Color(1f, 0f, 0f, distanceGamma);
 
 			float ZDepth = (row * pins.NbColumns + column)/1000f;
 			Vector3 pinPos = new Vector3(pin.position.x, -pins.height * 4f, pin.position.z);
@@ -832,7 +861,7 @@ public class SafeGuard : MonoBehaviour
 			_pinSecondOutlineWidths[_pinIndex] =  pinSecondOutlineWidth;
 			_pinIndex++;
 
-			_dotColors[_dotIndex] = dotColor; //(feedbackMode != FeedbackMode.State) ? dotColor : new Color(1f, 1f, 1f, 0f);//Color.white;
+			_dotColors[_dotIndex] = dotColor; // new Color(1f, 0f, 0f, (distanceGamma <= 1f) ? 0f : 1f); //(feedbackMode != FeedbackMode.State) ? dotColor : new Color(1f, 1f, 1f, 0f);//Color.white;
 			_dotOutlineColors[_dotIndex] = new Vector4(1f, 1f, 1f, distanceGamma);
 			_dotOutlineWidths[_dotIndex] = Mathf.Lerp(minOutlineWidth, maxOutlineWidth, scaleDistanceCoeff);
 			_dotSecondOutlineColors[_dotIndex] = new Vector4(0f, 0f, 0f, distanceGamma);
@@ -875,7 +904,7 @@ public class SafeGuard : MonoBehaviour
 			int directionAmount = Mathf.RoundToInt(Mathf.Lerp(0f, 30f, displacementPercent));
 			Graphics.CopyTexture(_shapeTextures[directionAmount], 0, 0, _iconTextureArray, _planeIndex, 0); // i is the index of the texture
 			_iconTextureIndexes[_planeIndex] = _planeIndex;
-			_planeColors[_planeIndex] = new Color(1f, 1f, 1f, distanceGamma);//dotColor;
+			_planeColors[_planeIndex] = new Color(1f, 1f, 1f, (distanceGamma <= 1f)?0f:1f);//dotColor;
 			_planeOutlineColors[_planeIndex] = Vector4.zero;
 			_planeOutlineWidths[_planeIndex] = 0;
 			_planeSecondOutlineColors[_planeIndex] = Vector4.zero;
@@ -899,6 +928,10 @@ public class SafeGuard : MonoBehaviour
 	}
 	private void GenerateUserOverlay()
 	{
+		Color bodyColor = gradient.Evaluate(bodyGamma); // new Color(1f, 0f, 0f, distanceGamma);
+		float bodyAlpha = (bodyGamma > 0f) ? 1f : 0f; // new Color(1f, 0f, 0f, distanceGamma);
+		bodyColor.a = bodyAlpha;
+
 		// Generate Left Forearm Zone
 		if (currLeftHandCollider != null && currLeftArmCollider != null)
 		{
@@ -916,9 +949,9 @@ public class SafeGuard : MonoBehaviour
 			Vector3 foreLeftHandPos = new Vector3(leftHandPos.x, foregroundDistance, leftHandPos.z);
 			_foreHandMatrices[_foreHandIndex] = Matrix4x4.TRS(foreLeftHandPos, Quaternion.identity, leftHandScale);
 			_foreHandColors[_foreHandIndex] = new Vector4(1f, 1f, 1f, 0f); //new Vector4(1f, 1f, 1f, bodyGamma);
-			_foreHandOutlineColors[_foreHandIndex] = new Vector4(1f, 0f, 0f, bodyGamma);
+			_foreHandOutlineColors[_foreHandIndex] = bodyColor;// new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreHandOutlineWidths[_foreHandIndex] = bodyOutlineWidth;
-			_foreHandSecondOutlineColors[_foreHandIndex] = new Vector4(1f, 0f, 0f, bodyGamma);
+			_foreHandSecondOutlineColors[_foreHandIndex] = bodyColor;//new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreHandSecondOutlineWidths[_foreHandIndex] = bodySecondOutlineWidth;
 			_foreHandIndex++;
 
@@ -945,9 +978,9 @@ public class SafeGuard : MonoBehaviour
 				leftArmScale
 				);
 			_foreArmColors[_foreArmIndex] = new Vector4(1f, 1f, 1f, 0f); //new Vector4(1f, 1f, 1f, bodyGamma);
-			_foreArmOutlineColors[_foreArmIndex] = new Vector4(1f, 0f, 0f, bodyGamma);
+			_foreArmOutlineColors[_foreArmIndex] = bodyColor;// new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreArmOutlineWidths[_foreArmIndex] = bodyOutlineWidth;
-			_foreArmSecondOutlineColors[_foreArmIndex] = new Vector4(1f, 0f, 0f, bodyGamma);
+			_foreArmSecondOutlineColors[_foreArmIndex] = bodyColor;// new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreArmSecondOutlineWidths[_foreArmIndex] = bodySecondOutlineWidth;
 			_foreArmIndex++;
 		}
@@ -968,9 +1001,9 @@ public class SafeGuard : MonoBehaviour
 			Vector3 foreRightHandPos = new Vector3(rightHandPos.x, foregroundDistance, rightHandPos.z);
 			_foreHandMatrices[_foreHandIndex] = Matrix4x4.TRS(foreRightHandPos, Quaternion.identity, rightHandScale);
 			_foreHandColors[_foreHandIndex] = new Vector4(1f, 1f, 1f, 0f); //new Vector4(1f, 1f, 1f, bodyGamma);
-			_foreHandOutlineColors[_foreHandIndex] = new Vector4(1f, 0f, 0f, bodyGamma);
+			_foreHandOutlineColors[_foreHandIndex] = bodyColor;// new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreHandOutlineWidths[_foreHandIndex] = bodyOutlineWidth;
-			_foreHandSecondOutlineColors[_foreHandIndex] = new Vector4(1f, 0f, 0f, bodyGamma);
+			_foreHandSecondOutlineColors[_foreHandIndex] = bodyColor;// new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreHandSecondOutlineWidths[_foreHandIndex] = bodySecondOutlineWidth;
 			_foreHandIndex++;
 
@@ -997,9 +1030,9 @@ public class SafeGuard : MonoBehaviour
 				rightArmScale
 				);
 			_foreArmColors[_foreArmIndex] = new Vector4(1f, 1f, 1f, 0f); //new Vector4(1f, 1f, 1f, bodyGamma);
-			_foreArmOutlineColors[_foreArmIndex] = new Vector4(1f, 0f, 0f, bodyGamma);
+			_foreArmOutlineColors[_foreArmIndex] = bodyColor;// new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreArmOutlineWidths[_foreArmIndex] = bodyOutlineWidth;
-			_foreArmSecondOutlineColors[_foreArmIndex] = new Vector4(1f, 0f, 0f, bodyGamma);
+			_foreArmSecondOutlineColors[_foreArmIndex] = bodyColor;// new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreArmSecondOutlineWidths[_foreArmIndex] = bodySecondOutlineWidth;
 			_foreArmIndex++;
 		}
@@ -1034,7 +1067,7 @@ public class SafeGuard : MonoBehaviour
 			);
 
 			//Color dotColor = (displacement > 0) ? Color.Lerp(_middleDivergingColor, _rightDivergingColor, displacement / 40f) : Color.Lerp(_middleDivergingColor, _leftDivergingColor, -displacement / 40f);
-			Color dotColor = new Color(1f, 0f, 0f, distanceGamma);
+			Color dotColor = gradient.Evaluate(distanceGamma); // new Color(1f, 0f, 0f, distanceGamma);
 			float safetyDiameter = pins.diameter + MyCapsuleHand.STOP_RADIUS * 2f;
 			float safetyRadius = safetyDiameter / 2.0f;
 
@@ -1080,7 +1113,7 @@ public class SafeGuard : MonoBehaviour
 			int directionAmount = Mathf.RoundToInt(Mathf.Lerp(0f, 30f, displacementPercent));
 			Graphics.CopyTexture(_shapeTextures[directionAmount], 0, 0, _iconTextureArray, _planeIndex, 0); // i is the index of the texture
 			_iconTextureIndexes[_planeIndex] = _planeIndex;
-			_planeColors[_planeIndex] = new Color(1f, 1f, 1f, distanceGamma);//dotColor;
+			_planeColors[_planeIndex] = new Color(1f, 1f, 1f, (distanceGamma <1f)?0f:1f);//dotColor;
 			_planeOutlineColors[_planeIndex] = Vector4.zero;
 			_planeOutlineWidths[_planeIndex] = 0;
 			_planeSecondOutlineColors[_planeIndex] = Vector4.zero;
@@ -1160,14 +1193,14 @@ public class SafeGuard : MonoBehaviour
 			if (pins.leftHand != null && pins.leftHand.IsActive())
 			{
 
-				currLeftHandCollider = pins.leftHand.GetHandCollider();
-				currLeftArmCollider =  pins.leftHand.GetArmCollider();
+				currLeftHandCollider = pins.leftHand.GetHandColliderAt(0);
+				currLeftArmCollider =  pins.leftHand.GetArmColliderAt(0);
 			}
 			if (pins.rightHand != null && pins.rightHand.IsActive())
 			{
 
-				currRightHandCollider = pins.rightHand.GetHandCollider();
-				currRightArmCollider = pins.rightHand.GetArmCollider();
+				currRightHandCollider = pins.rightHand.GetHandColliderAt(0);
+				currRightArmCollider = pins.rightHand.GetArmColliderAt(0);
 			}
 		}
 		FetchUserBody();
@@ -1191,7 +1224,7 @@ public class SafeGuard : MonoBehaviour
 
 					if (distanceGamma > 0f)
 					{
-						float finalGamma = (distanceGamma < 1f) ? 0f: 1f; // (distanceGamma < 1f) ? 0.6f : distanceGamma; 
+						float finalGamma = distanceGamma;// (distanceGamma < 1f) ? 0f: 1f; // (distanceGamma < 1f) ? 0.6f : distanceGamma; 
 						dynamicFeedbackMaxGamma = Mathf.Max(finalGamma, dynamicFeedbackMaxGamma);
 						//Debug.Log(row + " " + column + " finalGamma:" + finalGamma);
 						Vector3 nextUnsafeTransition = new Vector3(row, column, finalGamma);

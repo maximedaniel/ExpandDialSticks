@@ -250,14 +250,14 @@ namespace Leap.Unity {
             //return (_handColliders != null && _handColliders[0].GetComponent<SphereCollider>().enabled);
         }
 
-        public GameObject GetHandCollider()
+        public GameObject GetHandColliderAt(int index)
         {
-            return _handColliders[0];
+            return _handColliders[index];
         }
 
-        public GameObject GetArmCollider()
+        public GameObject GetArmColliderAt(int index)
         {
-            return _forearmColliders[0];
+            return _forearmColliders[index];
         }
 
         public override void SetLeapHand(Hand hand)

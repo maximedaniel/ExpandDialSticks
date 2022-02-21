@@ -213,11 +213,11 @@ public class Test : MonoBehaviour
 				{
 					expanDialSticks.modelMatrix[i, j].TargetColor = Color.red;
 					expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = 0.1f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "cross-reverse";
-					expanDialSticks.modelMatrix[i, j].TargetProjectorColor = Color.white;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 0.02f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "cross-reverse";
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontColor = Color.white;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontRotation = 90f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontSize = 0.02f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontChangeDuration = 0.1f;
 				}
 			}
 			expanDialSticks.triggerProjectorChange();

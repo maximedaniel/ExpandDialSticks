@@ -725,14 +725,14 @@ public class OldSafeGuard : MonoBehaviour
 			if (pins.leftHand != null && pins.leftHand.IsActive())
 			{
 
-				currLeftHandCollider = pins.leftHand.GetHandCollider();
-				currLeftArmCollider = pins.leftHand.GetArmCollider();
+				currLeftHandCollider = pins.leftHand.GetHandColliderAt(0);
+				currLeftArmCollider = pins.leftHand.GetArmColliderAt(0);
 			}
 			if (pins.rightHand != null && pins.rightHand.IsActive())
 			{
 
-				currRightHandCollider = pins.rightHand.GetHandCollider();
-				currRightArmCollider = pins.rightHand.GetArmCollider();
+				currRightHandCollider = pins.rightHand.GetHandColliderAt(0);
+				currRightArmCollider = pins.rightHand.GetArmColliderAt(0);
 			}
 		}
 		// Generate Left Forearm Zone

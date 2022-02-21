@@ -256,11 +256,11 @@ public class XP1_P2_BIS : MonoBehaviour
 				expanDialSticks.modelMatrix[i, j].TargetPlaneTexture = "default";
 				expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = currentRotation;
 
-				expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "projector";
-				expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 0f;
-				expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 0f;
-				expanDialSticks.modelMatrix[i, j].TargetProjectorColor = Color.white;
-				expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = duration;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "projector";
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontRotation = 0f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontSize = 0f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontColor = Color.white;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontChangeDuration = duration;
 
 				expanDialSticks.modelMatrix[i, j].TargetColor = Color.black;
 				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
@@ -352,10 +352,10 @@ public class XP1_P2_BIS : MonoBehaviour
 					expanDialSticks.modelMatrix[i, j].TargetPlaneColor = Color.green;
 					expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = currentRotation;
 
-					expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "trackerPoint";
-					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 0f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorColor = Color.red;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "trackerPoint";
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontRotation = 0f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontSize = 2f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontColor = Color.red;
 				}
 
 				else
@@ -365,14 +365,14 @@ public class XP1_P2_BIS : MonoBehaviour
 					expanDialSticks.modelMatrix[i, j].TargetPlaneColor = Color.black;
 					expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = currentRotation;
 
-					expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "projector";
-					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 0f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 0f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorColor = Color.white;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "projector";
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontRotation = 0f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontSize = 0f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontColor = Color.white;
 				}
 
 				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
-				expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = duration;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontChangeDuration = duration;
 			}
 		}
 		string participantNumber = "<pos=0%><b>P" + numeroParticipant + "</b>";

@@ -160,7 +160,7 @@ public class ExpanDialSticks : MonoBehaviour
 	public float EVENT_INTERVAL = 0.25f; // 0.2f;
 	public const int nbColumns = 6;
 	public const int nbRows = 5;
-	float LeapMotionDistanceFromMatrix = 0.53f;
+	float LeapMotionDistanceFromMatrix = 0.57f;
 	float SARCameraDistanceFromMatrix = 0.7f;
 	private const float maxSpeed = 20f; // 40f; 20f; 13.33f; // pos/seconds 1s, 2s, 3s
 
@@ -1058,15 +1058,25 @@ public class ExpanDialSticks : MonoBehaviour
 		{
 			for (int j = 0; j < nbColumns; j++)
 			{
-				modelMatrix[i, j].setProjectorChangeCurrent(
-					modelMatrix[i, j].TargetProjectorColor,
-					modelMatrix[i, j].TargetProjectorTexture,
-					modelMatrix[i, j].TargetProjectorOffset,
-					modelMatrix[i, j].TargetProjectorRotation,
-					modelMatrix[i, j].TargetProjectorSize,
-					modelMatrix[i, j].TargetProjectorChangeDuration
+				modelMatrix[i, j].setFrontProjectorChangeCurrent(
+					modelMatrix[i, j].TargetProjectorFrontColor,
+					modelMatrix[i, j].TargetProjectorFrontTexture,
+					modelMatrix[i, j].TargetProjectorFrontOffset,
+					modelMatrix[i, j].TargetProjectorFrontRotation,
+					modelMatrix[i, j].TargetProjectorFrontSize,
+					modelMatrix[i, j].TargetProjectorFrontChangeDuration
 				);
-				modelMatrix[i, j].TargetProjectorChangeDuration = 0f;
+				modelMatrix[i, j].TargetProjectorFrontChangeDuration = 0f;
+
+				modelMatrix[i, j].setBackProjectorChangeCurrent(
+					modelMatrix[i, j].TargetProjectorBackColor,
+					modelMatrix[i, j].TargetProjectorBackTexture,
+					modelMatrix[i, j].TargetProjectorBackOffset,
+					modelMatrix[i, j].TargetProjectorBackRotation,
+					modelMatrix[i, j].TargetProjectorBackSize,
+					modelMatrix[i, j].TargetProjectorBackChangeDuration
+				);
+				modelMatrix[i, j].TargetProjectorBackChangeDuration = 0f;
 			}
 		}
 		projectorChanging = true;
@@ -1359,13 +1369,21 @@ public class ExpanDialSticks : MonoBehaviour
 			{
 				for (int j = 0; j < nbColumns; j++)
 				{
-					viewMatrix[i, j].setProjectorChangeTarget(
-						modelMatrix[i, j].CurrentProjectorColor,
-						modelMatrix[i, j].CurrentProjectorTexture,
-						modelMatrix[i, j].CurrentProjectorOffset,
-						modelMatrix[i, j].CurrentProjectorRotation,
-						modelMatrix[i, j].CurrentProjectorSize,
-						modelMatrix[i, j].CurrentProjectorChangeDuration
+					viewMatrix[i, j].setFrontProjectorChangeTarget(
+						modelMatrix[i, j].CurrentProjectorFrontColor,
+						modelMatrix[i, j].CurrentProjectorFrontTexture,
+						modelMatrix[i, j].CurrentProjectorFrontOffset,
+						modelMatrix[i, j].CurrentProjectorFrontRotation,
+						modelMatrix[i, j].CurrentProjectorFrontSize,
+						modelMatrix[i, j].CurrentProjectorFrontChangeDuration
+					);
+					viewMatrix[i, j].setBackProjectorChangeTarget(
+						modelMatrix[i, j].CurrentProjectorBackColor,
+						modelMatrix[i, j].CurrentProjectorBackTexture,
+						modelMatrix[i, j].CurrentProjectorBackOffset,
+						modelMatrix[i, j].CurrentProjectorBackRotation,
+						modelMatrix[i, j].CurrentProjectorBackSize,
+						modelMatrix[i, j].CurrentProjectorBackChangeDuration
 					);
 				}
 			}

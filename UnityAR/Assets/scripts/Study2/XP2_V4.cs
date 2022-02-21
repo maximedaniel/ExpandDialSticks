@@ -15,7 +15,7 @@ using Leap.Unity;
 using Random = UnityEngine.Random;
 using System.Linq;
 
-public class XP2_P1 : MonoBehaviour
+public class XP2_V4 : MonoBehaviour
 {
 
 	// ExpanDialSticks Core
@@ -30,6 +30,7 @@ public class XP2_P1 : MonoBehaviour
 	private bool connected;
 
 	private const float LOG_INTERVAL = 0.2f; // 0.2f;
+	private float DISTRACTOR_INTERVAL = 0.5f; // 0.2f;
 	private const float COMPLETION_INTERVAL = 0.5f; // 0.2f;
 	private float currTime;
 	private float prevTime;
@@ -41,7 +42,8 @@ public class XP2_P1 : MonoBehaviour
 	private const int resetPos = 0;
 	private const int minPos = 0;
 	private const int maxPos = 20;
-	private const int targetPos = 30;
+	private const int targetPos = 40;
+	private const int distractorPos = 40;
 	private const float shortShapeChangeDuration = 2f;
 	private const float longShapeChangeDuration = 4f;
 	private float shapeChangeWaitFor = 3f;
@@ -81,7 +83,7 @@ public class XP2_P1 : MonoBehaviour
 	private const sbyte gaugeHeight = 20;
 	private float aiguilleRotation = 90f;
 	private float cadranRotation = 90f;
-	private float speedRotation = 1f;
+	private float speedRotation = 10f;
 
 	private float directionTime = 0f;
 	private float directionDuration = 3f;
@@ -122,25 +124,18 @@ public class XP2_P1 : MonoBehaviour
 
 
 
-	private List<List<Vector2Int>> distractorsList = new List<List<Vector2Int>>();
-	private int currDistractorIndex;
-	private List<Vector2Int> currDistractors;
-
 	public enum TaskMode { SC_UNDER, SC_BETWEEN, SC_AROUND };
 	private TaskMode currTaskMode;
 
 	private List<Vector2Int> candidates = new List<Vector2Int>();
 
-	List<Tuple<Vector2Int, Vector2Int>> targetPairs = new List<Tuple<Vector2Int, Vector2Int>>();
-	private int currTargetPairIndex;
-	private Tuple<Vector2Int, Vector2Int> currTargetPair;
-	private int totalTargetPairs;
+	List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>> trials = new List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>>();
+	private int currTrialIndex;
+	private Tuple<Vector2Int, Vector2Int, List<Vector2Int>> currTrial;
+	private int totalTrials;
 
 	private Vector2Int prevSelectPosition;
 	private Vector2Int currSelectPosition;
-
-	private int currTrial = 0;
-	public int nbTrials = 5;
 
 	void Start()
 	{
@@ -157,14 +152,10 @@ public class XP2_P1 : MonoBehaviour
 		currOverlayMode = ExpanDialSticks.SafetyOverlayMode.User;
 		currTaskMode = TaskMode.SC_AROUND;
 		candidates = new List<Vector2Int>();
-		targetPairs = new List<Tuple<Vector2Int, Vector2Int>>();
-		currTargetPairIndex = -1;
-		currTargetPair = new Tuple<Vector2Int, Vector2Int>(new Vector2Int(-1, -1), new Vector2Int(-1, -1));
-		distractorsList = new List< List < Vector2Int >> ();
-		currDistractorIndex = -1;
-		currDistractors = new List<Vector2Int>();
+		trials = new List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>>();
+		currTrialIndex = -1;
 		prevSelectPosition = currSelectPosition = new Vector2Int(-1, -1);
-		DELTAS = new List<Vector2Int>() {LEFT, LEFT_UP, UP, RIGHT_UP, RIGHT, RIGHT_DOWN, DOWN, LEFT_DOWN};
+		DELTAS = new List<Vector2Int>() { LEFT, LEFT_UP, UP, RIGHT_UP, RIGHT, RIGHT_DOWN, DOWN, LEFT_DOWN };
 		//GenerateTrials();
 		MetricsActive = false;
 		targetAroundIsSelected = false;
@@ -179,239 +170,230 @@ public class XP2_P1 : MonoBehaviour
 	}
 	public void GenerateTrials()
 	{
-		targetPairs = new List<Tuple<Vector2Int, Vector2Int>>();
-		distractorsList = new List<List<Vector2Int>>();
-		switch (currTaskMode)
-		{
-			case TaskMode.SC_AROUND:
-				List<Vector2Int> targetCandidates = new List<Vector2Int> { new Vector2Int(1, 1), new Vector2Int(1, 4), new Vector2Int(3, 1), new Vector2Int(3, 4) };
-				for (int i = 0; i < targetCandidates.Count(); i++)
+		trials = new List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>>();
+		// LEFT SIDE, DENSITY 1
+		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(4, 1), new Vector2Int(0, 1),new List<Vector2Int>
 				{
-					Vector2Int firstTarget = targetCandidates[i];
-					for (int j = 0; j < targetCandidates.Count(); j++)
-					{
-						Vector2Int secondTarget = targetCandidates[j];
-						if (i != j)
-						{
-							targetPairs.Add(new Tuple<Vector2Int, Vector2Int>(firstTarget, secondTarget));
-							distractorsList.Add(
-								new List<Vector2Int>
-								{
-										secondTarget + LEFT,
-										secondTarget + LEFT_UP,
-										secondTarget + UP,
-										secondTarget  + RIGHT_UP,
-										secondTarget + RIGHT,
-										secondTarget + RIGHT_DOWN,
-										secondTarget + DOWN,
-										secondTarget + LEFT_DOWN
-								}
-							);
-						}
-					}
+								new Vector2Int(0,0),
+								new Vector2Int(1,2),
+								new Vector2Int(2,0),
+								new Vector2Int(3,2),
+								new Vector2Int(4,0)
 				}
-				break;
-			case TaskMode.SC_UNDER:
-				targetCandidates = new List<Vector2Int> { new Vector2Int(1, 1), new Vector2Int(1, 4), new Vector2Int(3, 1), new Vector2Int(3, 4) };
-				targetPairs = new List<Tuple<Vector2Int, Vector2Int>>();
-				for (int i = 0; i < targetCandidates.Count(); i++)
+			));
+
+
+		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(4, 1), new Vector2Int(0, 1), new List<Vector2Int>
 				{
-					Vector2Int firstTarget = targetCandidates[i];
-					for (int j = 0; j < targetCandidates.Count(); j++)
-					{
-						Vector2Int secondTarget = targetCandidates[j];
-						if (i != j)
-						{
-							targetPairs.Add(new Tuple<Vector2Int, Vector2Int>(firstTarget, secondTarget));
-							distractorsList.Add(
-								new List<Vector2Int>
-								{
-										firstTarget + LEFT,
-										firstTarget + LEFT_UP,
-										firstTarget + UP,
-										firstTarget  + RIGHT_UP,
-										firstTarget + RIGHT,
-										firstTarget + RIGHT_DOWN,
-										firstTarget + DOWN,
-										firstTarget + LEFT_DOWN
-								}
-							);
-						}
-					}
+								new Vector2Int(0,2),
+								new Vector2Int(1,0),
+								new Vector2Int(2,2),
+								new Vector2Int(3,0),
+								new Vector2Int(4,2)
 				}
-				break;
-			case TaskMode.SC_BETWEEN:
-				targetPairs = new List<Tuple<Vector2Int, Vector2Int>>();
-				// TOP_LEFT -> BOT_LEFT
-				targetPairs.Add(new Tuple<Vector2Int, Vector2Int>(new Vector2Int(0,1), new Vector2Int(4, 1)));
-				distractorsList.Add(
-								new List<Vector2Int>
-								{
-										new Vector2Int(2,1) + LEFT,
-										new Vector2Int(2,1) + LEFT_UP,
-										new Vector2Int(2,1) + UP,
-										new Vector2Int(2,1)  + RIGHT_UP,
-										new Vector2Int(2,1) + RIGHT,
-										new Vector2Int(2,1) + RIGHT_DOWN,
-										new Vector2Int(2,1) + DOWN,
-										new Vector2Int(2,1) + LEFT_DOWN
-								}
-							);
-				// BOT_LEFT -> TOP_LEFT
-				targetPairs.Add(new Tuple<Vector2Int, Vector2Int>(new Vector2Int(4, 1), new Vector2Int(0, 1)));
-				distractorsList.Add(distractorsList.Last());
-
-				// TOP_RIGHT -> BOT_RIGHT
-				targetPairs.Add(new Tuple<Vector2Int, Vector2Int>(new Vector2Int(0, 4), new Vector2Int(4, 4)));
-				distractorsList.Add(
-								new List<Vector2Int>
-								{
-										new Vector2Int(2,4) + LEFT,
-										new Vector2Int(2,4) + LEFT_UP,
-										new Vector2Int(2,4) + UP,
-										new Vector2Int(2,4)  + RIGHT_UP,
-										new Vector2Int(2,4) + RIGHT,
-										new Vector2Int(2,4) + RIGHT_DOWN,
-										new Vector2Int(2,4) + DOWN,
-										new Vector2Int(2,4) + LEFT_DOWN
-								}
-							);
-				// BOT_RIGHT -> TOP_RIGHT
-				targetPairs.Add(new Tuple<Vector2Int, Vector2Int>(new Vector2Int(4, 4), new Vector2Int(0, 4)));
-				distractorsList.Add(distractorsList.Last());
+			));
 
 
-
-				// TOP_LEFT -> TOP_RIGHT
-				targetPairs.Add(new Tuple<Vector2Int, Vector2Int>(new Vector2Int(1, 0), new Vector2Int(1, 4)));
-				distractorsList.Add(
-								new List<Vector2Int>
-								{
-										new Vector2Int(1,2) + LEFT,
-										new Vector2Int(1,2) + LEFT_UP,
-										new Vector2Int(1,2) + UP,
-										new Vector2Int(1,2)  + RIGHT_UP,
-										new Vector2Int(1,2) + RIGHT,
-										new Vector2Int(1,2) + RIGHT_DOWN,
-										new Vector2Int(1,2) + DOWN,
-										new Vector2Int(1,2) + LEFT_DOWN
-								}
-							);
-				// TOP_RIGHT -> TOP_LEFT
-				targetPairs.Add(new Tuple<Vector2Int, Vector2Int>(new Vector2Int(1, 4), new Vector2Int(1, 0)));
-				distractorsList.Add(distractorsList.Last());
-
-				// BOT_LEFT -> BOT_RIGHT
-				targetPairs.Add(new Tuple<Vector2Int, Vector2Int>(new Vector2Int(3, 0), new Vector2Int(3, 4)));
-				distractorsList.Add(
-								new List<Vector2Int>
-								{
-										new Vector2Int(3,2) + LEFT,
-										new Vector2Int(3,2) + LEFT_UP,
-										new Vector2Int(3,2) + UP,
-										new Vector2Int(3,2)  + RIGHT_UP,
-										new Vector2Int(3,2) + RIGHT,
-										new Vector2Int(3,2) + RIGHT_DOWN,
-										new Vector2Int(3,2) + DOWN,
-										new Vector2Int(3,2) + LEFT_DOWN
-								}
-							);
-				// BOT_RIGHT -> BOT_LEFT
-				targetPairs.Add(new Tuple<Vector2Int, Vector2Int>(new Vector2Int(3, 4), new Vector2Int(3, 0)));
-				distractorsList.Add(distractorsList.Last());
-
-				// TOP_LEFT -> BOT_RIGHT
-				targetPairs.Add(new Tuple<Vector2Int, Vector2Int>(new Vector2Int(0, 1), new Vector2Int(4, 5)));
-				distractorsList.Add(
-								new List<Vector2Int>
-								{
-										new Vector2Int(2,3) + LEFT,
-										new Vector2Int(2,3) + LEFT_UP,
-										new Vector2Int(2,3) + UP,
-										new Vector2Int(2,3)  + RIGHT_UP,
-										new Vector2Int(2,3) + RIGHT,
-										new Vector2Int(2,3) + RIGHT_DOWN,
-										new Vector2Int(2,3) + DOWN,
-										new Vector2Int(2,3) + LEFT_DOWN
-								}
-							);
-				// BOT_RIGHT -> BOT_LEFT
-				targetPairs.Add(new Tuple<Vector2Int, Vector2Int>(new Vector2Int(4, 5), new Vector2Int(0, 1)));
-				distractorsList.Add(distractorsList.Last());
-
-				// TOP_RIGHT -> BOT_LEFT
-				targetPairs.Add(new Tuple<Vector2Int, Vector2Int>(new Vector2Int(0, 4), new Vector2Int(4, 0)));
-				distractorsList.Add(
-								new List<Vector2Int>
-								{
-										new Vector2Int(2,2) + LEFT,
-										new Vector2Int(2,2) + LEFT_UP,
-										new Vector2Int(2,2) + UP,
-										new Vector2Int(2,2)  + RIGHT_UP,
-										new Vector2Int(2,2) + RIGHT,
-										new Vector2Int(2,2) + RIGHT_DOWN,
-										new Vector2Int(2,2) + DOWN,
-										new Vector2Int(2,2) + LEFT_DOWN
-								}
-							);
-				// BOT_LEFT -> TOP_RIGHT
-				targetPairs.Add(new Tuple<Vector2Int, Vector2Int>(new Vector2Int(4, 0), new Vector2Int(0, 4)));
-				distractorsList.Add(distractorsList.Last());
-				break;
-			default:
-				break;
-		}
-
-		totalTargetPairs = targetPairs.Count();
-		/*for (int i = 1; i < 2; i++)
-		{
-			for (int j = 1; j < expanDialSticks.NbColumns - 1; j++)
-			{
-				candidates.Add(new Vector2Int(i, j));
-			}
-		}*/
-
-		/*for(int i = 0; i < nbPins.Length; i++)
-		{
-			int nbPin = nbPins[i];
-			for (int j = 0; j < nbTrials; j++)
-			{
-				ListExtension.Shuffle(DELTAS);
-				distractors.Add(DELTAS.GetRange(0, nbPin));
-			}
-		}*/
-
-		/*distractors.Add(new List<Vector2Int> { UP, RIGHT, DOWN });
-		distractors.Add(new List<Vector2Int> { RIGHT, DOWN, LEFT });
-		distractors.Add(new List<Vector2Int> { DOWN, LEFT, UP });
-
-		distractors.Add(new List<Vector2Int> { LEFT_UP, RIGHT_UP, RIGHT_DOWN });
-		distractors.Add(new List<Vector2Int> { RIGHT_UP, RIGHT_DOWN, LEFT_DOWN });
-		distractors.Add(new List<Vector2Int> { RIGHT_DOWN, LEFT_DOWN, LEFT_UP });
-		distractors.Add(new List<Vector2Int> { LEFT_DOWN, LEFT_UP, RIGHT_UP });
-
-		distractors.Add(new List<Vector2Int> { LEFT_DOWN, LEFT_UP, RIGHT });
-		distractors.Add(new List<Vector2Int> { LEFT_UP, RIGHT_UP, DOWN });
-		distractors.Add(new List<Vector2Int> { RIGHT_UP, RIGHT_DOWN, LEFT });
-		distractors.Add(new List<Vector2Int> { RIGHT_DOWN, LEFT_DOWN, UP });*/
-		/*for (int i = 0; i < nbTrials; i++)
-		{
-			targets.Add(candidates[i % candidates.Count()]);
-		}
-		ListExtension.Shuffle(targets);*/
+		// RIGHT SIDE, DENSITY 1
+		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(4, 4), new Vector2Int(0, 4), new List<Vector2Int>
+				{
+								new Vector2Int(0,3),
+								new Vector2Int(1,5),
+								new Vector2Int(2,3),
+								new Vector2Int(3,5),
+								new Vector2Int(4,3)
+				}
+			));
 
 
+		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(4, 4), new Vector2Int(0, 4), new List<Vector2Int>
+				{
+								new Vector2Int(0,5),
+								new Vector2Int(1,3),
+								new Vector2Int(2,5),
+								new Vector2Int(3,3),
+								new Vector2Int(4,5)
+				}
+			));
 
-		//ListExtension.Shuffle(distractors);
 
+		// LEFT SIDE, DENSITY 2
+		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(4, 1), new Vector2Int(0, 1), new List<Vector2Int>
+				{
+								new Vector2Int(0,0),
+								new Vector2Int(0,1),
+								new Vector2Int(1,0),
+								new Vector2Int(1,2),
+								new Vector2Int(2,1),
+								new Vector2Int(2,2),
+								new Vector2Int(3,0),
+								new Vector2Int(3,2),
+								new Vector2Int(4,0),
+								new Vector2Int(4,1)
+				}
+			));
 
-		/*for (int i = 0; i < distractors.Count(); i++)
-		{
-			//Debug.Log(i % candidates.Count());
-			//Debug.Log(candidates[i % candidates.Count()]);
-			targets.Add(candidates[i % candidates.Count()]);
-		}
-		ListExtension.Shuffle(targets);*/
+		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(4, 1), new Vector2Int(0, 1), new List<Vector2Int>
+				{
+								new Vector2Int(0,1),
+								new Vector2Int(0,2),
+								new Vector2Int(1,0),
+								new Vector2Int(1,2),
+								new Vector2Int(2,0),
+								new Vector2Int(2,1),
+								new Vector2Int(3,0),
+								new Vector2Int(3,2),
+								new Vector2Int(4,1),
+								new Vector2Int(4,2)
+				}
+			));
+
+		// RIGHT SIDE, DENSITY 2
+		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(4, 4), new Vector2Int(0, 4), new List<Vector2Int>
+				{
+								new Vector2Int(0,3),
+								new Vector2Int(0,4),
+								new Vector2Int(1,3),
+								new Vector2Int(1,5),
+								new Vector2Int(2,4),
+								new Vector2Int(2,5),
+								new Vector2Int(3,3),
+								new Vector2Int(3,5),
+								new Vector2Int(4,3),
+								new Vector2Int(4,4)
+				}
+			));
+
+		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(4, 4), new Vector2Int(0, 4), new List<Vector2Int>
+				{
+								new Vector2Int(0,4),
+								new Vector2Int(0,5),
+								new Vector2Int(1,3),
+								new Vector2Int(1,5),
+								new Vector2Int(2,3),
+								new Vector2Int(2,4),
+								new Vector2Int(3,3),
+								new Vector2Int(3,5),
+								new Vector2Int(4,4),
+								new Vector2Int(4,5)
+				}
+			));
+
+		// LEFT SIDE, DENSITY 2
+		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(4, 1), new Vector2Int(0, 1), new List<Vector2Int>
+				{
+								new Vector2Int(0,0),
+								new Vector2Int(0,1),
+								new Vector2Int(1,0),
+								new Vector2Int(1,2),
+								new Vector2Int(2,1),
+								new Vector2Int(2,2),
+								new Vector2Int(3,0),
+								new Vector2Int(3,2),
+								new Vector2Int(4,0),
+								new Vector2Int(4,1)
+				}
+			));
+
+		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(4, 1), new Vector2Int(0, 1), new List<Vector2Int>
+				{
+								new Vector2Int(0,1),
+								new Vector2Int(0,2),
+								new Vector2Int(1,0),
+								new Vector2Int(1,2),
+								new Vector2Int(2,0),
+								new Vector2Int(2,1),
+								new Vector2Int(3,0),
+								new Vector2Int(3,2),
+								new Vector2Int(4,1),
+								new Vector2Int(4,2)
+				}
+			));
+
+		// LEFT SIDE, DENSITY 3
+		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(4, 4), new Vector2Int(0, 4), new List<Vector2Int>
+				{
+								new Vector2Int(0,3),
+								new Vector2Int(0,4),
+								new Vector2Int(0,5),
+								new Vector2Int(1,3),
+								new Vector2Int(1,4),
+								new Vector2Int(1,5),
+								new Vector2Int(2,3),
+								new Vector2Int(2,4),
+								new Vector2Int(2,5),
+								new Vector2Int(3,3),
+								new Vector2Int(3,4),
+								new Vector2Int(3,5),
+								new Vector2Int(4,3),
+								new Vector2Int(4,4),
+								new Vector2Int(4,5)
+				}
+			));
+
+		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(4, 4), new Vector2Int(0, 4), new List<Vector2Int>
+				{
+								new Vector2Int(0,3),
+								new Vector2Int(0,4),
+								new Vector2Int(0,5),
+								new Vector2Int(1,3),
+								new Vector2Int(1,4),
+								new Vector2Int(1,5),
+								new Vector2Int(2,3),
+								new Vector2Int(2,4),
+								new Vector2Int(2,5),
+								new Vector2Int(3,3),
+								new Vector2Int(3,4),
+								new Vector2Int(3,5),
+								new Vector2Int(4,3),
+								new Vector2Int(4,4),
+								new Vector2Int(4,5)
+				}
+			));
+
+		// RIGHT SIDE, DENSITY 3
+		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(4, 1), new Vector2Int(0, 1), new List<Vector2Int>
+				{
+								new Vector2Int(0,0),
+								new Vector2Int(0,1),
+								new Vector2Int(0,2),
+								new Vector2Int(1,0),
+								new Vector2Int(1,1),
+								new Vector2Int(1,2),
+								new Vector2Int(2,0),
+								new Vector2Int(2,1),
+								new Vector2Int(2,2),
+								new Vector2Int(3,0),
+								new Vector2Int(3,1),
+								new Vector2Int(3,2),
+								new Vector2Int(4,0),
+								new Vector2Int(4,1),
+								new Vector2Int(4,2)
+				}
+			));
+
+		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(4, 1), new Vector2Int(0, 1), new List<Vector2Int>
+				{
+								new Vector2Int(0,0),
+								new Vector2Int(0,1),
+								new Vector2Int(0,2),
+								new Vector2Int(1,0),
+								new Vector2Int(1,1),
+								new Vector2Int(1,2),
+								new Vector2Int(2,0),
+								new Vector2Int(2,1),
+								new Vector2Int(2,2),
+								new Vector2Int(3,0),
+								new Vector2Int(3,1),
+								new Vector2Int(3,2),
+								new Vector2Int(4,0),
+								new Vector2Int(4,1),
+								new Vector2Int(4,2)
+				}
+			));
+
+		totalTrials = trials.Count();
+		ListExtension.Shuffle(trials);
 	}
 
 
@@ -439,7 +421,7 @@ public class XP2_P1 : MonoBehaviour
 	private void HandleRotationChanged(object sender, ExpanDialStickEventArgs e)
 	{
 		currSelectPosition = new Vector2Int(e.i, e.j);
-		if (currSelectPosition == currTargetPair.Item1)
+		if (currSelectPosition == currTrial.Item1)
 		{
 			if (gaugeState == BEGIN_TARGET_START)
 			{
@@ -447,9 +429,8 @@ public class XP2_P1 : MonoBehaviour
 			}
 			float prevRotation = aiguilleRotation;
 			aiguilleRotation -= e.diff * anglePerStep;
-			aiguilleRotation = aiguilleRotation % 360f;
-			string msg = "";
-			msg += "USER_ROTATION " + prevRotation + " " + aiguilleRotation;
+			aiguilleRotation = (aiguilleRotation + 360f) % 360f;
+			string msg = "USER_ROTATION " + currSelectPosition.ToString() + " CADRAN " + cadranRotation + " AIGUILLE " + aiguilleRotation;
 			//Debug.Log(msg);
 			/*if (gaugeState == GAUGE_APPEARED)
 			{
@@ -460,7 +441,7 @@ public class XP2_P1 : MonoBehaviour
 			}*/
 			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		}
-		if (currSelectPosition == currTargetPair.Item2)
+		if (currSelectPosition == currTrial.Item2)
 		{
 			if (gaugeState == END_TARGET_START)
 			{
@@ -468,9 +449,8 @@ public class XP2_P1 : MonoBehaviour
 			}
 			float prevRotation = aiguilleRotation;
 			aiguilleRotation -= e.diff * anglePerStep;
-			aiguilleRotation = aiguilleRotation % 360f;
-			string msg = "";
-			msg += "USER_ROTATION " + prevRotation + " " + aiguilleRotation;
+			aiguilleRotation = (aiguilleRotation + 360f) % 360f;
+			string msg = "USER_ROTATION " + currSelectPosition.ToString() + " CADRAN " + cadranRotation + " AIGUILLE " + aiguilleRotation;
 			//Debug.Log(msg);
 			/*if (gaugeState == GAUGE_APPEARED)
 			{
@@ -682,10 +662,15 @@ public class XP2_P1 : MonoBehaviour
 				expanDialSticks.modelMatrix[i, j].TargetPlaneSize = 0f;
 				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = shapeChangeDuration;
 
-				expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "projector";
-				expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 0f;
-				expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 0f;
-				expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = shapeChangeDuration;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "projector";
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontRotation = 0f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontSize = 0f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontChangeDuration = shapeChangeDuration;
+
+				expanDialSticks.modelMatrix[i, j].TargetProjectorBackTexture = "projector";
+				expanDialSticks.modelMatrix[i, j].TargetProjectorBackRotation = 0f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorBackSize = 0f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorBackChangeDuration = shapeChangeDuration;
 
 			}
 		}
@@ -698,7 +683,7 @@ public class XP2_P1 : MonoBehaviour
 	}
 	private void PrepareShapeChangeAroundTarget(Vector2Int target, float shapeChangeDuration)
 	{
-		for(int i = target.x - 1; i <= target.x + 1; i++)
+		for (int i = target.x - 1; i <= target.x + 1; i++)
 		{
 			for (int j = target.y - 1; j <= target.y + 1; j++)
 			{
@@ -711,7 +696,7 @@ public class XP2_P1 : MonoBehaviour
 		}
 	}
 	private void PrepareResetTextureAndProjector(float duration)
-	{   
+	{
 		// Reset Texture
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
 		{
@@ -723,10 +708,15 @@ public class XP2_P1 : MonoBehaviour
 				expanDialSticks.modelMatrix[i, j].TargetPlaneSize = 0f;
 				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
 
-				expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "projector";
-				expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 0f;
-				expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 0f;
-				expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = duration;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "projector";
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontRotation = 0f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontSize = 0f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontChangeDuration = duration;
+
+				expanDialSticks.modelMatrix[i, j].TargetProjectorBackTexture = "projector";
+				expanDialSticks.modelMatrix[i, j].TargetProjectorBackRotation = 0f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorBackSize = 0f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorBackChangeDuration = duration;
 
 			}
 		}
@@ -746,13 +736,323 @@ public class XP2_P1 : MonoBehaviour
 		}
 
 	}
-	private IEnumerator TriggerTrial()
+	private IEnumerator TriggerSystemTask()
+	{
+		MetricsActive = false;
+		// Fetch model
+		int trialIndex = totalTrials - trials.Count();
+		currTrial = trials.First();
+		trials.RemoveAt(0);
+		Vector2Int secondTarget = currTrial.Item2;
+		List<Vector2Int> distractorList = currTrial.Item3;
+		string startTrialMsg = "TRIAL_START " + trialIndex;
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(startTrialMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+
+
+		// Reset Texture and Projector
+		PrepareResetTextureAndProjector(0.1f);
+		expanDialSticks.triggerTextureChange();
+		expanDialSticks.triggerProjectorChange();
+		yield return new WaitForSeconds(0.1f);
+
+		// Move up the target
+		expanDialSticks.modelMatrix[secondTarget.x, secondTarget.y].TargetPosition = targetPos;
+		expanDialSticks.modelMatrix[secondTarget.x, secondTarget.y].TargetShapeChangeDuration = shortShapeChangeDuration;
+		expanDialSticks.triggerShapeChange();
+		yield return new WaitForSeconds(shortShapeChangeDuration);
+
+		// wait for target shape-change completion
+		bool shapeChangeEnded = false;
+		while (!shapeChangeEnded)
+		{
+			shapeChangeEnded = true;
+			Debug.Log("waiting for shape-change to complete...");
+
+			if (expanDialSticks.viewMatrix[secondTarget.x, secondTarget.y].CurrentReaching ||
+					expanDialSticks.viewMatrix[secondTarget.x, secondTarget.y].CurrentPosition < targetPos - 1 ||
+					expanDialSticks.viewMatrix[secondTarget.x, secondTarget.y].CurrentPosition > targetPos + 1) shapeChangeEnded = false;
+			yield return new WaitForSeconds(COMPLETION_INTERVAL);
+		}
+		string targetMsg = "TARGET " + secondTarget.ToString();
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(targetMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+
+		// Trigger distractors
+		String shapeChangeMsg = "SYSTEM_TRIGGER_SHAPE_CHANGE";
+		foreach (Vector2Int distractor in distractorList)
+		{
+			shapeChangeMsg += " " + new Vector3Int(distractor.x, distractor.y, distractorPos).ToString();
+			expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetPosition = distractorPos;
+			expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetShapeChangeDuration = longShapeChangeDuration;
+		}
+		expanDialSticks.triggerShapeChange();
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(shapeChangeMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		MetricsActive = true;
+		yield return new WaitForSeconds(0.25f);
+
+
+		// Texture First Target
+		// 24 position
+		cadranRotation = Random.Range(0, 23) * anglePerStep;
+		aiguilleRotation = cadranRotation + (-1 + Random.Range(0, 1) * 2) * anglePerStep;
+		ShowGaugeOnTarget(secondTarget, 0.1f);
+		expanDialSticks.triggerTextureChange();
+		expanDialSticks.triggerProjectorChange();
+		yield return new WaitForSeconds(0.1f);
+		string taskStartMsg = "SYSTEM_TASK_START " + secondTarget.ToString() + " CADRAN " + cadranRotation + " AIGUILLE " + aiguilleRotation;
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(taskStartMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+
+		gaugeState = BEGIN_TARGET_START;
+		// wait for start signal
+		while (gaugeState != BEGIN_TARGET_STOP)
+		{
+			if (aiguilleRotation >= (cadranRotation - anglePerStep / 2f) % 360f && aiguilleRotation <= (cadranRotation + anglePerStep / 2f) % 360f)
+			{
+				gaugeState = BEGIN_TARGET_STOP;
+			}
+			// Move it
+			float prevRotation = cadranRotation;
+			switch (directionRotation)
+			{
+				case DirectionRotation.CW:
+					cadranRotation += speedRotation * 0.1f;
+					break;
+				case DirectionRotation.CCW:
+					cadranRotation -= speedRotation * 0.1f;
+					break;
+				default:
+					break;
+			}
+			cadranRotation = cadranRotation % 360f;
+			MoveAiguilleCadran(secondTarget, 0.1f);
+			expanDialSticks.triggerProjectorChange();
+			yield return new WaitForSeconds(0.1f);
+		}
+		string taskEndMsg = "SYSTEM_TASK_END " + secondTarget.ToString() + " CADRAN " + cadranRotation + " AIGUILLE " + aiguilleRotation;
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(taskEndMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+
+		// wait for shape-change completion
+		shapeChangeEnded = false;
+		while (!shapeChangeEnded)
+		{
+			shapeChangeEnded = true;
+			Debug.Log("waiting for shape-change to complete...");
+
+			foreach (Vector2Int distractor in distractorList)
+			{
+
+				if (expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentReaching ||
+					expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentPosition < distractorPos - 1 ||
+					expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentPosition > distractorPos + 1) shapeChangeEnded = false;
+			}
+			yield return new WaitForSeconds(COMPLETION_INTERVAL);
+		}
+
+		// Trigger texture and shape reset
+		PrepareResetTextureAndProjector(0.1f);
+		expanDialSticks.triggerTextureChange();
+		expanDialSticks.triggerProjectorChange();
+		yield return new WaitForSeconds(0.1f);
+		PrepareResetShape(shortShapeChangeDuration);
+		expanDialSticks.triggerShapeChange();
+		yield return new WaitForSeconds(shortShapeChangeDuration);
+
+		// Wait for shape-change completion
+		bool resetEnded = false;
+		while (!resetEnded)
+		{
+			resetEnded = true;
+			Debug.Log("waiting for reset to complete...");
+			for (int i = 0; i < expanDialSticks.NbRows; i++)
+				for (int j = 0; j < expanDialSticks.NbColumns; j++)
+					if (expanDialSticks.viewMatrix[i, j].CurrentReaching || expanDialSticks.viewMatrix[i, j].CurrentPosition != 0) resetEnded = false;
+			yield return new WaitForSeconds(COMPLETION_INTERVAL);
+		}
+		MetricsActive = false;
+		string endTrialMsg = "TRIAL_END " + trialIndex;
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(endTrialMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		triggerNextTrial = true;
+	}
+
+	private IEnumerator TriggerUserTask()
+	{
+		MetricsActive = false;
+		String msg;
+		// Fetch model
+		int trialIndex = totalTrials - trials.Count();
+		currTrial = trials.First();
+		trials.RemoveAt(0);
+		Vector2Int secondTarget = currTrial.Item2;
+		List<Vector2Int> distractorList = currTrial.Item3;
+		msg = "TRIAL_START " + trialIndex;
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+
+
+		// Reset Texture and Projector
+		PrepareResetTextureAndProjector(0.1f);
+		expanDialSticks.triggerTextureChange();
+		expanDialSticks.triggerProjectorChange();
+		yield return new WaitForSeconds(0.1f);
+
+		// Move up the target
+		expanDialSticks.modelMatrix[secondTarget.x, secondTarget.y].TargetPosition = targetPos;
+		expanDialSticks.modelMatrix[secondTarget.x, secondTarget.y].TargetShapeChangeDuration = shortShapeChangeDuration;
+		expanDialSticks.triggerShapeChange();
+		yield return new WaitForSeconds(shortShapeChangeDuration);
+
+		// wait for target shape-change completion
+		bool shapeChangeEnded = false;
+		while (!shapeChangeEnded)
+		{
+			shapeChangeEnded = true;
+			Debug.Log("waiting for shape-change to complete...");
+
+			if (expanDialSticks.viewMatrix[secondTarget.x, secondTarget.y].CurrentReaching ||
+					expanDialSticks.viewMatrix[secondTarget.x, secondTarget.y].CurrentPosition < targetPos - 1 ||
+					expanDialSticks.viewMatrix[secondTarget.x, secondTarget.y].CurrentPosition > targetPos + 1) shapeChangeEnded = false;
+			yield return new WaitForSeconds(COMPLETION_INTERVAL);
+		}
+
+		msg = "TARGET " + secondTarget.ToString();
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+
+
+
+		// Texture First Target
+		// 24 position
+		cadranRotation = Random.Range(0, 23) * anglePerStep;
+		aiguilleRotation = cadranRotation + (-1 + Random.Range(0, 1) * 2) * anglePerStep;
+		ShowGaugeOnTarget(secondTarget, 0.1f);
+		expanDialSticks.triggerTextureChange();
+		expanDialSticks.triggerProjectorChange();
+		yield return new WaitForSeconds(0.1f);
+		msg = "USER_TASK_START " + secondTarget.ToString() + " CADRAN " + cadranRotation + " AIGUILLE " + aiguilleRotation;
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+
+		gaugeState = BEGIN_TARGET_START;
+		ListExtension.Shuffle(distractorList);
+		int distractorIndex = 0;
+		int distractorLength = distractorList.Count();
+
+		DISTRACTOR_INTERVAL = Random.Range(0.5f,1.5f);
+		// wait for start signal
+		while (gaugeState != BEGIN_TARGET_STOP)
+		{
+			if(gaugeState == BEGIN_TARGET_TRIGGER)
+			{
+				if (distractorIndex < distractorLength && currTime - prevDistractorTime >= DISTRACTOR_INTERVAL)
+				{
+					// Trigger distractors
+					msg = "SYSTEM_TRIGGER_SHAPE_CHANGE";
+					Vector2Int distractor = distractorList[distractorIndex++];
+					msg += " " + new Vector3Int(distractor.x, distractor.y, distractorPos).ToString();
+					expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetPosition = distractorPos;
+					expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetShapeChangeDuration = longShapeChangeDuration;
+					expanDialSticks.triggerShapeChange();
+					expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+					MetricsActive = true;
+					if (distractorIndex >= distractorLength) DISTRACTOR_INTERVAL = 5f;
+					else DISTRACTOR_INTERVAL = Random.Range(0.5f, 1.5f);
+					prevDistractorTime = currTime;
+				}
+
+				//Debug.Log("BEGIN_TARGET: " + (cadranRotation - anglePerStep / 2f) + " <= " + aiguilleRotation + " <=  " + (cadranRotation + anglePerStep / 2f));
+				if (distractorIndex >= distractorLength && currTime - prevDistractorTime >= DISTRACTOR_INTERVAL)
+				{
+					if (aiguilleRotation >= (cadranRotation - anglePerStep / 2f) % 360f && aiguilleRotation <= (cadranRotation + anglePerStep / 2f) % 360f)
+					{
+						gaugeState = BEGIN_TARGET_STOP;
+					}
+
+				}
+				// Move it
+				float prevRotation = cadranRotation;
+				switch (directionRotation)
+				{
+					case DirectionRotation.CW:
+						cadranRotation += speedRotation * 0.1f;
+						break;
+					case DirectionRotation.CCW:
+						cadranRotation -= speedRotation * 0.1f;
+						break;
+					default:
+						break;
+				}
+				cadranRotation = cadranRotation % 360f;
+				MoveAiguilleCadran(secondTarget, 0.1f);
+				expanDialSticks.triggerProjectorChange();
+			}
+
+			yield return new WaitForSeconds(0.1f);
+		}
+
+		msg = "USER_TASK_END " + secondTarget.ToString() + " CADRAN " + cadranRotation + " AIGUILLE " + aiguilleRotation;
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+
+
+		// Reset texture and projector
+		PrepareResetTextureAndProjector(0.1f);
+		expanDialSticks.triggerTextureChange();
+		expanDialSticks.triggerProjectorChange();
+		yield return new WaitForSeconds(0.1f);
+
+		// wait for shape-change completion
+		shapeChangeEnded = false;
+		while (!shapeChangeEnded)
+		{
+			shapeChangeEnded = true;
+			Debug.Log("waiting for shape-change to complete...");
+
+			foreach (Vector2Int distractor in distractorList)
+			{
+
+				if (expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentReaching ||
+					expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentPosition < distractorPos - 1 ||
+					expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentPosition > distractorPos + 1) shapeChangeEnded = false;
+			}
+			yield return new WaitForSeconds(COMPLETION_INTERVAL);
+		}
+
+		
+		PrepareResetShape(shortShapeChangeDuration);
+		expanDialSticks.triggerShapeChange();
+		yield return new WaitForSeconds(shortShapeChangeDuration);
+
+		// Wait for shape-change completion
+		bool resetEnded = false;
+		while (!resetEnded)
+		{
+			resetEnded = true;
+			Debug.Log("waiting for reset to complete...");
+			for (int i = 0; i < expanDialSticks.NbRows; i++)
+				for (int j = 0; j < expanDialSticks.NbColumns; j++)
+					if (expanDialSticks.viewMatrix[i, j].CurrentReaching || expanDialSticks.viewMatrix[i, j].CurrentPosition != 0) resetEnded = false;
+			yield return new WaitForSeconds(COMPLETION_INTERVAL);
+		}
+		MetricsActive = false;
+
+		msg = "TRIAL_END " + trialIndex;
+		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+		triggerNextTrial = true;
+	}
+	private void TriggerTrial()
 	{
 		Debug.Log("TriggerTrial()");
-		if(targetPairs.Count() > 0)
+		if (trials.Count() > 0)
 		{
 
-			MetricsActive = false;
+			switch (currTaskMode)
+			{
+				case TaskMode.SC_AROUND:
+					StartCoroutine(TriggerSystemTask());
+					break;
+				case TaskMode.SC_UNDER:
+					StartCoroutine(TriggerUserTask());
+					break;
+				default:
+					break;
+			}
+
+			/*MetricsActive = false;
 			// Fetch model
 			int trialIndex = totalTargetPairs - targetPairs.Count();
 			currTargetPair = targetPairs.First();
@@ -791,14 +1091,11 @@ public class XP2_P1 : MonoBehaviour
 			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(firstTargetMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 
 			gaugeState = BEGIN_TARGET_START;
-			bool distractorsTriggered = false;
 			// wait for start signal
 			while (gaugeState != BEGIN_TARGET_STOP)
 			{
-				/*if(!distractorsTriggered && gaugeState == BEGIN_TARGET_TRIGGER)
-				{
-					distractorsTriggered = true;
-				}*/
+
+				//Debug.Log("BEGIN_TARGET: " + (cadranRotation - anglePerStep / 2f) + " <= " + aiguilleRotation + " <=  " + (cadranRotation + anglePerStep / 2f));
 				if (aiguilleRotation >= (cadranRotation - anglePerStep / 2f) % 360f && aiguilleRotation <= (cadranRotation + anglePerStep / 2f) % 360f)
 				{
 
@@ -806,8 +1103,8 @@ public class XP2_P1 : MonoBehaviour
 					String shapeChangeMsg = "SYSTEM_TRIGGER_SHAPE_CHANGE";
 					foreach (Vector2Int distractor in currDistractors)
 					{
-						shapeChangeMsg += " " + new Vector3Int(distractor.x, distractor.y, targetPos).ToString();
-						expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetPosition = targetPos;
+						shapeChangeMsg += " " + new Vector3Int(distractor.x, distractor.y, distractorPos).ToString();
+						expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetPosition = distractorPos;
 						expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetShapeChangeDuration = longShapeChangeDuration;
 					}
 					expanDialSticks.triggerShapeChange();
@@ -816,7 +1113,6 @@ public class XP2_P1 : MonoBehaviour
 					MetricsActive = true;
 					gaugeState = BEGIN_TARGET_STOP;
 				}
-				//Debug.Log((cadranRotation - anglePerStep / 2f) + " <= " + aiguilleRotation + " <=  " + (cadranRotation + anglePerStep / 2f));
 				// Move it
 				float prevRotation = cadranRotation;
 				switch (directionRotation)
@@ -852,7 +1148,8 @@ public class XP2_P1 : MonoBehaviour
 			// wait for end signal
 			while (gaugeState != END_TARGET_STOP)
 			{
-				if (aiguilleRotation >= (cadranRotation - anglePerStep / 2f)%360f && aiguilleRotation <= (cadranRotation + anglePerStep / 2f)%360f)
+				//Debug.Log("END_TARGET: " + (cadranRotation - anglePerStep / 2f) + " <= " + aiguilleRotation + " <=  " + (cadranRotation + anglePerStep / 2f));
+				if (aiguilleRotation >= (cadranRotation - anglePerStep / 2f) % 360f && aiguilleRotation <= (cadranRotation + anglePerStep / 2f) % 360f)
 				{
 					gaugeState = END_TARGET_STOP;
 				}
@@ -893,9 +1190,9 @@ public class XP2_P1 : MonoBehaviour
 				foreach (Vector2Int distractor in currDistractors)
 				{
 
-					if (expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentReaching || 
-						expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentPosition < targetPos - 1 ||
-						expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentPosition > targetPos + 1) shapeChangeEnded = false;
+					if (expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentReaching ||
+						expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentPosition < distractorPos - 1 ||
+						expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentPosition > distractorPos + 1) shapeChangeEnded = false;
 				}
 				yield return new WaitForSeconds(COMPLETION_INTERVAL);
 			}
@@ -925,8 +1222,10 @@ public class XP2_P1 : MonoBehaviour
 			string endTrialMsg = "TRIAL_ENDED " + trialIndex;
 			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(endTrialMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 			triggerNextTrial = true;
+			*/
 
-		} else
+		}
+		else
 		{
 			Quit();
 		}
@@ -942,36 +1241,48 @@ public class XP2_P1 : MonoBehaviour
 				expanDialSticks.modelMatrix[i, j].TargetColor = Color.black; //Color.green;
 				if (i == target.x && j == target.y)
 				{
-					expanDialSticks.modelMatrix[i, j].TargetPlaneTexture = "LightCadran";
-					expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = cadranRotation;
-					expanDialSticks.modelMatrix[i, j].TargetPlaneSize = 0.6f;
-					expanDialSticks.modelMatrix[i, j].TargetPlaneColor = Color.red;
 
-					expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "aiguille";
-					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = aiguilleRotation;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 0.02f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorColor = Color.white;
+					expanDialSticks.modelMatrix[i, j].TargetPlaneTexture = "default";
+					expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = 0f;
+					expanDialSticks.modelMatrix[i, j].TargetPlaneSize = 0f;
+					expanDialSticks.modelMatrix[i, j].TargetPlaneColor = Color.black;
+
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "LightCadran";
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontRotation = cadranRotation;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontSize = 0.02f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontColor = Color.blue;
+
+					expanDialSticks.modelMatrix[i, j].TargetProjectorBackTexture = "aiguille";
+					expanDialSticks.modelMatrix[i, j].TargetProjectorBackRotation = aiguilleRotation;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorBackSize = 0.02f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorBackColor = Color.white;
 				}
 
 				else
 				{
 					expanDialSticks.modelMatrix[i, j].TargetPlaneTexture = "default";
-					expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = cadranRotation;
+					expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = 0f;
 					expanDialSticks.modelMatrix[i, j].TargetPlaneSize = 0f;
 					expanDialSticks.modelMatrix[i, j].TargetPlaneColor = Color.black;
 
-					expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "projector";
-					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = aiguilleRotation;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 0f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorColor = Color.white;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "projector";
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontRotation = cadranRotation;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontSize = 0f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontColor = Color.white;
+
+					expanDialSticks.modelMatrix[i, j].TargetProjectorBackTexture = "projector";
+					expanDialSticks.modelMatrix[i, j].TargetProjectorBackRotation = aiguilleRotation;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorBackSize = 0f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorBackColor = Color.blue;
 				}
 
 				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
-				expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = duration;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontChangeDuration = duration;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorBackChangeDuration = duration;
 			}
 		}
 		string participantNumber = "<pos=0%><b>P" + numeroParticipant + "</b>";
-		string trialProgress = "<pos=90%><b>" + targetPairs.Count() + "/" + totalTargetPairs + "</b>";
+		string trialProgress = "<pos=90%><b>" + trials.Count() + "/" + totalTrials + "</b>";
 		string legend = participantNumber + trialProgress;
 		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 0.1f, Color.black, legend, new Vector3(90f, -90f, 0f));
 		expanDialSticks.setBorderBackground(Color.white);
@@ -980,13 +1291,35 @@ public class XP2_P1 : MonoBehaviour
 
 	void MoveAiguilleCadran(Vector2Int target, float duration)
 	{
-		expanDialSticks.modelMatrix[target.x, target.y].TargetPlaneRotation = cadranRotation;
-		expanDialSticks.modelMatrix[target.x, target.y].TargetTextureChangeDuration = duration;
-		expanDialSticks.modelMatrix[target.x, target.y].TargetProjectorRotation = aiguilleRotation;
-		expanDialSticks.modelMatrix[target.x, target.y].TargetProjectorChangeDuration = duration;
+		expanDialSticks.modelMatrix[target.x, target.y].TargetProjectorBackRotation = aiguilleRotation;
+		expanDialSticks.modelMatrix[target.x, target.y].TargetProjectorBackChangeDuration = duration;
+		expanDialSticks.modelMatrix[target.x, target.y].TargetProjectorFrontRotation = cadranRotation;
+		expanDialSticks.modelMatrix[target.x, target.y].TargetProjectorFrontChangeDuration = duration;
 	}
 
 
+	void RandomColor()
+	{
+
+		for (int i = 0; i < expanDialSticks.NbRows; i++)
+		{
+			for (int j = 0; j < expanDialSticks.NbColumns; j++)
+			{
+				if (expanDialSticks.viewMatrix[i, j].TargetTextureChangeDuration <= 0f) // if previous texture change is finished
+				{
+					Color randomColor = Random.ColorHSV(0f, 1f, 0f, 1f, 0.5f, 1f);
+					float randomDuration = Random.Range(0.25f, 5f);
+					expanDialSticks.modelMatrix[i, j].TargetColor = randomColor;
+					expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = randomDuration;
+				}
+				else
+				{
+					expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = expanDialSticks.viewMatrix[i, j].TargetTextureChangeDuration;
+				}
+			}
+		}
+		expanDialSticks.triggerTextureChange();
+	}
 	void Update()
 	{
 		// check if ExpanDialSticks is connected
@@ -994,16 +1327,21 @@ public class XP2_P1 : MonoBehaviour
 		{
 			currTime = Time.time;
 
-			if(triggerNextTrial == true)
+			if (triggerNextTrial == true)
 			{
 				triggerNextTrial = false;
-				StartCoroutine(TriggerTrial());
+				TriggerTrial();
 			}
 			if (MetricsActive && currTime - prevMetricsTime >= LOG_INTERVAL)
 			{
 				LogMetrics();
 				prevMetricsTime = currTime;
 			}
+			/*if (currTime - prevRandomTextureTime >= 5f)
+			{
+				RandomColor();
+				prevRandomTextureTime = currTime;
+			}*/
 
 			if (Input.GetKey("escape"))
 			{
@@ -1014,23 +1352,23 @@ public class XP2_P1 : MonoBehaviour
 			{
 				if (gaugeState == BEGIN_TARGET_START || gaugeState == BEGIN_TARGET_TRIGGER || gaugeState == BEGIN_TARGET_STOP)
 				{
-					HandleRotationChanged(new object(), new ExpanDialStickEventArgs(DateTime.Now, currTargetPair.Item1.x, currTargetPair.Item1.y, 0, 1, 1));
+					HandleRotationChanged(new object(), new ExpanDialStickEventArgs(DateTime.Now, currTrial.Item1.x, currTrial.Item1.y, 0, 1, 1));
 				}
 				if (gaugeState == END_TARGET_START || gaugeState == END_TARGET_TRIGGER || gaugeState == END_TARGET_STOP)
 				{
-					HandleRotationChanged(new object(), new ExpanDialStickEventArgs(DateTime.Now, currTargetPair.Item2.x, currTargetPair.Item2.y, 0, 1, 1));
+					HandleRotationChanged(new object(), new ExpanDialStickEventArgs(DateTime.Now, currTrial.Item2.x, currTrial.Item2.y, 0, 1, 1));
 				}
 				//currentRotation += anglePerStep;
 			}
 			if (Input.GetKeyDown(KeyCode.LeftArrow))
 			{
-				if (gaugeState == BEGIN_TARGET_START ||  gaugeState == BEGIN_TARGET_TRIGGER || gaugeState == BEGIN_TARGET_STOP)
+				if (gaugeState == BEGIN_TARGET_START || gaugeState == BEGIN_TARGET_TRIGGER || gaugeState == BEGIN_TARGET_STOP)
 				{
-					HandleRotationChanged(new object(), new ExpanDialStickEventArgs(DateTime.Now, currTargetPair.Item1.x, currTargetPair.Item1.y, 1, 0, -1));
-				}
+					HandleRotationChanged(new object(), new ExpanDialStickEventArgs(DateTime.Now, currTrial.Item1.x, currTrial.Item1.y, 1, 0, -1));
+				!
 				if (gaugeState == END_TARGET_START || gaugeState == END_TARGET_TRIGGER || gaugeState == END_TARGET_STOP)
-				{
-					HandleRotationChanged(new object(), new ExpanDialStickEventArgs(DateTime.Now, currTargetPair.Item2.x, currTargetPair.Item2.y, 1, 0, -1));
+				{ 
+					HandleRotationChanged(new object(), new ExpanDialStickEventArgs(DateTime.Now, currTrial.Item2.x, currTrial.Item2.y, 1, 0, -1));
 				}
 				//currentRotation -= anglePerStep;
 			}
@@ -1059,7 +1397,7 @@ public class XP2_P1 : MonoBehaviour
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
 				positionString += expanDialSticks.viewMatrix[i, j].CurrentPosition + " ";
-				reachingString += (expanDialSticks.viewMatrix[i, j].CurrentReaching?1:0) + " ";
+				reachingString += (expanDialSticks.viewMatrix[i, j].CurrentReaching ? 1 : 0) + " ";
 				pauseString += expanDialSticks.viewMatrix[i, j].CurrentPaused + " ";
 			}
 		}

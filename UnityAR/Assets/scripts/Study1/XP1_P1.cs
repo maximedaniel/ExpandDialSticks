@@ -438,21 +438,21 @@ public class XP1_P1 : MonoBehaviour
 				if (i == (int)molePosition.x && j == (int)molePosition.y)
 				{
 					expanDialSticks.modelMatrix[i, j].TargetColor = Color.white; //Color.green;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "dot";
-					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 0f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorColor = Color.black;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "dot";
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontRotation = 0f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontSize = 2f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontColor = Color.black;
 				}
 				else
 				{
 					expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "projector";
-					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 0f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 0f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorColor = Color.white;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "projector";
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontRotation = 0f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontSize = 0f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontColor = Color.white;
 
 				}
-				expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = duration;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontChangeDuration = duration;
 				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
 			}
 		}

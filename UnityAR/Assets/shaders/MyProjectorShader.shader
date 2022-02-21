@@ -77,10 +77,10 @@ Shader "Custom/MyProjectorShader"
             half4 frag(v2f i) : COLOR
             {
                 float4 tex = tex2D(_MainTex, i.uv) * _Color;
-               /* if (i.uv.w < 0)
+                if (i.uv.w < 0)
                 {
                     tex = float4(0,0,0,1);
-                }*/
+                }
 
                 return tex;
             }

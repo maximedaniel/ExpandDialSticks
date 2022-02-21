@@ -495,7 +495,7 @@ public class XP2_P1BIS : MonoBehaviour
 					{
 						Debug.Log("rightCandidate => " + rightCandidate);
 						// Projector
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon0";
+						expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "icon0";
 						// Shape
 						expanDialSticks.modelMatrix[i, j].TargetPosition = (sbyte)rightCandidate.z;
 						expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = shapeChangeDuration;
@@ -504,7 +504,7 @@ public class XP2_P1BIS : MonoBehaviour
 					{
 						Debug.Log("wrongCandidate => " + wrongCandidate);
 						// Projector
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon0";
+						expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "icon0";
 						// Shape
 						expanDialSticks.modelMatrix[i, j].TargetPosition = (sbyte)wrongCandidate.z;
 						expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = shapeChangeDuration;
@@ -513,7 +513,7 @@ public class XP2_P1BIS : MonoBehaviour
 					{
 						Debug.Log("movingCandidate => " + movingCandidate);
 						// Projector
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon" + randomIcons.First();
+						expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "icon" + randomIcons.First();
 						randomIcons.RemoveAt(0);
 						// Shape
 						expanDialSticks.modelMatrix[i, j].TargetPosition = (sbyte)movingCandidate.z;
@@ -523,13 +523,13 @@ public class XP2_P1BIS : MonoBehaviour
 					{
 						// Projector
 						//expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "default";
-						expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "icon" + randomIcons.First();
+						expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "icon" + randomIcons.First();
 						randomIcons.RemoveAt(0);
 					}
 					// Projector
-					expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorSize = 2f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontRotation = 90f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontSize = 2f;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontChangeDuration = 0.1f;
 				}
 			}
 			expanDialSticks.triggerProjectorChange();

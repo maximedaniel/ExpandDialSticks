@@ -464,10 +464,10 @@ public class XP2_P1BISBISBIS : MonoBehaviour
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
 				//Projector
-				expanDialSticks.modelMatrix[i, j].TargetProjectorTexture = "default";
-				expanDialSticks.modelMatrix[i, j].TargetProjectorRotation = 90f;
-				expanDialSticks.modelMatrix[i, j].TargetProjectorSize = expanDialSticks.modelMatrix[i, j].Diameter / 3f;
-				expanDialSticks.modelMatrix[i, j].TargetProjectorChangeDuration = 0.1f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "default";
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontRotation = 90f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontSize = expanDialSticks.modelMatrix[i, j].Diameter / 3f;
+				expanDialSticks.modelMatrix[i, j].TargetProjectorFrontChangeDuration = 0.1f;
 				//Texture
 				expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
 				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = 0.1f;
