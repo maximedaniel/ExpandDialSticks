@@ -308,7 +308,7 @@ public class SafeGuard : MonoBehaviour
 
 		// Configure camera
 		Camera cam = this.GetComponent<Camera>();
-		cam.orthographicSize = (pins.NbRows * (pins.diameter + pins.offset) + 2 * pins.offset + 2 * pins.BorderOffset + (pins.diameter - pins.BorderOffset)) / 2f;
+		cam.orthographicSize = 0.30f; // (pins.NbRows * (pins.diameter + pins.offset) + 2 * pins.offset + 2 * pins.BorderOffset + (pins.diameter - pins.BorderOffset)) / 2f;
 		
 		// Configure projector
 		projector = this.GetComponent<Projector>();
@@ -1190,17 +1190,17 @@ public class SafeGuard : MonoBehaviour
 		}
 		else
 		{
-			if (pins.leftHand != null && pins.leftHand.IsActive())
+			if (pins.LeftArm != null && pins.LeftArm.IsActive())
 			{
 
-				currLeftHandCollider = pins.leftHand.GetHandColliderAt(0);
-				currLeftArmCollider =  pins.leftHand.GetArmColliderAt(0);
+				currLeftHandCollider = pins.LeftArm.GetHandColliderAt(0);
+				currLeftArmCollider =  pins.LeftArm.GetArmColliderAt(0);
 			}
-			if (pins.rightHand != null && pins.rightHand.IsActive())
+			if (pins.RightArm != null && pins.RightArm.IsActive())
 			{
 
-				currRightHandCollider = pins.rightHand.GetHandColliderAt(0);
-				currRightArmCollider = pins.rightHand.GetArmColliderAt(0);
+				currRightHandCollider = pins.RightArm.GetHandColliderAt(0);
+				currRightArmCollider = pins.RightArm.GetArmColliderAt(0);
 			}
 		}
 		FetchUserBody();

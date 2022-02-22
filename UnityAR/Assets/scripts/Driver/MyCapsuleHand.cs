@@ -16,7 +16,7 @@ using g3;
 
 namespace Leap.Unity {
     /** A basic Leap hand model constructed dynamically vs. using pre-existing geometry*/
-    public class MyCapsuleHand : HandModelBase
+    public class MyCapsuleHand : HandModelBase, IArmController
     {
         /// <summary>
         /// Extract translation from transform matrix.
@@ -949,11 +949,6 @@ namespace Leap.Unity {
         private int getFingerJointIndex(int fingerIndex, int jointIndex)
         {
             return fingerIndex * 4 + jointIndex;
-        }
-
-        private void LateUpdate()
-        {
- 
         }
     }
 }

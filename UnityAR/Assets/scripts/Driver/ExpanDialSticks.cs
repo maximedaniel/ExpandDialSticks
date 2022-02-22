@@ -128,10 +128,10 @@ public class ExpanDialSticks : MonoBehaviour
 	public float offset = 0.001f;  // divide by 100
 	public float borderOffset = 2.0f;
 
-	//public GameObject capsuleHandLeftPrefab;
-	//public GameObject capsuleHandRightPrefab;
-	public MyCapsuleHand leftHand;
-	public MyCapsuleHand rightHand;
+	private GameObject leftArmObject;
+	private GameObject rightArmObject;
+	private IArmController leftArm;
+	private IArmController rightArm;
 	public enum SafetyMotionMode {SafetyRatedMonitoredStop, SpeedAndSeparationMonitoring};
 	public SafetyMotionMode safetyMotionMode = SafetyMotionMode.SafetyRatedMonitoredStop;
 	public enum SafetyOverlayMode {User, System, Mixed};
@@ -276,6 +276,14 @@ public class ExpanDialSticks : MonoBehaviour
 	public event EventHandler<ExpanDialStickEventArgs> onProximityChanged = (sender, e) => { };
 	public event EventHandler<ExpanDialStickEventArgs> onSeparationLevelChanged = (sender, e) => { };
 
+	public IArmController RightArm
+	{
+		get => rightArm;
+	}
+	public IArmController LeftArm
+	{
+		get => leftArm;
+	}
 	public int NbRows{
 		get => nbRows;
 	}
@@ -363,11 +371,40 @@ public class ExpanDialSticks : MonoBehaviour
 	}
 	// Use this for initialization
 	void Start () {
-		if(leftHand == null || rightHand == null)
+		// Find and Handle real LeapMotion
+		leftArmObject = GameObject.Find("LeapMotion/RealArmsManager/LeftArmController");
+		rightArmObject = GameObject.Find("LeapMotion/RealArmsManager/RightArmController");
+		if (leftArmObject != null && rightArmObject != null)
 		{
-			Debug.Log("Could not found left and/or right hand capsule.");
+
+			leftArm = leftArmObject.GetComponent<MyCapsuleHand>();
+			rightArm = rightArmObject.GetComponent<MyCapsuleHand>();
+
+		} else { // use fake LeapMotion
+
+			leftArmObject = GameObject.Find("LeapMotion/FakeArmsManager/LeftArmController");
+			rightArmObject = GameObject.Find("LeapMotion/FakeArmsManager/RightArmController");
+
+			if (leftArmObject != null && rightArmObject != null)
+			{
+				leftArm = leftArmObject.GetComponent<MyFakeCapsuleHand>();
+				rightArm = rightArmObject.GetComponent<MyFakeCapsuleHand>();
+
+			}
+		}
+
+		if (leftArmObject == null || rightArmObject == null)
+		{
+			Debug.Log("Could not found left/right arm gameobjects. Exiting...");
 			Quit();
 		}
+
+		if (leftArm == null || rightArm == null)
+		{
+			Debug.Log("Could not found left/right arm controllers. Exiting...");
+			Quit();
+		}
+
 		shapeChanging = textureChanging = safetyChanging = false;
 		/*for(int i = 0; i < nbRows * nbColumns; i++) {
 			this.positions[i] = 0;
@@ -427,8 +464,8 @@ public class ExpanDialSticks : MonoBehaviour
 				collisionMatrix[i, j].Height = height;
 				collisionMatrix[i, j].Offset = offset;
 				collisionMatrix[i, j].NbSeparationLevels = nbSeparationLevels;
-				collisionMatrix[i, j].RightHand = rightHand;
-				collisionMatrix[i, j].LeftHand = leftHand;
+				collisionMatrix[i, j].RightHand = rightArm;
+				collisionMatrix[i, j].LeftHand = leftArm;
 				//collisionMatrix[i, j].EnableCollision();
 			}
 		// Set camera

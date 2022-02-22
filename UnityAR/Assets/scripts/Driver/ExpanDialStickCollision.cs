@@ -22,8 +22,8 @@ public class ExpanDialStickCollision: MonoBehaviour
 	private float height = 10.0f;
 	private float offset = 0.5f;
 
-	private MyCapsuleHand leftHand;
-	private MyCapsuleHand rightHand;
+	private IArmController leftHand;
+	private IArmController rightHand;
 
 	private int i = 0;
 	private int j = 0;
@@ -78,12 +78,12 @@ public class ExpanDialStickCollision: MonoBehaviour
 		get => this.diameter;
 		set => this.diameter = value;
 	}
-	public MyCapsuleHand LeftHand
+	public IArmController LeftHand
 	{
 		get => this.leftHand;
 		set => this.leftHand = value;
 	}
-	public MyCapsuleHand RightHand
+	public IArmController RightHand
 	{
 		get => this.rightHand;
 		set => this.rightHand = value;
