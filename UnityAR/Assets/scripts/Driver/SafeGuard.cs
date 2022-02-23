@@ -113,7 +113,7 @@ public class SafeGuard : MonoBehaviour
 	private Vector4[] _lineLeftBackArmCenters, _lineRightBackArmCenters;
 	private Vector4[] _lineLeftFrontArmCenters, _lineRightFrontArmCenters;
 	private float[] _lineLeftArmRadius, _lineRightArmRadius;
-	private int _lineIndex = 0;
+	//private int _lineIndex = 0;
 
 	public enum SafetyOverlayMode {User, System, Mixed};
 	private SafetyOverlayMode overlayMode = SafetyOverlayMode.User;
@@ -130,7 +130,6 @@ public class SafeGuard : MonoBehaviour
 	private Color _rightDivergingColor = Color.white;
 	public static bool freeze = false;
 	private bool frozen = false;
-	private bool toDraw = false;
 	private GameObject currLeftHandCollider = null;
 	private GameObject currLeftArmCollider = null;
 	private GameObject prevLeftHandCollider = null;
@@ -471,7 +470,7 @@ public class SafeGuard : MonoBehaviour
 		gradient.SetKeys(colorKey, alphaKey);
 
 
-		freeze = frozen = toDraw = false;
+		freeze = frozen = false;
 
 
 		pins.OnConnected += HandleConnected;
@@ -1138,7 +1137,7 @@ public class SafeGuard : MonoBehaviour
 	// Update is called once per frame
 	public void Update()
     {
-		_backHandIndex = _foreHandIndex =  _backArmIndex = _foreArmIndex = _pinIndex = _planeIndex = _dotIndex = _lineIndex = 0;
+		_backHandIndex = _foreHandIndex =  _backArmIndex = _foreArmIndex = _pinIndex = _planeIndex = _dotIndex = 0;
 
 		// Handle Overlay Modes à priori
 		switch (overlayMode)

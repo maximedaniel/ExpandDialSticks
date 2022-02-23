@@ -61,16 +61,12 @@ public class XP2 : MonoBehaviour
 	private const float safetyDistance = 6f;
 
 
-	private bool landscapeGenerated = false;
 	private string stringParticipant = "";
 	private int numeroParticipant = 0;
 	private bool unknownParticipant = true;
 	private bool training = false;
 	private bool triggerNextTrial = true;
-	private bool waitForNoHand = false;
-	private bool autoDistractorTrigger = false;
 	private bool MetricsActive = false;
-	private bool targetAroundIsSelected = false;
 
 	// GAUGE GAME VARIABLES
 	private Vector2[] gaugePositions;
@@ -89,20 +85,12 @@ public class XP2 : MonoBehaviour
 	private const int END_TARGET_STOP = 10;
 
 	private int gaugeState = GAUGE_TO_APPEAR;
-	private const sbyte gaugeHeight = 20;
 	private float aiguilleRotation = 90f;
 	private float cadranRotation = 90f;
 	private float speedRotation = 10f;
 
-	private float directionTime = 0f;
-	private float directionDuration = 3f;
-
-	private const float initGameDuration = 20f;
-	private float gameDuration = Mathf.Infinity;
-	private float motionDuration = 10f;
 
 	private const float anglePerStep = 360f / 24f;
-	private float startRotation = 90f - anglePerStep;
 	public enum DirectionRotation { CW, CCW, IDDLE };
 	private DirectionRotation directionRotation = DirectionRotation.CW;
 
@@ -131,7 +119,6 @@ public class XP2 : MonoBehaviour
 	private List<Vector2Int> candidates = new List<Vector2Int>();
 
 	List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>> trials = new List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>>();
-	private int currTrialIndex;
 	private Tuple<Vector2Int, Vector2Int, List<Vector2Int>> currTrial;
 	private int totalTrials;
 
@@ -154,11 +141,9 @@ public class XP2 : MonoBehaviour
 		currTaskMode = TaskMode.SYSTEM_INTERRUPT;
 		candidates = new List<Vector2Int>();
 		trials = new List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>>();
-		currTrialIndex = -1;
 		prevSelectPosition = currSelectPosition = new Vector2Int(-1, -1);
 		//GenerateTrials();
 		MetricsActive = false;
-		targetAroundIsSelected = false;
 		triggerNextTrial = true;
 		connected = false;
 		/*for(float i = 0; i < 1.0f; i += 0.1f)

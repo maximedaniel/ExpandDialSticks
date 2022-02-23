@@ -6,7 +6,7 @@ using UnityEngine;
 public class MyFakeCapsuleHand : MonoBehaviour, IArmController
 {
     // Constants
-    private const int SEPARATION_LEVEL = 3; 
+    private const int SEPARATION_LEVEL = 1; 
     private const int SEPARATION_LAYER = 10; // Safety Level 0
     private const float HAND_RADIUS = 0.10f;
     private const float FOREARM_RADIUS = 0.05f;

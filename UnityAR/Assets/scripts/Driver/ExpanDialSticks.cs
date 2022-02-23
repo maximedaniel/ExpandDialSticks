@@ -372,8 +372,8 @@ public class ExpanDialSticks : MonoBehaviour
 	// Use this for initialization
 	void Start () {
 		// Find and Handle real LeapMotion
-		leftArmObject = GameObject.Find("LeapMotion/RealArmsManager/LeftArmController");
-		rightArmObject = GameObject.Find("LeapMotion/RealArmsManager/RightArmController");
+		leftArmObject = GameObject.Find("LeapMotion/ArmsManager/LeftArmController");
+		rightArmObject = GameObject.Find("LeapMotion/ArmsManager/RightArmController");
 		if (leftArmObject != null && rightArmObject != null)
 		{
 
@@ -382,8 +382,8 @@ public class ExpanDialSticks : MonoBehaviour
 
 		} else { // use fake LeapMotion
 
-			leftArmObject = GameObject.Find("LeapMotion/FakeArmsManager/LeftArmController");
-			rightArmObject = GameObject.Find("LeapMotion/FakeArmsManager/RightArmController");
+			leftArmObject = GameObject.Find("FakeLeapMotion/ArmsManager/LeftArmController");
+			rightArmObject = GameObject.Find("FakeLeapMotion/ArmsManager/RightArmController");
 
 			if (leftArmObject != null && rightArmObject != null)
 			{
