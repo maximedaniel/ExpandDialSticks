@@ -6,16 +6,16 @@ Shader "Outlined/DotOutlineShader" {
 		 _Color("Main Color", Color) = (0.5,0.5,0.5,1)
 		_Textures("Textures", 2DArray) = "" {}
 		_TextureIndex("Texture Index", Range(0, 32)) = 0
-		_OutlineColor("Outline Color", Color) = (0,0,0,1)
-		_Outline("Outline width", Range(0.0, 100.00)) = 100
-		_SecondOutlineColor("Second Outline Color", Color) = (1,0,0,1)
+		_FirstOutlineColor("First Outline Color", Color) = (0,0,0,1)
+		_FirstOutlineWidth("First Outline width", Range(0.0, 100.00)) = 100
+		/*_SecondOutlineColor("Second Outline Color", Color) = (1,0,0,1)
 		_SecondOutline("Second Outline width", Range(0.0, 100.00)) = 80
 		_ThirdOutlineColor("Third Outline Color", Color) = (0,1,0,1)
 		_ThirdOutline("Third Outline width", Range(0.0, 100.00)) = 60
 		_FourthOutlineColor("Fourth Outline Color", Color) = (0,0,1,1)
 		_FourthOutline("Fourth Outline width", Range(0.0, 100.00)) = 40
 		_FifthOutlineColor("Fifth Outline Color", Color) = (1,1,1,1)
-		_FifthOutline("Fifth Outline width", Range(0.0, 100.00)) = 20
+		_FifthOutline("Fifth Outline width", Range(0.0, 100.00)) = 20*/
 			// Left Hand
 			_LeftHandCenter("Left Hand Center", Vector) = (.0, .0, .0, .0)
 			_LeftHandRadius("Left Hand Radius", Range(0,100)) = 0
@@ -84,16 +84,16 @@ Shader "Outlined/DotOutlineShader" {
 		UNITY_INSTANCING_BUFFER_START(Props)
 			UNITY_DEFINE_INSTANCED_PROP(float, _TextureIndex)
 			UNITY_DEFINE_INSTANCED_PROP(float4, _Color)
-			UNITY_DEFINE_INSTANCED_PROP(float, _Outline)
-			UNITY_DEFINE_INSTANCED_PROP(float4, _OutlineColor)
-			UNITY_DEFINE_INSTANCED_PROP(float, _SecondOutline)
+			UNITY_DEFINE_INSTANCED_PROP(float4, _FirstOutlineColor)
+			UNITY_DEFINE_INSTANCED_PROP(float, _FirstOutlineWidth)
+			/*UNITY_DEFINE_INSTANCED_PROP(float, _SecondOutline)
 			UNITY_DEFINE_INSTANCED_PROP(float4, _SecondOutlineColor)
 			UNITY_DEFINE_INSTANCED_PROP(float, _ThirdOutline)
 			UNITY_DEFINE_INSTANCED_PROP(float4, _ThirdOutlineColor)
 			UNITY_DEFINE_INSTANCED_PROP(float, _FourthOutline)
 			UNITY_DEFINE_INSTANCED_PROP(float4, _FourthOutlineColor)
 			UNITY_DEFINE_INSTANCED_PROP(float, _FifthOutline)
-			UNITY_DEFINE_INSTANCED_PROP(float4, _FifthOutlineColor)
+			UNITY_DEFINE_INSTANCED_PROP(float4, _FifthOutlineColor)*/
 			// Left Hand
 			UNITY_DEFINE_INSTANCED_PROP(float4, _LeftHandCenter)
 			UNITY_DEFINE_INSTANCED_PROP(float, _LeftHandRadius)
@@ -237,8 +237,8 @@ Shader "Outlined/DotOutlineShader" {
 				float3 norm = mul((float3x3)UNITY_MATRIX_IT_MV, v.normal);
 				float2 offset = TransformViewToProjection(norm.xy);
 
-				o.pos.xy += offset * o.pos.z * UNITY_ACCESS_INSTANCED_PROP(Props, _Outline);
-				o.color = UNITY_ACCESS_INSTANCED_PROP(Props, _OutlineColor);
+				o.pos.xy += offset * o.pos.z * UNITY_ACCESS_INSTANCED_PROP(Props, _FirstOutlineWidth);
+				o.color = UNITY_ACCESS_INSTANCED_PROP(Props, _FirstOutlineColor);
 				return o;
 			}
 			half4 frag(v2f i) :COLOR {
@@ -273,6 +273,7 @@ Shader "Outlined/DotOutlineShader" {
 			}
 			ENDCG
 			}
+			/*
 				// note that a vertex shader is specified here but its using the one above
 				Pass{
 						Name "OUTLINE 2"
@@ -610,7 +611,7 @@ Shader "Outlined/DotOutlineShader" {
 				return i.color;
 			}
 			ENDCG
-			}
+			}*/
 
 		}
 

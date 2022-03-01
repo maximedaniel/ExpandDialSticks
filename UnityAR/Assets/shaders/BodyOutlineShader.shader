@@ -4,10 +4,12 @@ Shader "Outlined/BodySilhouetteShader" {
 	Properties{
 		 _Color("Main Color", Color) = (0.5,0.5,0.5,1)
 		 _MainTex("Texture", 2D) = "white" {}
-		_OutlineColor("Outline Color", Color) = (0,0,0,1)
-		_Outline("Outline width", Range(0.0, 100.00)) = 50
+		_FirstOutlineColor("First Outline Color", Color) = (0,0,0,1)
+		_FirstOutlineWidth("First Outline width", Range(0.0, 100.00)) = 0
 		_SecondOutlineColor("Second Outline Color", Color) = (1,1,1,1)
-		_SecondOutline("Second Outline width", Range(0.0, 100.00)) = 25
+		_SecondOutlineWidth("Second Outline width", Range(0.0, 100.00)) = 0
+		_ThirdOutlineColor("Third Outline Color", Color) = (1,1,1,1)
+		_ThirdOutlineWidth("Third Outline width", Range(0.0, 100.00)) = 0
 	}
 		CGINCLUDE
 #include "UnityCG.cginc"
@@ -31,10 +33,12 @@ Shader "Outlined/BodySilhouetteShader" {
 		float4 _MainTex_ST;
 		UNITY_INSTANCING_BUFFER_START(Props)
 			UNITY_DEFINE_INSTANCED_PROP(float4, _Color)
-			UNITY_DEFINE_INSTANCED_PROP(float, _Outline)
-			UNITY_DEFINE_INSTANCED_PROP(float4, _OutlineColor)
-			UNITY_DEFINE_INSTANCED_PROP(float, _SecondOutline)
+			UNITY_DEFINE_INSTANCED_PROP(float4, _FirstOutlineColor)
+			UNITY_DEFINE_INSTANCED_PROP(float, _FirstOutlineWidth)
 			UNITY_DEFINE_INSTANCED_PROP(float4, _SecondOutlineColor)
+			UNITY_DEFINE_INSTANCED_PROP(float, _SecondOutlineWidth)
+			UNITY_DEFINE_INSTANCED_PROP(float4, _ThirdOutlineColor)
+			UNITY_DEFINE_INSTANCED_PROP(float, _ThirdOutlineWidth)
 			UNITY_INSTANCING_BUFFER_END(Props)
 			ENDCG
 
@@ -121,8 +125,8 @@ Shader "Outlined/BodySilhouetteShader" {
 					float3 norm = mul((float3x3)UNITY_MATRIX_IT_MV, v.normal);
 					float2 offset = TransformViewToProjection(norm.xy);
 
-					o.pos.xy += offset * o.pos.z * UNITY_ACCESS_INSTANCED_PROP(Props, _Outline);
-					o.color = UNITY_ACCESS_INSTANCED_PROP(Props, _OutlineColor);
+					o.pos.xy += offset * o.pos.z * UNITY_ACCESS_INSTANCED_PROP(Props, _FirstOutlineWidth);
+					o.color = UNITY_ACCESS_INSTANCED_PROP(Props, _FirstOutlineColor);
 					return o;
 				}
 				half4 frag(v2f i) :COLOR {
@@ -131,12 +135,12 @@ Shader "Outlined/BodySilhouetteShader" {
 				}
 				ENDCG
 				}
-				/*	// note that a vertex shader is specified here but its using the one above
+					// note that a vertex shader is specified here but its using the one above
 					Pass{
 						Name "OUTLINE 2"
 						Tags { "LightMode" = "Always" }
 						Cull Front
-						Offset 32, 32
+						Offset 0, 0
 
 					// you can choose what kind of blending mode you want for the outline
 					Blend SrcAlpha OneMinusSrcAlpha // Normal
@@ -160,7 +164,7 @@ Shader "Outlined/BodySilhouetteShader" {
 					float3 norm = mul((float3x3)UNITY_MATRIX_IT_MV, v.normal);
 					float2 offset = TransformViewToProjection(norm.xy);
 
-					o.pos.xy += offset * o.pos.z * UNITY_ACCESS_INSTANCED_PROP(Props,_SecondOutline);
+					o.pos.xy += offset * o.pos.z * UNITY_ACCESS_INSTANCED_PROP(Props, _SecondOutlineWidth);
 					o.color = UNITY_ACCESS_INSTANCED_PROP(Props,_SecondOutlineColor);
 					return o;
 				}
@@ -169,7 +173,46 @@ Shader "Outlined/BodySilhouetteShader" {
 					return i.color;
 				}
 				ENDCG
-				}*/
+				}
+				// note that a vertex shader is specified here but its using the one above
+				Pass{
+						Name "OUTLINE 3"
+						Tags { "LightMode" = "Always" }
+						Cull Front
+						Offset 0, 0
+
+					// you can choose what kind of blending mode you want for the outline
+					Blend SrcAlpha OneMinusSrcAlpha // Normal
+					//Blend One One // Additive
+					//Blend One OneMinusDstColor // Soft Additive
+					//Blend DstColor Zero // Multiplicative
+					//Blend DstColor SrcColor // 2x Multiplicative
+
+					CGPROGRAM
+					#pragma multi_compile_instancing
+					#pragma vertex vert
+					#pragma fragment frag			
+
+					v2f vert(appdata v) {
+					// just make a copy of incoming vertex data but scaled according to normal direction
+					v2f o;
+					UNITY_SETUP_INSTANCE_ID(v);
+					UNITY_TRANSFER_INSTANCE_ID(v, o);
+					o.pos = UnityObjectToClipPos(v.vertex);
+
+					float3 norm = mul((float3x3)UNITY_MATRIX_IT_MV, v.normal);
+					float2 offset = TransformViewToProjection(norm.xy);
+
+					o.pos.xy += offset * o.pos.z * UNITY_ACCESS_INSTANCED_PROP(Props, _ThirdOutlineWidth);
+					o.color = UNITY_ACCESS_INSTANCED_PROP(Props,_ThirdOutlineColor);
+					return o;
+				}
+				half4 frag(v2f i) :COLOR {
+					UNITY_SETUP_INSTANCE_ID(i);
+					return i.color;
+				}
+				ENDCG
+				}
 
 		}
 

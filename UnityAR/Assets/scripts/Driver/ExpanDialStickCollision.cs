@@ -178,11 +178,13 @@ public class ExpanDialStickCollision: MonoBehaviour
 		Vector3 endPos = Vector3.positiveInfinity;
 		float minDistance = 0f;
 		float maxDistance = 0f;
+		float prox = float.PositiveInfinity;
 		Vector3 finalStartPos = Vector3.negativeInfinity;
 		Vector3 finalDirection = Vector3.positiveInfinity;
 		Vector3 finalEndPos = Vector3.positiveInfinity;
 		float finalMinDistance = 0f;
 		float finalMaxDistance = 0f;
+		float finalProx = float.PositiveInfinity;
 		//Vector3[] directionParts = new Vector3[NB_PARTS];
 		float diameter = pin.localScale.x;
 		float height = pin.localScale.y * 2f;
@@ -196,8 +198,11 @@ public class ExpanDialStickCollision: MonoBehaviour
 		direction = endPos - startPos;
 		minDistance = minLeftHandRadius;
 		maxDistance = maxLeftHandRadius;
-		if (direction.magnitude <= finalDirection.magnitude)
+		prox = (direction.magnitude - minDistance) / (maxDistance - minDistance);
+		//prox = Mathf.InverseLerp(minDistance, maxDistance, direction.magnitude);
+		if (prox <= finalProx)
 		{
+			finalProx = prox;
 			finalDirection = direction;
 			finalStartPos = startPos;
 			finalEndPos = endPos;
@@ -211,16 +216,17 @@ public class ExpanDialStickCollision: MonoBehaviour
 		direction = endPos - startPos;
 		minDistance = minLeftHandRadius;
 		maxDistance = maxLeftHandRadius;
-		if (direction.magnitude <= finalDirection.magnitude)
+		prox = (direction.magnitude - minDistance) / (maxDistance - minDistance);
+		//prox = Mathf.InverseLerp(minDistance, maxDistance, direction.magnitude);
+		if (prox <= finalProx)
 		{
+			finalProx = prox;
 			finalDirection = direction;
 			finalStartPos = startPos;
 			finalEndPos = endPos;
 			finalMinDistance = minDistance;
 			finalMaxDistance = maxDistance;
 		}
-		//Debug.DrawLine(headPinPos + headPinToLeftHand * (diameter / 2.0f), headPinPos + headPinToLeftHand * (diameter / 2.0f) + pinToLeftHandDirection, Color.HSVToRGB(0f, 0f, 0f));
-		//directionParts[LEFT_HAND_INDEX] = pinToLeftHandDirection;
 
 		// RIGHT HAND
 		endPos = rightHandPos;
@@ -228,8 +234,11 @@ public class ExpanDialStickCollision: MonoBehaviour
 		direction = endPos - startPos;
 		minDistance = minRightHandRadius;
 		maxDistance = maxRightHandRadius;
-		if (direction.magnitude <= finalDirection.magnitude)
+		prox = (direction.magnitude - minDistance) / (maxDistance - minDistance);
+		//prox = Mathf.InverseLerp(minDistance, maxDistance, direction.magnitude);
+		if (prox <= finalProx)
 		{
+			finalProx = prox;
 			finalDirection = direction;
 			finalStartPos = startPos;
 			finalEndPos = endPos;
@@ -243,8 +252,11 @@ public class ExpanDialStickCollision: MonoBehaviour
 		direction = endPos - startPos;
 		minDistance = minRightHandRadius;
 		maxDistance = maxRightHandRadius;
-		if (direction.magnitude <= finalDirection.magnitude)
+		prox = (direction.magnitude - minDistance) / (maxDistance - minDistance);
+		//prox = Mathf.InverseLerp(minDistance, maxDistance, direction.magnitude);
+		if (prox <= finalProx)
 		{
+			finalProx = prox;
 			finalDirection = direction;
 			finalStartPos = startPos;
 			finalEndPos = endPos;
@@ -254,14 +266,16 @@ public class ExpanDialStickCollision: MonoBehaviour
 
 
 		// LEFT ARM
-
 		endPos = ProjectPointLine(tailPinPos, leftBackArmPos, leftFrontArmPos);
 		startPos = tailPinPos + Vector3.Normalize(new Vector3(endPos.x, tailPinPos.y, endPos.z) - tailPinPos) * (diameter / 2.0f);
 		direction = endPos - startPos;
 		minDistance = minLeftArmRadius;
 		maxDistance = maxLeftArmRadius;
-		if (direction.magnitude <= finalDirection.magnitude)
+		prox = (direction.magnitude - minDistance) / (maxDistance - minDistance);
+		//prox = Mathf.InverseLerp(minDistance, maxDistance, direction.magnitude);
+		if (prox <= finalProx)
 		{
+			finalProx = prox;
 			finalDirection = direction;
 			finalStartPos = startPos;
 			finalEndPos = endPos;
@@ -274,8 +288,11 @@ public class ExpanDialStickCollision: MonoBehaviour
 		direction = endPos - startPos;
 		minDistance = minLeftArmRadius;
 		maxDistance = maxLeftArmRadius;
-		if (direction.magnitude <= finalDirection.magnitude)
+		prox = (direction.magnitude - minDistance) / (maxDistance - minDistance);
+		//prox = Mathf.InverseLerp(minDistance, maxDistance, direction.magnitude);
+		if (prox <= finalProx)
 		{
+			finalProx = prox;
 			finalDirection = direction;
 			finalStartPos = startPos;
 			finalEndPos = endPos;
@@ -285,15 +302,16 @@ public class ExpanDialStickCollision: MonoBehaviour
 
 
 		// RIGHT ARM
-
-
 		endPos = ProjectPointLine(tailPinPos, rightBackArmPos, rightFrontArmPos);
 		startPos = tailPinPos + Vector3.Normalize(new Vector3(endPos.x, tailPinPos.y, endPos.z) - tailPinPos) * (diameter / 2.0f);
 		direction = endPos - startPos;
 		minDistance = minRightArmRadius;
 		maxDistance = maxRightArmRadius;
-		if (direction.magnitude <= finalDirection.magnitude)
+		prox = (direction.magnitude - minDistance) / (maxDistance - minDistance);
+		//prox = Mathf.InverseLerp(minDistance, maxDistance, direction.magnitude);
+		if (prox <= finalProx)
 		{
+			finalProx = prox;
 			finalDirection = direction;
 			finalStartPos = startPos;
 			finalEndPos = endPos;
@@ -306,8 +324,11 @@ public class ExpanDialStickCollision: MonoBehaviour
 		direction = endPos - startPos;
 		minDistance = minRightArmRadius;
 		maxDistance = maxRightArmRadius;
-		if (direction.magnitude <= finalDirection.magnitude)
+		prox = (direction.magnitude - minDistance) / (maxDistance - minDistance);
+		//prox = Mathf.InverseLerp(minDistance, maxDistance, direction.magnitude);
+		if (prox <= finalProx)
 		{
+			finalProx = prox;
 			finalDirection = direction;
 			finalStartPos = startPos;
 			finalEndPos = endPos;
@@ -353,8 +374,8 @@ public class ExpanDialStickCollision: MonoBehaviour
 			leftHandCollider = leftHand.GetHandColliderAt(0);
 			SphereCollider sc = leftHandCollider.GetComponent<SphereCollider>();
 			leftHandPos = leftHandCollider.transform.position;
-			minLeftHandRadius = sc.radius;
-			maxLeftHandRadius = sc.radius + MyCapsuleHand.WARNING_RADIUS;
+			minLeftHandRadius = sc.radius + MyCapsuleHand.STOP_RADIUS;
+			maxLeftHandRadius = sc.radius + MyCapsuleHand.STOP_RADIUS + MyCapsuleHand.WARNING_RADIUS;
 			//Debug.Log("minLeftHandRadius: " + minLeftHandRadius + " " + maxLeftHandRadius);
 
 
@@ -363,8 +384,8 @@ public class ExpanDialStickCollision: MonoBehaviour
 			CapsuleCollider cc = leftArmCollider.GetComponent<CapsuleCollider>();
 			leftFrontArmPos = leftArmCollider.transform.position + leftArmCollider.transform.forward * (cc.height / 2.0f);
 			leftBackArmPos = leftArmCollider.transform.position - leftArmCollider.transform.forward * (cc.height / 2.0f);
-			minLeftArmRadius = cc.radius;
-			maxLeftArmRadius = cc.radius + MyCapsuleHand.WARNING_RADIUS;
+			minLeftArmRadius = cc.radius + MyCapsuleHand.STOP_RADIUS;
+			maxLeftArmRadius = cc.radius + MyCapsuleHand.STOP_RADIUS + MyCapsuleHand.WARNING_RADIUS;
 			//Debug.Log("minLeftArmRadius: " + minLeftArmRadius + " " + maxLeftArmRadius);
 
 			computeDistance = true;
@@ -375,8 +396,8 @@ public class ExpanDialStickCollision: MonoBehaviour
 			rightHandCollider = rightHand.GetHandColliderAt(0);
 			SphereCollider sc = rightHandCollider.GetComponent<SphereCollider>();
 			rightHandPos = rightHandCollider.transform.position;
-			minRightHandRadius = sc.radius;
-			maxRightHandRadius = sc.radius + MyCapsuleHand.WARNING_RADIUS;
+			minRightHandRadius = sc.radius + MyCapsuleHand.STOP_RADIUS;
+			maxRightHandRadius = sc.radius + MyCapsuleHand.STOP_RADIUS + MyCapsuleHand.WARNING_RADIUS;
 			///Debug.Log("minRightHandRadius" + minRightHandRadius + " " + maxRightHandRadius);
 
 			// Get Right Arm Collider
@@ -384,8 +405,8 @@ public class ExpanDialStickCollision: MonoBehaviour
 			CapsuleCollider cc = rightArmCollider.GetComponent<CapsuleCollider>();
 			rightFrontArmPos = rightArmCollider.transform.position + rightArmCollider.transform.forward * (cc.height / 2.0f);
 			rightBackArmPos = rightArmCollider.transform.position - rightArmCollider.transform.forward * (cc.height / 2.0f);
-			minRightArmRadius = cc.radius;
-			maxRightArmRadius = cc.radius + MyCapsuleHand.WARNING_RADIUS;
+			minRightArmRadius = cc.radius + MyCapsuleHand.STOP_RADIUS;
+			maxRightArmRadius = cc.radius + MyCapsuleHand.STOP_RADIUS + MyCapsuleHand.WARNING_RADIUS;
 			//Debug.Log("maxRightArmRadius: " + minRightArmRadius + " " + maxRightArmRadius);
 
 			computeDistance = true;
@@ -406,22 +427,23 @@ public class ExpanDialStickCollision: MonoBehaviour
 			this.minDistance = minDistance;
 			this.maxDistance = maxDistance;
 			this.distance = direction.magnitude;
-
 			float horizontalGamma = 1f - Mathf.InverseLerp(minDistance, maxDistance, new Vector3(direction.x, 0f, direction.z).magnitude);
 			float verticalGamma = 1f - Mathf.InverseLerp(minDistance, maxDistance, new Vector3(0f, direction.y, 0f).magnitude);
 			this.gamma = Mathf.Min(horizontalGamma, verticalGamma);
-				
 
-			this.separationLevel = (int)Mathf.Lerp(1.99f, nbSeparationLevels+0.99f, 1f - this.gamma);
+
+			this.separationLevel = (int)Mathf.Lerp(1.99f, nbSeparationLevels + 0.99f, 1f - this.gamma);
 			float coeff = Mathf.Max(0, separationLevel - 1) / (float)(nbSeparationLevels - 1f);
 			this.proximity = 1f - coeff;
 
-			/*if (Row == 1 && Column == 1) {
+			/*if (Row == 0 && Column == 1)
+			{
 				Debug.DrawLine(startPos, startPos + new Vector3(direction.x, 0f, direction.z), new Color(horizontalGamma, 0f, 0f, 1f));
 				Debug.DrawLine(startPos, startPos + new Vector3(0f, direction.y, 0f), new Color(verticalGamma, 0f, 0f, 1f));
-				Debug.Log("distance(" + distance +  "), gamma(" + gamma + "), separation("+ separationLevel+")");
+				Debug.Log("direction(" + direction + "), distance(" + distance + "), gamma(" + gamma + "), separation(" + separationLevel + ")");
 			}*/
 			return;
+
 			/* Check user proximy level 1 */
 			/*for (int level = 0; level < nbSeparationLevels; level++)
 			{

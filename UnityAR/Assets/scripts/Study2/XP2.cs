@@ -57,7 +57,7 @@ public class XP2 : MonoBehaviour
 	private const int targetPos = 40;
 	private const int distractorPos = 40;
 	private const float shortShapeChangeDuration = 2f;
-	private const float longShapeChangeDuration = 4f;
+	private const float longShapeChangeDuration = 6f;
 	private const float safetyDistance = 6f;
 
 
@@ -95,6 +95,8 @@ public class XP2 : MonoBehaviour
 	private DirectionRotation directionRotation = DirectionRotation.CW;
 
 	// MQTT VARIABLES
+
+	public const string MQTT_EMPATICA_RECORDER = "EMPATICA_RECORDER";
 	public const string MQTT_SYSTEM_RECORDER = "SYSTEM_RECORDER";
 	public const string CMD_START = "START";
 	public const string CMD_STOP = "STOP";
@@ -392,6 +394,8 @@ public class XP2 : MonoBehaviour
 	private void HandleConnected(object sender, MqttConnectionEventArgs e)
 	{
 		Debug.Log("Application connected.");
+
+		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		connected = true;
 
@@ -418,6 +422,7 @@ public class XP2 : MonoBehaviour
 			aiguilleRotation -= e.diff * anglePerStep;
 			aiguilleRotation = (aiguilleRotation + 360f) % 360f;
 			string msg = "USER_ROTATION " + currSelectPosition.ToString() + " CADRAN " + cadranRotation + " AIGUILLE " + aiguilleRotation;
+			//Debug.Log("HandleRotationChanged:" + msg);
 			//Debug.Log(msg);
 			/*if (gaugeState == GAUGE_APPEARED)
 			{
@@ -440,6 +445,7 @@ public class XP2 : MonoBehaviour
 			aiguilleRotation -= e.diff * anglePerStep;
 			aiguilleRotation = (aiguilleRotation + 360f) % 360f;
 			string msg = "USER_ROTATION " + currSelectPosition.ToString() + " CADRAN " + cadranRotation + " AIGUILLE " + aiguilleRotation;
+			//Debug.Log("HandleRotationChanged:" + msg);
 			//Debug.Log(msg);
 			/*if (gaugeState == GAUGE_APPEARED)
 			{
@@ -454,6 +460,8 @@ public class XP2 : MonoBehaviour
 	void Quit()
 	{
 
+
+		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 #if UNITY_EDITOR
 		// Application.Quit() does not work in the editor so
@@ -636,8 +644,8 @@ public class XP2 : MonoBehaviour
 		//string trialProgress = currTrial + "/" + nbTrials;
 
 		expanDialSticks.setBorderBackground(Color.white);
-		expanDialSticks.setLeftCornerText(TextAlignmentOptions.Center, 12, Color.black, participantNumber, new Vector3(90f, -90f, 0f));
-		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 12, Color.black, instructions, new Vector3(90f, -90f, 0f));
+		expanDialSticks.setLeftCornerText(TextAlignmentOptions.Center, 12, Color.white, participantNumber, new Vector3(90f, -90f, 0f));
+		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 12, Color.white, instructions, new Vector3(90f, -90f, 0f));
 		//expanDialSticks.setRightCornerText(TextAlignmentOptions.Center, 12, Color.black, trialProgress, new Vector3(90f, -90f, 0f));
 
 		//expanDialSticks.triggerTextureChange();
@@ -698,7 +706,7 @@ public class XP2 : MonoBehaviour
 		{
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
-				expanDialSticks.modelMatrix[i, j].TargetColor = Color.black;
+				expanDialSticks.modelMatrix[i, j].TargetColor = Color.white;
 				expanDialSticks.modelMatrix[i, j].TargetPlaneTexture = "default";
 				expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = 0f;
 				expanDialSticks.modelMatrix[i, j].TargetPlaneSize = 0f;
@@ -802,15 +810,15 @@ public class XP2 : MonoBehaviour
 		string taskStartMsg = "SYSTEM_TASK_START " + secondTarget.ToString() + " CADRAN " + cadranRotation + " AIGUILLE " + aiguilleRotation;
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(taskStartMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 
-		gaugeState = BEGIN_TARGET_START;
+		gaugeState = END_TARGET_START;
 		// wait for start signal
-		while (gaugeState != BEGIN_TARGET_STOP)
+		while (gaugeState != END_TARGET_STOP)
 		{
-			if (gaugeState == BEGIN_TARGET_TRIGGER)
+			if (gaugeState == END_TARGET_TRIGGER)
 			{
 				if (aiguilleRotation >= (cadranRotation - anglePerStep / 2f) % 360f && aiguilleRotation <= (cadranRotation + anglePerStep / 2f) % 360f)
 				{
-					gaugeState = BEGIN_TARGET_STOP;
+					gaugeState = END_TARGET_STOP;
 				}
 				// Move it
 				float prevRotation = cadranRotation;
@@ -834,6 +842,12 @@ public class XP2 : MonoBehaviour
 		string taskEndMsg = "SYSTEM_TASK_END " + secondTarget.ToString() + " CADRAN " + cadranRotation + " AIGUILLE " + aiguilleRotation;
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(taskEndMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 
+		// Trigger texture and shape reset
+		PrepareResetTextureAndProjector(0.1f);
+		expanDialSticks.triggerTextureChange();
+		expanDialSticks.triggerProjectorChange();
+		yield return new WaitForSeconds(0.1f);
+
 		// wait for shape-change completion
 		shapeChangeEnded = false;
 		if (!training)
@@ -854,11 +868,7 @@ public class XP2 : MonoBehaviour
 			}
 		}
 
-		// Trigger texture and shape reset
-		PrepareResetTextureAndProjector(0.1f);
-		expanDialSticks.triggerTextureChange();
-		expanDialSticks.triggerProjectorChange();
-		yield return new WaitForSeconds(0.1f);
+		// Trigger shape reset
 		PrepareResetShape(shortShapeChangeDuration);
 		expanDialSticks.triggerShapeChange();
 		yield return new WaitForSeconds(shortShapeChangeDuration);
@@ -941,9 +951,9 @@ public class XP2 : MonoBehaviour
 		int distractorLength = distractorList.Count();
 
 		// wait for start signal
-		while (gaugeState != BEGIN_TARGET_STOP)
+		while (gaugeState != END_TARGET_STOP)
 		{
-			if(gaugeState == BEGIN_TARGET_TRIGGER)
+			if(gaugeState == END_TARGET_TRIGGER)
 			{
 				if (distractorIndex < distractorLength && currTime - prevDistractorTime >= DISTRACTOR_INTERVAL)
 				{
@@ -969,7 +979,7 @@ public class XP2 : MonoBehaviour
 				{
 					if (aiguilleRotation >= (cadranRotation - anglePerStep / 2f) % 360f && aiguilleRotation <= (cadranRotation + anglePerStep / 2f) % 360f)
 					{
-						gaugeState = BEGIN_TARGET_STOP;
+						gaugeState = END_TARGET_STOP;
 					}
 
 				}
@@ -1252,14 +1262,14 @@ public class XP2 : MonoBehaviour
 		{
 			for (int j = 0; j < expanDialSticks.NbColumns; j++)
 			{
-				expanDialSticks.modelMatrix[i, j].TargetColor = Color.black; //Color.green;
+				expanDialSticks.modelMatrix[i, j].TargetColor = Color.white; //Color.green;
 				if (i == target.x && j == target.y)
 				{
 
 					expanDialSticks.modelMatrix[i, j].TargetPlaneTexture = "default";
 					expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = 0f;
 					expanDialSticks.modelMatrix[i, j].TargetPlaneSize = 0f;
-					expanDialSticks.modelMatrix[i, j].TargetPlaneColor = Color.black;
+					expanDialSticks.modelMatrix[i, j].TargetPlaneColor = Color.white;
 
 					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "LightCadran";
 					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontRotation = cadranRotation;
@@ -1269,7 +1279,7 @@ public class XP2 : MonoBehaviour
 					expanDialSticks.modelMatrix[i, j].TargetProjectorBackTexture = "aiguille";
 					expanDialSticks.modelMatrix[i, j].TargetProjectorBackRotation = aiguilleRotation;
 					expanDialSticks.modelMatrix[i, j].TargetProjectorBackSize = 0.02f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorBackColor = Color.white;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorBackColor = Color.black;
 				}
 
 				else
@@ -1277,17 +1287,17 @@ public class XP2 : MonoBehaviour
 					expanDialSticks.modelMatrix[i, j].TargetPlaneTexture = "default";
 					expanDialSticks.modelMatrix[i, j].TargetPlaneRotation = 0f;
 					expanDialSticks.modelMatrix[i, j].TargetPlaneSize = 0f;
-					expanDialSticks.modelMatrix[i, j].TargetPlaneColor = Color.black;
+					expanDialSticks.modelMatrix[i, j].TargetPlaneColor = Color.white;
 
 					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontTexture = "projector";
 					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontRotation = cadranRotation;
 					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontSize = 0f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontColor = Color.white;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorFrontColor = Color.blue;
 
 					expanDialSticks.modelMatrix[i, j].TargetProjectorBackTexture = "projector";
 					expanDialSticks.modelMatrix[i, j].TargetProjectorBackRotation = aiguilleRotation;
 					expanDialSticks.modelMatrix[i, j].TargetProjectorBackSize = 0f;
-					expanDialSticks.modelMatrix[i, j].TargetProjectorBackColor = Color.blue;
+					expanDialSticks.modelMatrix[i, j].TargetProjectorBackColor = Color.black;
 				}
 
 				expanDialSticks.modelMatrix[i, j].TargetTextureChangeDuration = duration;
@@ -1298,8 +1308,8 @@ public class XP2 : MonoBehaviour
 		string participantNumber = "<pos=0%><b>P" + numeroParticipant + "</b>";
 		string trialProgress = "<pos=90%><b>" + trials.Count() + "/" + totalTrials + "</b>";
 		string legend = participantNumber + trialProgress;
-		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 0.1f, Color.white, legend, new Vector3(90f, -90f, 0f));
-		expanDialSticks.setBorderBackground(Color.black);
+		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 0.1f, Color.black, legend, new Vector3(90f, -90f, 0f));
+		expanDialSticks.setBorderBackground(Color.white);
 	}
 
 	void ShowDotOnTarget(Vector2Int target, float duration)
