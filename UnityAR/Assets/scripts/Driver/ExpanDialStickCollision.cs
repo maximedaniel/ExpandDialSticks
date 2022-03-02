@@ -13,6 +13,9 @@ using Leap.Unity;
 
 public class ExpanDialStickCollision: MonoBehaviour
 {
+	public enum CollisionMode { Surface, Volume };
+	private CollisionMode collisionMode = CollisionMode.Surface;
+
 	private const int LEFT_HAND_INDEX = 0;
 	private const int LEFT_ARM_INDEX = 1;
 	private const int RIGHT_HAND_INDEX = 2;
@@ -427,10 +430,21 @@ public class ExpanDialStickCollision: MonoBehaviour
 			this.minDistance = minDistance;
 			this.maxDistance = maxDistance;
 			this.distance = direction.magnitude;
-			float horizontalGamma = 1f - Mathf.InverseLerp(minDistance, maxDistance, new Vector3(direction.x, 0f, direction.z).magnitude);
-			float verticalGamma = 1f - Mathf.InverseLerp(minDistance, maxDistance, new Vector3(0f, direction.y, 0f).magnitude);
-			this.gamma = Mathf.Min(horizontalGamma, verticalGamma);
 
+			switch (collisionMode)
+			{
+				case CollisionMode.Surface:
+					float horizontalGamma = 1f - Mathf.InverseLerp(minDistance, maxDistance, new Vector3(direction.x, 0f, direction.z).magnitude);
+					float verticalGamma = 1f - Mathf.InverseLerp(minDistance, maxDistance, new Vector3(0f, direction.y, 0f).magnitude);
+					this.gamma = Mathf.Min(horizontalGamma, verticalGamma);
+					break;
+				case CollisionMode.Volume:
+					this.gamma = 1f - Mathf.InverseLerp(minDistance, maxDistance, direction.magnitude);
+					break;
+				default:
+					this.gamma = 0f;
+					break;
+			}
 
 			this.separationLevel = (int)Mathf.Lerp(1.99f, nbSeparationLevels + 0.99f, 1f - this.gamma);
 			float coeff = Mathf.Max(0, separationLevel - 1) / (float)(nbSeparationLevels - 1f);

@@ -505,13 +505,13 @@ public class XP2 : MonoBehaviour
 		{
 			stringParticipant = GUI.TextField(new Rect(midX - 55, midY, 50, componentHeight), stringParticipant, 25);
 
-			if (GUI.Button(new Rect(midX + 5, midY - 75, componentWidth, componentHeight), "USER Interrupt TRAINING"))
+			if (GUI.Button(new Rect(midX + 5, midY - 75, componentWidth, componentHeight), "USERI TRAINING"))
 			{
 				numeroParticipant = int.Parse(stringParticipant);
 				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.User;
 				currTaskMode = TaskMode.USER_INTERRUPT;
 				expanDialSticks.SetOverlayMode(currOverlayMode);
-				string identity = "USER_IDENTITY " + numeroParticipant + " | USER INTERRUPT TRAINING";
+				string identity = "USER_IDENTITY " + numeroParticipant + " | USERI TRAINING";
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				Debug.Log(identity);
 				GenerateTrials();
@@ -519,13 +519,13 @@ public class XP2 : MonoBehaviour
 				unknownParticipant = false;
 			}
 
-			if (GUI.Button(new Rect(midX + 5, midY - 50, componentWidth, componentHeight), "USER Overlay | USER Interrupt"))
+			if (GUI.Button(new Rect(midX + 5, midY - 50, componentWidth, componentHeight), "USERO | USERI"))
 			{
 				numeroParticipant = int.Parse(stringParticipant);
 				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.User;
 				currTaskMode = TaskMode.USER_INTERRUPT;
 				expanDialSticks.SetOverlayMode(currOverlayMode);
-				string identity = "USER_IDENTITY " + numeroParticipant + " | USER OVERLAY | USER INTERRUPT";
+				string identity = "USER_IDENTITY " + numeroParticipant + " | USERO | USERI";
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				Debug.Log(identity);
 				GenerateTrials();
@@ -533,13 +533,13 @@ public class XP2 : MonoBehaviour
 				unknownParticipant = false;
 			}
 
-			if (GUI.Button(new Rect(midX + 5, midY - 25, componentWidth, componentHeight), "SYSTEM Overlay | USER Interrupt"))
+			if (GUI.Button(new Rect(midX + 5, midY - 25, componentWidth, componentHeight), "SYSTEMO | USERI"))
 			{
 				numeroParticipant = int.Parse(stringParticipant);
 				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.System;
 				currTaskMode = TaskMode.USER_INTERRUPT;
 				expanDialSticks.SetOverlayMode(currOverlayMode);
-				string identity = "USER_IDENTITY " + numeroParticipant + " | SYSTEM OVERLAY | USER INTERRUPT";
+				string identity = "USER_IDENTITY " + numeroParticipant + " | SYSTEMO | USERI";
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				Debug.Log(identity);
 				GenerateTrials();
@@ -547,13 +547,13 @@ public class XP2 : MonoBehaviour
 				unknownParticipant = false;
 			}
 
-			if (GUI.Button(new Rect(midX + 5, midY, componentWidth, componentHeight), "SYSTEM Interrupt TRAINING"))
+			if (GUI.Button(new Rect(midX + 5, midY, componentWidth, componentHeight), "SYSTEMI TRAINING"))
 			{
 				numeroParticipant = int.Parse(stringParticipant);
 				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.User;
 				currTaskMode = TaskMode.SYSTEM_INTERRUPT;
 				expanDialSticks.SetOverlayMode(currOverlayMode);
-				string identity = "USER_IDENTITY " + numeroParticipant + " | SYSTEM INTERRUPT TRAINING";
+				string identity = "USER_IDENTITY " + numeroParticipant + " | SYSTEMI TRAINING";
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				Debug.Log(identity);
 				GenerateTrials();
@@ -562,13 +562,13 @@ public class XP2 : MonoBehaviour
 			}
 
 
-			if (GUI.Button(new Rect(midX + 5, midY + 25, componentWidth, componentHeight), "USER Overlay | SYSTEM Interrupt"))
+			if (GUI.Button(new Rect(midX + 5, midY + 25, componentWidth, componentHeight), "USERO | SYSTEMI"))
 			{
 				numeroParticipant = int.Parse(stringParticipant);
 				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.User;
 				currTaskMode = TaskMode.SYSTEM_INTERRUPT;
 				expanDialSticks.SetOverlayMode(currOverlayMode);
-				string identity = "USER_IDENTITY " + numeroParticipant + " | USER OVERLAY | SYSTEM INTERRUPT";
+				string identity = "USER_IDENTITY " + numeroParticipant + " | USERO | SYSTEMI";
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				Debug.Log(identity);
 				GenerateTrials();
@@ -576,13 +576,13 @@ public class XP2 : MonoBehaviour
 				unknownParticipant = false;
 			}
 
-			if (GUI.Button(new Rect(midX + 5, midY + 50, componentWidth, componentHeight), "SYSTEM Overlay | SYSTEM Interrupt"))
+			if (GUI.Button(new Rect(midX + 5, midY + 50, componentWidth, componentHeight), "SYSTEMO | SYSTEMI"))
 			{
 				numeroParticipant = int.Parse(stringParticipant);
 				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.System;
 				currTaskMode = TaskMode.SYSTEM_INTERRUPT;
 				expanDialSticks.SetOverlayMode(currOverlayMode);
-				string identity = "USER_IDENTITY " + numeroParticipant + " | SYSTEM OVERLAY | SYSTEM INTERRUPT";
+				string identity = "USER_IDENTITY " + numeroParticipant + " | SYSTEMO | SYSTEMI";
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				Debug.Log(identity);
 				GenerateTrials();
@@ -945,7 +945,7 @@ public class XP2 : MonoBehaviour
 		msg = "USER_TASK_START " + secondTarget.ToString() + " CADRAN " + cadranRotation + " AIGUILLE " + aiguilleRotation;
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 
-		gaugeState = BEGIN_TARGET_START;
+		gaugeState = END_TARGET_START;
 		ListExtension.Shuffle(distractorList);
 		int distractorIndex = 0;
 		int distractorLength = distractorList.Count();
