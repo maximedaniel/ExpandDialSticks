@@ -5,4 +5,4 @@
 
 # Instructions
 
-- Open a Terminal and Enter `python .\LoggerMQTT.py`
+- Open a Terminal and Enter `python34 .\LoggerMQTT.py`

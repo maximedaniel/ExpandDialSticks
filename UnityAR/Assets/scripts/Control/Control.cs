@@ -6,18 +6,27 @@ using uPLibrary.Networking.M2Mqtt;
 using uPLibrary.Networking.M2Mqtt.Messages;
 using uPLibrary.Networking.M2Mqtt.Utility;
 using uPLibrary.Networking.M2Mqtt.Exceptions;
+using System;
 
 public class Control : MonoBehaviour
 {
-	// Start is called before the first frame update
-	private UnityEngine.Video.VideoPlayer videoPlayer;
+    // MQTT Client
+
+    public IPAddress EXPANDIALSTICKS_BROKER_ADDRESS = IPAddress.Parse("192.168.0.10"); // "test.mosquitto.org";
+    public IPAddress LOCALHOST_BROKER_ADDRESS = IPAddress.Parse("127.0.0.1"); // "test.mosquitto.org";
+    private IPAddress BROKER_ADDRESS; // "test.mosquitto.org";
+    public int BROKER_PORT = 1883; // 8080; 
+    public string MQTT_TOPIC = "ExpanDialSticks";
+    public float MQTT_DELAY_RECONNECT = 5f; // 0.2f;
+    public MqttClient client;
+
+    // Start is called before the first frame update
+    private UnityEngine.Video.VideoPlayer videoPlayer;
     private bool videoChosen = false;
     private bool videoReady = false;
     private bool videoStarted = false;
     private GUIStyle currentStyle = null;
 
-    public GameObject expanDialSticksPrefab;
-    private ExpanDialSticks expanDialSticks;
     private bool connected = false;
     private int buttonHeight = 50;
     private int buttonWidth = 100;
@@ -30,6 +39,41 @@ public class Control : MonoBehaviour
     public const string MQTT_SYSTEM_RECORDER = "SYSTEM_RECORDER";
     public const string CMD_START = "START";
     public const string CMD_STOP = "STOP";
+
+
+    public void client_MqttConnect()
+    {
+
+        try
+        {
+            // Connecting to ExpanDialSticks MQTT Broker
+            BROKER_ADDRESS = LOCALHOST_BROKER_ADDRESS;
+            client = new MqttClient(BROKER_ADDRESS, BROKER_PORT, false, null);
+            client.MqttMsgDisconnected += client_MqttMsgDisconnected;
+            client.MqttMsgPublishReceived += client_MqttMsgPublishReceived;
+            string clientId = Guid.NewGuid().ToString();
+            client.Connect(clientId);
+            client.Subscribe(new string[] { MQTT_TOPIC }, new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
+            connected = true;
+        }
+        catch (Exception)
+        {
+                Quit();
+        }
+    }
+
+    private void client_MqttMsgDisconnected(object sender, EventArgs e)
+    {
+        Debug.Log("Disconnected. Trying to reconnect in  " + MQTT_DELAY_RECONNECT + " secs...");
+        Invoke("client_MqttConnect", MQTT_DELAY_RECONNECT);
+
+    }
+
+    private void client_MqttMsgPublishReceived(object sender, MqttMsgPublishEventArgs e)
+    {
+        Debug.Log("Received: " + System.Text.Encoding.UTF8.GetString(e.Message));
+    }
+
     void Start()
     {   
         // Will attach a VideoPlayer to the main camera.
@@ -66,16 +110,10 @@ public class Control : MonoBehaviour
         // its prepareCompleted event.
         videoChosen = false;
         videoReady = false;
-        // Preparing MQTT broker
-        expanDialSticks = expanDialSticksPrefab.GetComponent<ExpanDialSticks>();
-        // Listen to events
-        expanDialSticks.OnConnecting += HandleConnecting;
-        expanDialSticks.OnConnected += HandleConnected;
-        expanDialSticks.OnDisconnected += HandleDisconnected;
 
-        connected = false;
         // Connection to MQTT Broker
-        expanDialSticks.client_MqttConnect();
+        connected = false;
+        client_MqttConnect();
     }
 
     private void HandleConnecting(object sender, MqttConnectionEventArgs e)
@@ -160,7 +198,7 @@ public class Control : MonoBehaviour
                         {
 
                             Debug.Log(CMD_START);
-                            expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+                            client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
                             videoPlayer.Play();
                             videoStarted = true;
                         }
@@ -206,7 +244,7 @@ public class Control : MonoBehaviour
             if (videoReady && !videoPlayer.isPlaying && Input.GetKey(KeyCode.Space))
                 {
                     Debug.Log(CMD_START);
-                    expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+                    client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
                     videoPlayer.Play();
                     videoStarted = true;
                 }
@@ -221,7 +259,7 @@ public class Control : MonoBehaviour
     void Quit()
     {
         Debug.Log(CMD_STOP);
-        expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+        client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_STOP), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 #if UNITY_EDITOR
         // Application.Quit() does not work in the editor so
         // UnityEditor.EditorApplication.isPlaying need to be set to false to end the game
