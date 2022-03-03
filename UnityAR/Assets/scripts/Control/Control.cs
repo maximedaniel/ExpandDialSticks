@@ -41,25 +41,44 @@ public class Control : MonoBehaviour
     public const string CMD_STOP = "STOP";
 
 
+
     public void client_MqttConnect()
     {
 
         try
         {
             // Connecting to ExpanDialSticks MQTT Broker
-            BROKER_ADDRESS = LOCALHOST_BROKER_ADDRESS;
+            BROKER_ADDRESS = EXPANDIALSTICKS_BROKER_ADDRESS;
             client = new MqttClient(BROKER_ADDRESS, BROKER_PORT, false, null);
             client.MqttMsgDisconnected += client_MqttMsgDisconnected;
             client.MqttMsgPublishReceived += client_MqttMsgPublishReceived;
+
             string clientId = Guid.NewGuid().ToString();
             client.Connect(clientId);
             client.Subscribe(new string[] { MQTT_TOPIC }, new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
-            connected = true;
         }
         catch (Exception)
         {
+
+            try
+            {
+                // Connecting to localhosy MQTT Broker
+                BROKER_ADDRESS = LOCALHOST_BROKER_ADDRESS;
+                client = new MqttClient(BROKER_ADDRESS, BROKER_PORT, false, null);
+                client.MqttMsgDisconnected += client_MqttMsgDisconnected;
+                client.MqttMsgPublishReceived += client_MqttMsgPublishReceived;
+                string clientId = Guid.NewGuid().ToString();
+                client.Connect(clientId);
+                client.Subscribe(new string[] { MQTT_TOPIC }, new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
+            }
+            catch (Exception)
+            {
                 Quit();
+            }
         }
+        Debug.Log(String.Format("Connected to MQTT Broker @{0}:{1}.", BROKER_ADDRESS, BROKER_PORT));
+        connected = true;
+
     }
 
     private void client_MqttMsgDisconnected(object sender, EventArgs e)
