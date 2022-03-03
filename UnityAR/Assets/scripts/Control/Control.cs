@@ -44,7 +44,6 @@ public class Control : MonoBehaviour
 
     public void client_MqttConnect()
     {
-
         try
         {
             // Connecting to ExpanDialSticks MQTT Broker
@@ -59,7 +58,6 @@ public class Control : MonoBehaviour
         }
         catch (Exception)
         {
-
             try
             {
                 // Connecting to localhosy MQTT Broker
