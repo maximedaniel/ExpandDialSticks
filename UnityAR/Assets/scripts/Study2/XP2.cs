@@ -158,8 +158,358 @@ public class XP2 : MonoBehaviour
 	public void GenerateTrials()
 	{
 		trials = new List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>>();
+		// DENSITY 1
+
+		List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>> densityOne = new List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>>();
+		densityOne.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 1), new Vector2Int(1, 1),new List<Vector2Int>
+				{
+								new Vector2Int(0,0),
+								new Vector2Int(0,2),
+								new Vector2Int(0,4),
+								new Vector2Int(2,1),
+								new Vector2Int(2,3),
+								new Vector2Int(2,5),
+								new Vector2Int(4,0),
+								new Vector2Int(4,2),
+								new Vector2Int(4,4)
+				}
+			));
+
+		densityOne.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 2), new Vector2Int(1, 2), new List<Vector2Int>
+				{
+								new Vector2Int(0,1),
+								new Vector2Int(0,3),
+								new Vector2Int(0,5),
+								new Vector2Int(2,0),
+								new Vector2Int(2,2),
+								new Vector2Int(2,4),
+								new Vector2Int(4,1),
+								new Vector2Int(4,3),
+								new Vector2Int(4,5)
+				}
+			));
+
+		densityOne.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 3), new Vector2Int(1, 3), new List<Vector2Int>
+				{
+								new Vector2Int(0,0),
+								new Vector2Int(0,2),
+								new Vector2Int(0,4),
+								new Vector2Int(2,1),
+								new Vector2Int(2,3),
+								new Vector2Int(2,5),
+								new Vector2Int(4,0),
+								new Vector2Int(4,2),
+								new Vector2Int(4,4)
+				}
+			));
+
+		densityOne.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 4), new Vector2Int(1, 4), new List<Vector2Int>
+				{
+								new Vector2Int(0,1),
+								new Vector2Int(0,3),
+								new Vector2Int(0,5),
+								new Vector2Int(2,0),
+								new Vector2Int(2,2),
+								new Vector2Int(2,4),
+								new Vector2Int(4,1),
+								new Vector2Int(4,3),
+								new Vector2Int(4,5)
+				}
+			));
+
+
+		// DENSITY 2
+		List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>> densityTwo = new List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>>();
+
+		densityTwo.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 1), new Vector2Int(1, 1), new List<Vector2Int>
+				{
+								new Vector2Int(0,1),
+								new Vector2Int(0,2),
+								new Vector2Int(0,3),
+								new Vector2Int(0,5),
+
+								new Vector2Int(1,0),
+								new Vector2Int(1,2),
+								new Vector2Int(1,4),
+
+								new Vector2Int(2,0),
+								new Vector2Int(2,1),
+								new Vector2Int(2,3),
+								new Vector2Int(2,4),
+								new Vector2Int(2,5),
+
+								new Vector2Int(3,0),
+								new Vector2Int(3,2),
+								new Vector2Int(3,4),
+
+								new Vector2Int(4,1),
+								new Vector2Int(4,2),
+								new Vector2Int(4,3),
+								new Vector2Int(4,5),
+				}
+			));
+
+		densityTwo.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 2), new Vector2Int(1, 2), new List<Vector2Int>
+				{
+								new Vector2Int(0,0),
+								new Vector2Int(0,2),
+								new Vector2Int(0,3),
+								new Vector2Int(0,4),
+
+								new Vector2Int(1,1),
+								new Vector2Int(1,3),
+								new Vector2Int(1,5),
+
+								new Vector2Int(2,0),
+								new Vector2Int(2,1),
+								new Vector2Int(2,2),
+								new Vector2Int(2,4),
+								new Vector2Int(2,5),
+
+								new Vector2Int(3,1),
+								new Vector2Int(3,3),
+								new Vector2Int(3,5),
+
+								new Vector2Int(4,0),
+								new Vector2Int(4,2),
+								new Vector2Int(4,3),
+								new Vector2Int(4,4),
+				}
+			));
+
+		densityTwo.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 3), new Vector2Int(1, 3), new List<Vector2Int>
+				{
+								new Vector2Int(0,1),
+								new Vector2Int(0,2),
+								new Vector2Int(0,3),
+								new Vector2Int(0,5),
+
+								new Vector2Int(1,0),
+								new Vector2Int(1,2),
+								new Vector2Int(1,4),
+
+								new Vector2Int(2,0),
+								new Vector2Int(2,1),
+								new Vector2Int(2,3),
+								new Vector2Int(2,4),
+								new Vector2Int(2,5),
+
+								new Vector2Int(3,0),
+								new Vector2Int(3,2),
+								new Vector2Int(3,4),
+
+								new Vector2Int(4,1),
+								new Vector2Int(4,2),
+								new Vector2Int(4,3),
+								new Vector2Int(4,5),
+				}
+			));
+
+		densityTwo.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 4), new Vector2Int(1, 4), new List<Vector2Int>
+				{
+								new Vector2Int(0,0),
+								new Vector2Int(0,2),
+								new Vector2Int(0,3),
+								new Vector2Int(0,4),
+
+								new Vector2Int(1,1),
+								new Vector2Int(1,3),
+								new Vector2Int(1,5),
+
+								new Vector2Int(2,0),
+								new Vector2Int(2,1),
+								new Vector2Int(2,2),
+								new Vector2Int(2,4),
+								new Vector2Int(2,5),
+
+								new Vector2Int(3,1),
+								new Vector2Int(3,3),
+								new Vector2Int(3,5),
+
+								new Vector2Int(4,0),
+								new Vector2Int(4,2),
+								new Vector2Int(4,3),
+								new Vector2Int(4,4),
+				}
+			));
+		// DENSITY 3
+		List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>> densityThree = new List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>>();
+
+		densityThree.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 1), new Vector2Int(1, 1), new List<Vector2Int>
+				{
+								new Vector2Int(0,0),
+								new Vector2Int(0,1),
+								new Vector2Int(0,2),
+								new Vector2Int(0,3),
+								new Vector2Int(0,4),
+								new Vector2Int(0,5),
+
+								new Vector2Int(1,0),
+								//new Vector2Int(1,1),
+								new Vector2Int(1,2),
+								new Vector2Int(1,3),
+								new Vector2Int(1,4),
+								new Vector2Int(1,5),
+
+								new Vector2Int(2,0),
+								new Vector2Int(2,1),
+								new Vector2Int(2,2),
+								new Vector2Int(2,3),
+								new Vector2Int(2,4),
+								new Vector2Int(2,5),
+
+								new Vector2Int(3,0),
+								new Vector2Int(3,1),
+								new Vector2Int(3,2),
+								new Vector2Int(3,3),
+								new Vector2Int(3,4),
+								new Vector2Int(3,5),
+
+								new Vector2Int(4,0),
+								new Vector2Int(4,1),
+								new Vector2Int(4,2),
+								new Vector2Int(4,3),
+								new Vector2Int(4,4),
+								new Vector2Int(4,5)
+
+
+				}
+			));
+
+		densityThree.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 2), new Vector2Int(1, 2), new List<Vector2Int>
+				{
+								new Vector2Int(0,0),
+								new Vector2Int(0,1),
+								new Vector2Int(0,2),
+								new Vector2Int(0,3),
+								new Vector2Int(0,4),
+								new Vector2Int(0,5),
+
+								new Vector2Int(1,0),
+								new Vector2Int(1,1),
+								//new Vector2Int(1,2),
+								new Vector2Int(1,3),
+								new Vector2Int(1,4),
+								new Vector2Int(1,5),
+
+								new Vector2Int(2,0),
+								new Vector2Int(2,1),
+								new Vector2Int(2,2),
+								new Vector2Int(2,3),
+								new Vector2Int(2,4),
+								new Vector2Int(2,5),
+
+								new Vector2Int(3,0),
+								new Vector2Int(3,1),
+								new Vector2Int(3,2),
+								new Vector2Int(3,3),
+								new Vector2Int(3,4),
+								new Vector2Int(3,5),
+
+								new Vector2Int(4,0),
+								new Vector2Int(4,1),
+								new Vector2Int(4,2),
+								new Vector2Int(4,3),
+								new Vector2Int(4,4),
+								new Vector2Int(4,5)
+				}
+			));
+
+		densityThree.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 3), new Vector2Int(1, 3), new List<Vector2Int>
+				{
+					new Vector2Int(0,0),
+								new Vector2Int(0,1),
+								new Vector2Int(0,2),
+								new Vector2Int(0,3),
+								new Vector2Int(0,4),
+								new Vector2Int(0,5),
+
+								new Vector2Int(1,0),
+								new Vector2Int(1,1),
+								new Vector2Int(1,2),
+								//new Vector2Int(1,3),
+								new Vector2Int(1,4),
+								new Vector2Int(1,5),
+
+								new Vector2Int(2,0),
+								new Vector2Int(2,1),
+								new Vector2Int(2,2),
+								new Vector2Int(2,3),
+								new Vector2Int(2,4),
+								new Vector2Int(2,5),
+
+								new Vector2Int(3,0),
+								new Vector2Int(3,1),
+								new Vector2Int(3,2),
+								new Vector2Int(3,3),
+								new Vector2Int(3,4),
+								new Vector2Int(3,5),
+
+								new Vector2Int(4,0),
+								new Vector2Int(4,1),
+								new Vector2Int(4,2),
+								new Vector2Int(4,3),
+								new Vector2Int(4,4),
+								new Vector2Int(4,5)
+				}
+			));
+
+		densityThree.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 4), new Vector2Int(1, 4), new List<Vector2Int>
+				{				new Vector2Int(0,0),
+								new Vector2Int(0,1),
+								new Vector2Int(0,2),
+								new Vector2Int(0,3),
+								new Vector2Int(0,4),
+								new Vector2Int(0,5),
+
+								new Vector2Int(1,0),
+								new Vector2Int(1,1),
+								new Vector2Int(1,2),
+								new Vector2Int(1,3),
+								//new Vector2Int(1,4),
+								new Vector2Int(1,5),
+
+								new Vector2Int(2,0),
+								new Vector2Int(2,1),
+								new Vector2Int(2,2),
+								new Vector2Int(2,3),
+								new Vector2Int(2,4),
+								new Vector2Int(2,5),
+
+								new Vector2Int(3,0),
+								new Vector2Int(3,1),
+								new Vector2Int(3,2),
+								new Vector2Int(3,3),
+								new Vector2Int(3,4),
+								new Vector2Int(3,5),
+
+								new Vector2Int(4,0),
+								new Vector2Int(4,1),
+								new Vector2Int(4,2),
+								new Vector2Int(4,3),
+								new Vector2Int(4,4),
+								new Vector2Int(4,5)
+				}
+			));
+
+		// shuffle trial for each level
+		ListExtension.Shuffle(densityOne);
+		ListExtension.Shuffle(densityTwo);
+		ListExtension.Shuffle(densityThree);
+		// select trials to add
+		trials.AddRange(densityOne.GetRange(0, 3));
+		trials.AddRange(densityTwo.GetRange(0, 3));
+		trials.AddRange(densityThree.GetRange(0, 3));
+		//shuffle all trials
+		ListExtension.Shuffle(trials);
+		totalTrials = trials.Count();
+	}
+	public void GenerateTrials1()
+	{
+		trials = new List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>>();
 		// LEFT SIDE, DENSITY 1
-		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(4, 1), new Vector2Int(0, 1),new List<Vector2Int>
+
+		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(4, 1), new Vector2Int(0, 1), new List<Vector2Int>
 				{
 								new Vector2Int(0,0),
 								new Vector2Int(1,2),
@@ -756,6 +1106,13 @@ public class XP2 : MonoBehaviour
 
 		// Reset Texture and Projector
 		PrepareResetTextureAndProjector(0.1f);
+
+		string participantNumber = "<pos=0%><b>P" + numeroParticipant + "</b>";
+		string trialProgress = "<pos=90%><b>" + (totalTrials - trials.Count()) + "/" + totalTrials + "</b>";
+		string legend = participantNumber + trialProgress;
+		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 0.1f, Color.black, legend, new Vector3(90f, -90f, 0f));
+		expanDialSticks.setBorderBackground(Color.white);
+
 		expanDialSticks.triggerTextureChange();
 		expanDialSticks.triggerProjectorChange();
 		yield return new WaitForSeconds(0.1f);
@@ -804,6 +1161,12 @@ public class XP2 : MonoBehaviour
 		aiguilleRotation = cadranRotation + (-1 + Random.Range(0, 1) * 2) * anglePerStep * Random.Range(6, 12);
 		directionRotation = aiguilleRotation > cadranRotation ? DirectionRotation.CCW : DirectionRotation.CW;
 		ShowGaugeOnTarget(secondTarget, 0.1f);
+
+		/*foreach (Vector2Int distractor in distractorList)
+		{
+			expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetColor = Color.black;
+			expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetTextureChangeDuration = 0.1f;
+		}*/
 		expanDialSticks.triggerTextureChange();
 		expanDialSticks.triggerProjectorChange();
 		yield return new WaitForSeconds(0.1f);
@@ -906,6 +1269,13 @@ public class XP2 : MonoBehaviour
 
 		// Reset Texture and Projector
 		PrepareResetTextureAndProjector(0.1f);
+
+		/* string participantNumber = "<pos=0%><b>P" + numeroParticipant + "</b>";
+		string trialProgress = "<pos=90%><b>" + (totalTrials - trials.Count()) + "/" + totalTrials + "</b>";
+		string legend = participantNumber + trialProgress;
+		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 0.1f, Color.black, legend, new Vector3(90f, -90f, 0f));
+		expanDialSticks.setBorderBackground(Color.white);*/
+
 		expanDialSticks.triggerTextureChange();
 		expanDialSticks.triggerProjectorChange();
 		yield return new WaitForSeconds(0.1f);
@@ -939,6 +1309,13 @@ public class XP2 : MonoBehaviour
 		cadranRotation = Random.Range(0, 23) * anglePerStep;
 		aiguilleRotation = cadranRotation + (-1 + Random.Range(0, 1) * 2) * anglePerStep;
 		ShowGaugeOnTarget(secondTarget, 0.1f);
+
+		foreach (Vector2Int distractor in distractorList)
+		{
+			expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetColor = Color.black;
+			expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetTextureChangeDuration = 0.1f;
+		}
+
 		expanDialSticks.triggerTextureChange();
 		expanDialSticks.triggerProjectorChange();
 		yield return new WaitForSeconds(0.1f);
@@ -958,7 +1335,7 @@ public class XP2 : MonoBehaviour
 				if (distractorIndex < distractorLength && currTime - prevDistractorTime >= DISTRACTOR_INTERVAL)
 				{
 					// Trigger distractors
-					Vector2Int distractor = distractorList[distractorIndex++];
+					/*Vector2Int distractor = distractorList[distractorIndex++];
 					if (!training)
 					{
 						msg = "SYSTEM_TRIGGER_SHAPE_CHANGE";
@@ -971,6 +1348,20 @@ public class XP2 : MonoBehaviour
 					}
 					if (distractorIndex >= distractorLength) DISTRACTOR_INTERVAL = 5f;
 					else DISTRACTOR_INTERVAL = Random.Range(0.5f, 1.5f);
+					prevDistractorTime = currTime;*/
+					String shapeChangeMsg = "SYSTEM_TRIGGER_SHAPE_CHANGE";
+					foreach (Vector2Int distractor in distractorList)
+					{
+						shapeChangeMsg += " " + new Vector3Int(distractor.x, distractor.y, distractorPos).ToString();
+
+						expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetPosition = distractorPos;
+						expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetShapeChangeDuration = longShapeChangeDuration;
+					}
+					expanDialSticks.triggerShapeChange();
+					expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(shapeChangeMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+					MetricsActive = true;
+					distractorIndex = distractorLength; 
+					DISTRACTOR_INTERVAL = 5f;
 					prevDistractorTime = currTime;
 				}
 
@@ -1255,7 +1646,7 @@ public class XP2 : MonoBehaviour
 		}
 	}
 
-
+	
 	void ShowGaugeOnTarget(Vector2Int target, float duration)
 	{
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
@@ -1305,11 +1696,6 @@ public class XP2 : MonoBehaviour
 				expanDialSticks.modelMatrix[i, j].TargetProjectorBackChangeDuration = duration;
 			}
 		}
-		string participantNumber = "<pos=0%><b>P" + numeroParticipant + "</b>";
-		string trialProgress = "<pos=90%><b>" + trials.Count() + "/" + totalTrials + "</b>";
-		string legend = participantNumber + trialProgress;
-		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 0.1f, Color.black, legend, new Vector3(90f, -90f, 0f));
-		expanDialSticks.setBorderBackground(Color.white);
 	}
 
 	void ShowDotOnTarget(Vector2Int target, float duration)

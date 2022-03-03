@@ -1214,7 +1214,8 @@ public class SafeGuard : MonoBehaviour
 				Transform pin = pins.viewMatrix[row, column].transform;
 				bool reaching = pins.viewMatrix[row, column].CurrentReaching;
 				int displacement = (paused != 0) ? paused : feedforwarded;
-				if (reaching || displacement != 0) // if moving pins or paused or feedforwarded
+				//if (reaching || displacement != 0) // if moving pins or paused or feedforwarded
+				if (displacement != 0) // if moving pins or paused or feedforwarded
 				{
 
 					float distanceGamma = pins.collisionMatrix[row, column].Gamma();
