@@ -744,9 +744,6 @@ public class XP2 : MonoBehaviour
 	private void HandleConnected(object sender, MqttConnectionEventArgs e)
 	{
 		Debug.Log("Application connected.");
-
-		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 		connected = true;
 
 	}
@@ -861,6 +858,8 @@ public class XP2 : MonoBehaviour
 				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.User;
 				currTaskMode = TaskMode.USER_INTERRUPT;
 				expanDialSticks.SetOverlayMode(currOverlayMode);
+				expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				string identity = "USER_IDENTITY " + numeroParticipant + " | USERI TRAINING";
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				Debug.Log(identity);
@@ -875,6 +874,8 @@ public class XP2 : MonoBehaviour
 				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.User;
 				currTaskMode = TaskMode.USER_INTERRUPT;
 				expanDialSticks.SetOverlayMode(currOverlayMode);
+				expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				string identity = "USER_IDENTITY " + numeroParticipant + " | USERO | USERI";
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				Debug.Log(identity);
@@ -889,6 +890,8 @@ public class XP2 : MonoBehaviour
 				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.System;
 				currTaskMode = TaskMode.USER_INTERRUPT;
 				expanDialSticks.SetOverlayMode(currOverlayMode);
+				expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				string identity = "USER_IDENTITY " + numeroParticipant + " | SYSTEMO | USERI";
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				Debug.Log(identity);
@@ -903,6 +906,8 @@ public class XP2 : MonoBehaviour
 				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.User;
 				currTaskMode = TaskMode.SYSTEM_INTERRUPT;
 				expanDialSticks.SetOverlayMode(currOverlayMode);
+				expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				string identity = "USER_IDENTITY " + numeroParticipant + " | SYSTEMI TRAINING";
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				Debug.Log(identity);
@@ -918,6 +923,8 @@ public class XP2 : MonoBehaviour
 				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.User;
 				currTaskMode = TaskMode.SYSTEM_INTERRUPT;
 				expanDialSticks.SetOverlayMode(currOverlayMode);
+				expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				string identity = "USER_IDENTITY " + numeroParticipant + " | USERO | SYSTEMI";
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				Debug.Log(identity);
@@ -932,6 +939,8 @@ public class XP2 : MonoBehaviour
 				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.System;
 				currTaskMode = TaskMode.SYSTEM_INTERRUPT;
 				expanDialSticks.SetOverlayMode(currOverlayMode);
+				expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				string identity = "USER_IDENTITY " + numeroParticipant + " | SYSTEMO | SYSTEMI";
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(identity), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				Debug.Log(identity);
