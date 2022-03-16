@@ -2,7 +2,7 @@
 #include <Servo.h>
 #include <Wire.h>
 
-#define I2C_BUS 0x11
+#define I2C_BUS 0x10
 #define I2C_BAUDRATE 200000 //hz
 
 
@@ -70,6 +70,7 @@ Rotary dial [MAX_DIALSTICK] = {
 volatile signed char dialValue [MAX_DIALSTICK] = {0, 0, 0, 0, 0, 0};
 
 // ENCODER PARAMETERS
+const int STOP_POSITION = -2;
 const int RESET_POSITION = -1;
 const int MIN_POSITION = 0;
 const int MAX_POSITION = 49;
@@ -598,13 +599,32 @@ signed char moveTo(int id, int toEncoderTargetValue, float durationTime, bool ho
   if(toEncoderTargetValue == 0 && durationTime == 0 && holding == 0) return NONE_ANS;
   if(durationTime < PERIOD_DELAY_S) return DURATION_ERROR_ANS;
   if(id < 0 || id > NUM_DIALSTICK) return ID_ERROR_ANS;
-  if(encoderTargetValue[id] == RESET_POSITION) return RESET_ERROR_ANS;
-  if(toEncoderTargetValue < RESET_POSITION || toEncoderTargetValue > MAX_POSITION) return POSITION_ERROR_ANS;
-  encoderTargetValue[id] = toEncoderTargetValue;
-  //if(encoderTargetValue[id] == MIN_POSITION) encoderTargetValue[id] = RESET_POSITION;
-  duration[id] = durationTime;
-  servoIsHolding[id] = holding;
-  servo[id].attach(pinServo[id]);
+  //if(encoderTargetValue[id] == RESET_POSITION) return RESET_ERROR_ANS;
+  if(toEncoderTargetValue < STOP_POSITION || toEncoderTargetValue > MAX_POSITION) return POSITION_ERROR_ANS;
+  
+  // STOP
+  if(toEncoderTargetValue == STOP_POSITION){
+    encoderTargetValue[id] = encoderValue[id];  
+    duration[id] = PERIOD_DELAY_S;
+    servoIsHolding[id] = false;
+    servo[id].detach();
+    servoIsReaching[id] = false;
+  } 
+  // RESET
+  else if(toEncoderTargetValue == RESET_POSITION) {  
+    encoderTargetValue[id] = RESET_POSITION;  
+    duration[id] = MAX_DURATION;
+    servoIsHolding[id] = false;
+    servo[id].attach(pinServo[id]);
+  }
+  // MOVE
+  else { 
+    encoderTargetValue[id] = toEncoderTargetValue;
+    //if(encoderTargetValue[id] == MIN_POSITION) encoderTargetValue[id] = RESET_POSITION;
+    duration[id] = durationTime;
+    servoIsHolding[id] = holding;
+    servo[id].attach(pinServo[id]);
+  }
   return SUCCESS_ANS;
 }
 
