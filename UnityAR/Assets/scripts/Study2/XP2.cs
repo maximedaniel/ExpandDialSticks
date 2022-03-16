@@ -56,7 +56,7 @@ public class XP2 : MonoBehaviour
 
 	private const int targetPos = 40;
 	private const int distractorPos = 40;
-	private const float shortShapeChangeDuration = 2f;
+	private const float shortShapeChangeDuration = 3f;
 	private const float longShapeChangeDuration = 6f;
 	private const float safetyDistance = 6f;
 
@@ -1279,11 +1279,12 @@ public class XP2 : MonoBehaviour
 		// Reset Texture and Projector
 		PrepareResetTextureAndProjector(0.1f);
 
-		/* string participantNumber = "<pos=0%><b>P" + numeroParticipant + "</b>";
+
+		string participantNumber = "<pos=0%><b>P" + numeroParticipant + "</b>";
 		string trialProgress = "<pos=90%><b>" + (totalTrials - trials.Count()) + "/" + totalTrials + "</b>";
 		string legend = participantNumber + trialProgress;
 		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 0.1f, Color.black, legend, new Vector3(90f, -90f, 0f));
-		expanDialSticks.setBorderBackground(Color.white);*/
+		expanDialSticks.setBorderBackground(Color.white);
 
 		expanDialSticks.triggerTextureChange();
 		expanDialSticks.triggerProjectorChange();
@@ -1316,14 +1317,14 @@ public class XP2 : MonoBehaviour
 		// Texture First Target
 		// 24 position
 		cadranRotation = Random.Range(0, 23) * anglePerStep;
-		aiguilleRotation = cadranRotation + (-1 + Random.Range(0, 1) * 2) * anglePerStep;
+		aiguilleRotation = cadranRotation + (-1 + Random.Range(0, 1) * 2) * (anglePerStep+ anglePerStep/2);
 		ShowGaugeOnTarget(secondTarget, 0.1f);
 
-		foreach (Vector2Int distractor in distractorList)
+		/*foreach (Vector2Int distractor in distractorList)
 		{
 			expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetColor = Color.black;
 			expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetTextureChangeDuration = 0.1f;
-		}
+		}*/
 
 		expanDialSticks.triggerTextureChange();
 		expanDialSticks.triggerProjectorChange();
@@ -1358,17 +1359,21 @@ public class XP2 : MonoBehaviour
 					if (distractorIndex >= distractorLength) DISTRACTOR_INTERVAL = 5f;
 					else DISTRACTOR_INTERVAL = Random.Range(0.5f, 1.5f);
 					prevDistractorTime = currTime;*/
-					String shapeChangeMsg = "SYSTEM_TRIGGER_SHAPE_CHANGE";
-					foreach (Vector2Int distractor in distractorList)
-					{
-						shapeChangeMsg += " " + new Vector3Int(distractor.x, distractor.y, distractorPos).ToString();
 
-						expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetPosition = distractorPos;
-						expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetShapeChangeDuration = longShapeChangeDuration;
+					if (!training)
+					{
+						String shapeChangeMsg = "SYSTEM_TRIGGER_SHAPE_CHANGE";
+						foreach (Vector2Int distractor in distractorList)
+						{
+							shapeChangeMsg += " " + new Vector3Int(distractor.x, distractor.y, distractorPos).ToString();
+
+							expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetPosition = distractorPos;
+							expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetShapeChangeDuration = longShapeChangeDuration;
+						}
+						expanDialSticks.triggerShapeChange();
+						expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(shapeChangeMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+						MetricsActive = true;
 					}
-					expanDialSticks.triggerShapeChange();
-					expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(shapeChangeMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-					MetricsActive = true;
 					distractorIndex = distractorLength; 
 					DISTRACTOR_INTERVAL = 5f;
 					prevDistractorTime = currTime;

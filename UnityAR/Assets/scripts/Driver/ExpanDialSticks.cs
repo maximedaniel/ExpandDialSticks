@@ -158,6 +158,7 @@ public class ExpanDialSticks : MonoBehaviour
 	public float MQTT_DELAY_AT_START = 2f; // 0.2f;
 	public float MQTT_INTERVAL = 0.25f; // 0.2f;
 	public float EVENT_INTERVAL = 0.25f; // 0.2f;
+	public const int STOP_POSITION = -2; // 0.2f;
 	public const int nbColumns = 6;
 	public const int nbRows = 5;
 	float LeapMotionDistanceFromMatrix = 0.57f;
@@ -742,6 +743,12 @@ public class ExpanDialSticks : MonoBehaviour
 
 								if (safeGuardOn)
 								{
+									// ATTENTION
+									if (modelMatrix[i, j].CurrentPaused != 0) // UPDATE VALUE FOR FIX
+									{
+										modelMatrix[i, j].CurrentPaused = modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition;
+									}
+
 									// doing nothing for each pin
 									positions[i * nbColumns + j] = modelMatrix[i, j].CurrentPosition;
 									holdings[i * nbColumns + j] = modelMatrix[i, j].CurrentHolding ? 1 : 0;
@@ -757,9 +764,9 @@ public class ExpanDialSticks : MonoBehaviour
 										{
 											if (modelMatrix[i, j].CurrentPaused == 0) // PIN IS NOT ALREADY BEING PAUSED
 											{
-												//Debug.Log("modelMatrix[" + i + "," + j + "] pause towards " + modelMatrix[i, j].TargetPosition + "!");
+												Debug.Log("modelMatrix[" + i + "," + j + "] pause towards " + modelMatrix[i, j].TargetPosition + "!");
 												modelMatrix[i, j].CurrentPaused = modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition;
-												positions[i * nbColumns + j] = modelMatrix[i, j].CurrentPosition;
+												positions[i * nbColumns + j] = STOP_POSITION; //modelMatrix[i, j].CurrentPosition; // must stop pin using  STOP_POSITON;
 												holdings[i * nbColumns + j] = 0;
 												durations[i * nbColumns + j] = 0.1f;
 												safe = false;
@@ -788,8 +795,8 @@ public class ExpanDialSticks : MonoBehaviour
 												float motionDuration = Mathf.Abs(modelMatrix[i, j].TargetPosition - modelMatrix[i, j].CurrentPosition) / finalSpeed;
 												float safetyDuration = Math.Max(motionDuration, 0.1f);
 												durations[i * nbColumns + j] = safetyDuration;
-											/*	Debug.Log("modelMatrix[" + i + "," + j + "] unpause from " + modelMatrix[i, j].TargetPosition
-													+ " to " + modelMatrix[i, j].CurrentPosition + " in " + safetyDuration + "s!");*/
+												Debug.Log("modelMatrix[" + i + "," + j + "] unpause from " + modelMatrix[i, j].TargetPosition
+													+ " to " + modelMatrix[i, j].CurrentPosition + " in " + safetyDuration + "s!");
 												safe = false;
 											}
 										}
@@ -807,8 +814,8 @@ public class ExpanDialSticks : MonoBehaviour
 												float safetyDuration = Math.Max(motionDuration, 0.1f);
 												durations[i * nbColumns + j] = safetyDuration;
 
-												/*Debug.Log("modelMatrix[" + i + "," + j + "] change speed from " + modelMatrix[i, j].TargetPosition
-													+ " to " + modelMatrix[i, j].CurrentPosition + " in " + safetyDuration  + "s!");*/
+												Debug.Log("modelMatrix[" + i + "," + j + "] change speed from " + modelMatrix[i, j].TargetPosition
+													+ " to " + modelMatrix[i, j].CurrentPosition + " in " + safetyDuration  + "s!");
 												//float minShapeChangeDuration = 1f; // 20 pos per sec
 												//durations[i * nbColumns + j] = minShapeChangeDuration + (nextProximity * 3f);
 												safe = false;
