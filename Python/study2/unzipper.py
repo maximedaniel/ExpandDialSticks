@@ -12,15 +12,15 @@ plotting = True
 printing = True
 saving = False
 
-sequence_filename = 'sequence.xlsx'
+sequence_filename = 'study2-sequence.xlsx'
 data_directory = 'data'
 archive_directory = 'archive'
 log_directory = 'Logs'
 physio_directory = 'Physios'
 form_directory = 'Forms'
 interview_directory = 'Interviews'
-physio_columns = ['rest0', 'train0', 'session0', 'rest1', 'session1', 'rest2', 'train1', 'session2', 'rest3', 'session3']
-log_columns = ['train0', 'session0', 'session1', 'train1', 'session2', 'session3']
+physio_columns = ['rest0', 'train0', 'session0', 'rest1', 'session1', 'rest2', 'session2', 'rest3', 'session3']
+log_columns = ['train0', 'session0', 'session1', 'session2', 'session3']
 
 df_seq = pd.read_excel(sequence_filename, index_col=0)
 
@@ -48,8 +48,9 @@ for (dirpath, dirnames, filenames) in os.walk(archive_directory):
                 participant_index = int(filename.split('participant')[1].split('.')[0])
                 i = 0
                 log_list_dir = os.listdir( participant_directory )
-                if len(log_list_dir) != 6: sys.exit("[ERROR] Missing Log files.")
+                if len(log_list_dir) != 5: sys.exit("[ERROR] Missing Log files.")
                 for file in log_list_dir:
+                    print(file)
                     log_column = log_columns[i]
                     sequence_tag = df_seq.iloc[participant_index][log_column] + '.txt'
                     file_path =  os.path.join(participant_directory, file)
@@ -63,7 +64,7 @@ for (dirpath, dirnames, filenames) in os.walk(archive_directory):
                 participant_index = int(filename.split('participant')[1].split('.')[0])
                 i = 0
                 physio_list_dir = os.listdir( participant_directory )
-                if len(physio_list_dir) != 10: sys.exit("[ERROR] Missing Physio files.")
+                if len(physio_list_dir) != 9: sys.exit("[ERROR] Missing Physio files.")
                 for file in physio_list_dir:
                     physio_column = physio_columns[i]
                     sequence_tag = df_seq.iloc[participant_index][physio_column] + '.txt'
