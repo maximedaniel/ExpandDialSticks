@@ -379,8 +379,9 @@ for participant in range (len(participants)):
                             ppg_epochs = nk.epochs_create(ppg_signals, bvp_events, sampling_rate=BVP_HZ, epochs_start=EPOCH_START, epochs_end=ppg_epochs_end)
                             ppg_epoch = ppg_epochs['1']
                             # analyze event-related features of EDA signals
-                            # ppg_analysis = nk.bio_analyze(ppg_epochs, method="event-related")
-                            
+                            ppg_analysis = nk.bio_analyze(ppg_epochs, method="event-related")
+                            print(ppg_analysis)
+                            exit()
                             # describe BVP peak results
                             df_bvp_peak_desc = ppg_epoch.loc[ppg_epoch['PPG_Peaks'] > 0, 'PPG_Clean'].describe()
                             bvp_peak_count = df_bvp_peak_desc['count']

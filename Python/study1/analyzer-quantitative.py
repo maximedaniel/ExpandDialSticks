@@ -71,14 +71,79 @@ df_quant = df_quant.loc[~df_quant['Modality'].isin(CONTROL_NAMES), :]
 # [Participant 9] No GSR/BVP data to process for trial 7-8
 #INCOMPLETE_PARTICIPANTS = [0,6, 8,9]
 #df_quant = df_quant.loc[~df_quant['Participant'].isin(INCOMPLETE_PARTICIPANTS), :]
-factor_names_list = [['Target_X'],['Target_Y'],['Trial'],['Task'],['Modality'],['Task', 'Modality'],['Target_X', 'Target_Y']]
-factor_types_list = [[ float],[ float],[ float],[str], [str], [str, str], [float, float]]
 
+#factor_names_list = [['Target_X'],['Target_Y'],['Trial'],['Task'],['Modality'],['Task', 'Modality'],['Target_X', 'Target_Y']]
+#factor_types_list = [[ float],[ float],[ float],[str], [str], [str, str], [float, float]]
+
+# PROCESS TARGET PIN
+# Target_X_columns = np.sort(df_quant.loc[:, 'Target_X'].unique())
+# Target_Y_columns = np.sort(df_quant.loc[:, 'Target_Y'].unique())
+# print(Target_X_columns, Target_Y_columns)
+# EDA_XY_map = np.array([])
+# SC_XY_map = np.array([])
+# for Target_Y_column in Target_Y_columns:
+#     for Target_X_column in Target_X_columns:
+#         # EDA_Response_Max
+#         EDA_Response_Maxs = df_quant.loc[(df_quant['Target_Y'] == Target_Y_column) & (df_quant['Target_X'] == Target_X_column), 'EDA_Response_Max']
+#         EDA_Response_Maxs_Desc = EDA_Response_Maxs.describe()
+#         EDA_XY_map = np.append(EDA_XY_map, EDA_Response_Maxs_Desc['mean'])
+#         # SC_Count_Max
+#         SC_Count_Maxs = df_quant.loc[(df_quant['Target_Y'] == Target_Y_column) & (df_quant['Target_X'] == Target_X_column), 'SC_Count_Max']
+#         SC_Count_Maxs_Desc = SC_Count_Maxs.describe()
+#         SC_XY_map = np.append(SC_XY_map, SC_Count_Maxs_Desc['mean'])
+
+# EDA_XY_map = np.reshape(EDA_XY_map, (len(Target_Y_columns), len(Target_X_columns)))  
+# SC_XY_map = np.reshape(SC_XY_map, (len(Target_Y_columns), len(Target_X_columns)))  
+
+
+# fig, ax = plt.subplots(ncols=2, figsize=(12, 12))
+# im0 = ax[0].imshow(EDA_XY_map)
+# # We want to show all ticks...
+# ax[0].set_xticks(np.arange(len(Target_X_columns)))
+# ax[0].set_yticks(np.arange(len(Target_Y_columns)))
+# # ... and label them with the respective list entries
+# ax[0].set_xticklabels(Target_X_columns)
+# ax[0].set_yticklabels(Target_Y_columns)
+
+# # Rotate the tick labels and set their alignment.
+# plt.setp(ax[0].get_xticklabels(), rotation=45, ha="right",
+#          rotation_mode="anchor")
+# # Loop over data dimensions and create text annotations.
+# for i in range(len(Target_Y_columns)):
+#     for j in range(len(Target_X_columns)):
+#         text = ax[0].text(j, i, EDA_XY_map[i, j],
+#                        ha="center", va="center", color="w")
+#         text = ax[1].text(j, i, SC_XY_map[i, j],
+#                        ha="center", va="center", color="w")
+# ax[0].set_title("TEST")
+
+# im1 = ax[1].imshow(SC_XY_map)
+# ax[1].set_xticks(np.arange(len(Target_X_columns)))
+# ax[1].set_yticks(np.arange(len(Target_Y_columns)))
+# ax[1].set_xticklabels(Target_X_columns)
+# ax[1].set_yticklabels(Target_Y_columns)
+# plt.setp(ax[1].get_xticklabels(), rotation=45, ha="right",
+#          rotation_mode="anchor")
+# # Loop over data dimensions and create text annotations.
+# for i in range(len(Target_Y_columns)):
+#     for j in range(len(Target_X_columns)):
+#         text = ax[1].text(j, i, SC_XY_map[i, j],
+#                        ha="center", va="center", color="w")
+# ax[1].set_title("TEST")
+# fig.tight_layout()
+# plt.show()
+
+factor_names_list = [['Trial'], ['Task','Modality']]
+factor_types_list = [[int], [str, str] ]
+
+#variable_name_list = [
+#   'EDA_Response_Mean', 'EDA_Response_Max',
+#    'EDA_Level_Mean', 'EDA_Level_Max',
+#    'BVP_Peak_Mean', 'BVP_Peak_Max',
+#    'BVP_Rate_Mean', 'BVP_Rate_Max'
+#]
 variable_name_list = [
-    'EDA_Response_Mean', 'EDA_Response_Max',
-    'EDA_Level_Mean', 'EDA_Level_Max',
-    'BVP_Peak_Mean', 'BVP_Peak_Max',
-    'BVP_Rate_Mean', 'BVP_Rate_Max'
+    'EDA_Response_Max'
 ]
 for factor_names, factor_types in zip(factor_names_list, factor_types_list):
     multifactor_name = ' x '.join(factor_names)
@@ -132,4 +197,4 @@ for factor_names, factor_types in zip(factor_names_list, factor_types_list):
     for index, variable_name in enumerate(variable_name_list):
             title = "[%s] %s" %(multifactor_name, variable_name)
             print(title)
-            statistics.Statistics.quantPaired(pathToImgDir, title, df_variable_list[index], silent=True)
+            statistics.Statistics.quantPaired(pathToImgDir, title, df_variable_list[index], silent= False)

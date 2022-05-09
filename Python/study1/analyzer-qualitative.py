@@ -21,9 +21,9 @@ df_demography = pd.read_excel(os.path.join(data_directory,form_directory, demogr
 df_demography = df_demography.drop(columns=['DATE', 'AGE_TO_DELETE', 'COBOT_TO_DELETE'])
 df_demography = df_demography.drop(index=[0, 1, 2])
 df_demography.reset_index(inplace=True, drop=True)
+print(df_demography.describe())
 for column_name in df_demography.columns.values:
     print(df_demography[column_name].value_counts())
-
 
 
 sequence_filename = 'sequence.xlsx'
@@ -64,10 +64,12 @@ factor_names_list = [['Task'],['Modality'], ['Task', 'Modality']]
 factor_types_list = [[str],[ str], [str, str]]
 
 variable_name_list = [
-    'NOT_STRESSED⇔MAX_STRESSED', 'NERVOUS⇔RELAXED',
-    'CALM⇔AGITATED', 'SERENE⇔SURPRISED',
-    'SLOW⇔FAST', 'RIGID⇔FLUID', 'CALM⇔BRUTAL',
-    'PREDICTABLE⇔SURPRISING', 'SYNCHRONOUS⇔ASYNCHRONOUS'
+    #'NOT_STRESSED⇔MAX_STRESSED', 
+    'NERVOUS⇔RELAXED',
+    'CALM⇔AGITATED', 
+    'SERENE⇔SURPRISED',
+    #'SLOW⇔FAST', 'RIGID⇔FLUID', 'CALM⇔BRUTAL',
+    #'PREDICTABLE⇔SURPRISING', 'SYNCHRONOUS⇔ASYNCHRONOUS'
 ]
 variable_scale_list = [
     7,5,
@@ -143,4 +145,4 @@ for factor_names, factor_types in zip(factor_names_list, factor_types_list):
     for index, variable_name in enumerate(variable_name_list):
             title = "[%s] %s" %(multifactor_name, variable_name)
             print(title)
-            statistics.Statistics.qualOrdinalPaired(pathToImgDir, title, df_variable_list[index], variable_scale_list[index], silent=True)
+            statistics.Statistics.qualOrdinalPaired(pathToImgDir, title, df_variable_list[index], variable_scale_list[index], silent=False)

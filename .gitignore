@@ -1,3 +1,13 @@
+
+
+# Studies
+Python/study1/data/
+Python/study1/parse/
+Python/study1/img/
+Python/study2/data/
+Python/study2/parse/
+Python/study2/img/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -134,4 +144,3 @@ dmypy.json
 
 # Unity
 .vs/
-Python/study1/parse/
