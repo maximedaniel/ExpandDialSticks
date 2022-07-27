@@ -15,25 +15,8 @@ using Leap.Unity;
 using Random = UnityEngine.Random;
 using System.Linq;
 
-public static class ListExtension
-{
-	public static System.Random rng = new System.Random();
 
-	public static void Shuffle<T>(this IList<T> list)
-	{
-		int n = list.Count;
-		while (n > 1)
-		{
-			n--;
-			int k = rng.Next(n + 1);
-			T value = list[k];
-			list[k] = list[n];
-			list[n] = value;
-		}
-	}
-}
-
-public class XP2 : MonoBehaviour
+public class XP1 : MonoBehaviour
 {
 
 	// ExpanDialSticks Core
@@ -57,7 +40,7 @@ public class XP2 : MonoBehaviour
 	private const int targetPos = 40;
 	private const int distractorPos = 40;
 	private const float colorChangeDuration = 1f;
-	private const float shortShapeChangeDuration = 3f;
+	private const float shortShapeChangeDuration = 2f;
 	private const float longShapeChangeDuration = 6f;
 	private const float safetyDistance = 6f;
 
@@ -103,7 +86,7 @@ public class XP2 : MonoBehaviour
 	public const string CMD_STOP = "STOP";
 
 	private List<ExpanDialSticks.SafetyOverlayMode> overlayModes;
-	private ExpanDialSticks.SafetyOverlayMode currOverlayMode = ExpanDialSticks.SafetyOverlayMode.User;
+	private ExpanDialSticks.SafetyOverlayMode currOverlayMode = ExpanDialSticks.SafetyOverlayMode.None;
 
 	private Vector2Int LEFT = new Vector2Int(-1, 0);
 	private Vector2Int LEFT_UP = new Vector2Int(-1, -1);
@@ -116,7 +99,7 @@ public class XP2 : MonoBehaviour
 
 
 
-	public enum TaskMode { USER_INTERRUPT, SYSTEM_INTERRUPT };
+	public enum TaskMode { USER_CONTROL, SYSTEM_CONTROL };
 	private TaskMode currTaskMode;
 
 	private List<Vector2Int> candidates = new List<Vector2Int>();
@@ -140,8 +123,8 @@ public class XP2 : MonoBehaviour
 		expanDialSticks.OnDisconnected += HandleDisconnected;
 		expanDialSticks.OnRotationChanged += HandleRotationChanged;
 
-		currOverlayMode = ExpanDialSticks.SafetyOverlayMode.User;
-		currTaskMode = TaskMode.SYSTEM_INTERRUPT;
+		currOverlayMode = ExpanDialSticks.SafetyOverlayMode.None;
+		currTaskMode = TaskMode.SYSTEM_CONTROL;
 		candidates = new List<Vector2Int>();
 		trials = new List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>>();
 		prevSelectPosition = currSelectPosition = new Vector2Int(-1, -1);
@@ -159,227 +142,8 @@ public class XP2 : MonoBehaviour
 	public void GenerateTrials()
 	{
 		trials = new List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>>();
-		// DENSITY 1
-		/*
-		List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>> densityOne = new List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>>();
-		densityOne.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 1), new Vector2Int(1, 1),new List<Vector2Int>
-				{
-								new Vector2Int(0,0),
-								new Vector2Int(0,2),
-								new Vector2Int(0,4),
-								new Vector2Int(2,1),
-								new Vector2Int(2,3),
-								new Vector2Int(2,5),
-								new Vector2Int(4,0),
-								new Vector2Int(4,2),
-								new Vector2Int(4,4)
-				}
-			));
-
-		densityOne.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 2), new Vector2Int(1, 2), new List<Vector2Int>
-				{
-								new Vector2Int(0,1),
-								new Vector2Int(0,3),
-								new Vector2Int(0,5),
-								new Vector2Int(2,0),
-								new Vector2Int(2,2),
-								new Vector2Int(2,4),
-								new Vector2Int(4,1),
-								new Vector2Int(4,3),
-								new Vector2Int(4,5)
-				}
-			));
-
-		densityOne.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 3), new Vector2Int(1, 3), new List<Vector2Int>
-				{
-								new Vector2Int(0,0),
-								new Vector2Int(0,2),
-								new Vector2Int(0,4),
-								new Vector2Int(2,1),
-								new Vector2Int(2,3),
-								new Vector2Int(2,5),
-								new Vector2Int(4,0),
-								new Vector2Int(4,2),
-								new Vector2Int(4,4)
-				}
-			));
-
-		densityOne.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 4), new Vector2Int(1, 4), new List<Vector2Int>
-				{
-								new Vector2Int(0,1),
-								new Vector2Int(0,3),
-								new Vector2Int(0,5),
-								new Vector2Int(2,0),
-								new Vector2Int(2,2),
-								new Vector2Int(2,4),
-								new Vector2Int(4,1),
-								new Vector2Int(4,3),
-								new Vector2Int(4,5)
-				}
-			));
-
-		*/
-		// DENSITY 2
-		/*List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>> densityTwo = new List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>>();
-
-		densityTwo.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 1), new Vector2Int(1, 1), new List<Vector2Int>
-				{
-								new Vector2Int(0,1),
-								new Vector2Int(0,2),
-								new Vector2Int(0,3),
-								new Vector2Int(0,5),
-
-								new Vector2Int(1,0),
-								new Vector2Int(1,2),
-								new Vector2Int(1,4),
-
-								new Vector2Int(2,0),
-								new Vector2Int(2,1),
-								new Vector2Int(2,3),
-								new Vector2Int(2,4),
-								new Vector2Int(2,5),
-
-								new Vector2Int(3,0),
-								new Vector2Int(3,2),
-								new Vector2Int(3,4),
-
-								new Vector2Int(4,1),
-								new Vector2Int(4,2),
-								new Vector2Int(4,3),
-								new Vector2Int(4,5),
-				}
-			));
-
-		densityTwo.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 2), new Vector2Int(1, 2), new List<Vector2Int>
-				{
-								new Vector2Int(0,0),
-								new Vector2Int(0,2),
-								new Vector2Int(0,3),
-								new Vector2Int(0,4),
-
-								new Vector2Int(1,1),
-								new Vector2Int(1,3),
-								new Vector2Int(1,5),
-
-								new Vector2Int(2,0),
-								new Vector2Int(2,1),
-								new Vector2Int(2,2),
-								new Vector2Int(2,4),
-								new Vector2Int(2,5),
-
-								new Vector2Int(3,1),
-								new Vector2Int(3,3),
-								new Vector2Int(3,5),
-
-								new Vector2Int(4,0),
-								new Vector2Int(4,2),
-								new Vector2Int(4,3),
-								new Vector2Int(4,4),
-				}
-			));
-
-		densityTwo.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 3), new Vector2Int(1, 3), new List<Vector2Int>
-				{
-								new Vector2Int(0,1),
-								new Vector2Int(0,2),
-								new Vector2Int(0,3),
-								new Vector2Int(0,5),
-
-								new Vector2Int(1,0),
-								new Vector2Int(1,2),
-								new Vector2Int(1,4),
-
-								new Vector2Int(2,0),
-								new Vector2Int(2,1),
-								new Vector2Int(2,3),
-								new Vector2Int(2,4),
-								new Vector2Int(2,5),
-
-								new Vector2Int(3,0),
-								new Vector2Int(3,2),
-								new Vector2Int(3,4),
-
-								new Vector2Int(4,1),
-								new Vector2Int(4,2),
-								new Vector2Int(4,3),
-								new Vector2Int(4,5),
-				}
-			));
-
-		densityTwo.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 4), new Vector2Int(1, 4), new List<Vector2Int>
-				{
-								new Vector2Int(0,0),
-								new Vector2Int(0,2),
-								new Vector2Int(0,3),
-								new Vector2Int(0,4),
-
-								new Vector2Int(1,1),
-								new Vector2Int(1,3),
-								new Vector2Int(1,5),
-
-								new Vector2Int(2,0),
-								new Vector2Int(2,1),
-								new Vector2Int(2,2),
-								new Vector2Int(2,4),
-								new Vector2Int(2,5),
-
-								new Vector2Int(3,1),
-								new Vector2Int(3,3),
-								new Vector2Int(3,5),
-
-								new Vector2Int(4,0),
-								new Vector2Int(4,2),
-								new Vector2Int(4,3),
-								new Vector2Int(4,4),
-				}
-			));
-		*/
-		// DENSITY 3
-		/*
-		 * List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>> densityThree = new List<Tuple<Vector2Int, Vector2Int, List<Vector2Int>>>();
-
-		densityThree.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 1), new Vector2Int(1, 1), new List<Vector2Int>
-				{
-								new Vector2Int(0,0),
-								new Vector2Int(0,1),
-								new Vector2Int(0,2),
-								new Vector2Int(0,3),
-								new Vector2Int(0,4),
-								new Vector2Int(0,5),
-
-								new Vector2Int(1,0),
-								//new Vector2Int(1,1),
-								new Vector2Int(1,2),
-								new Vector2Int(1,3),
-								new Vector2Int(1,4),
-								new Vector2Int(1,5),
-
-								new Vector2Int(2,0),
-								new Vector2Int(2,1),
-								new Vector2Int(2,2),
-								new Vector2Int(2,3),
-								new Vector2Int(2,4),
-								new Vector2Int(2,5),
-
-								new Vector2Int(3,0),
-								new Vector2Int(3,1),
-								new Vector2Int(3,2),
-								new Vector2Int(3,3),
-								new Vector2Int(3,4),
-								new Vector2Int(3,5),
-
-								new Vector2Int(4,0),
-								new Vector2Int(4,1),
-								new Vector2Int(4,2),
-								new Vector2Int(4,3),
-								new Vector2Int(4,4),
-								new Vector2Int(4,5)
-
-
-				}
-			));
-
-		densityThree.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 2), new Vector2Int(1, 2), new List<Vector2Int>
+		
+		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 2), new Vector2Int(4, 1), new List<Vector2Int>
 				{
 								new Vector2Int(0,0),
 								new Vector2Int(0,1),
@@ -390,7 +154,7 @@ public class XP2 : MonoBehaviour
 
 								new Vector2Int(1,0),
 								new Vector2Int(1,1),
-								//new Vector2Int(1,2),
+								new Vector2Int(1,2),
 								new Vector2Int(1,3),
 								new Vector2Int(1,4),
 								new Vector2Int(1,5),
@@ -410,7 +174,7 @@ public class XP2 : MonoBehaviour
 								new Vector2Int(3,5),
 
 								new Vector2Int(4,0),
-								new Vector2Int(4,1),
+								//new Vector2Int(4,1),
 								new Vector2Int(4,2),
 								new Vector2Int(4,3),
 								new Vector2Int(4,4),
@@ -418,47 +182,9 @@ public class XP2 : MonoBehaviour
 				}
 			));
 
-		densityThree.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 3), new Vector2Int(1, 3), new List<Vector2Int>
+		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 2), new Vector2Int(2, 1), new List<Vector2Int>
 				{
-					new Vector2Int(0,0),
-								new Vector2Int(0,1),
-								new Vector2Int(0,2),
-								new Vector2Int(0,3),
-								new Vector2Int(0,4),
-								new Vector2Int(0,5),
-
-								new Vector2Int(1,0),
-								new Vector2Int(1,1),
-								new Vector2Int(1,2),
-								//new Vector2Int(1,3),
-								new Vector2Int(1,4),
-								new Vector2Int(1,5),
-
-								new Vector2Int(2,0),
-								new Vector2Int(2,1),
-								new Vector2Int(2,2),
-								new Vector2Int(2,3),
-								new Vector2Int(2,4),
-								new Vector2Int(2,5),
-
-								new Vector2Int(3,0),
-								new Vector2Int(3,1),
-								new Vector2Int(3,2),
-								new Vector2Int(3,3),
-								new Vector2Int(3,4),
-								new Vector2Int(3,5),
-
-								new Vector2Int(4,0),
-								new Vector2Int(4,1),
-								new Vector2Int(4,2),
-								new Vector2Int(4,3),
-								new Vector2Int(4,4),
-								new Vector2Int(4,5)
-				}
-			));
-
-		densityThree.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 4), new Vector2Int(1, 4), new List<Vector2Int>
-				{				new Vector2Int(0,0),
+								new Vector2Int(0,0),
 								new Vector2Int(0,1),
 								new Vector2Int(0,2),
 								new Vector2Int(0,3),
@@ -469,11 +195,11 @@ public class XP2 : MonoBehaviour
 								new Vector2Int(1,1),
 								new Vector2Int(1,2),
 								new Vector2Int(1,3),
-								//new Vector2Int(1,4),
+								new Vector2Int(1,4),
 								new Vector2Int(1,5),
 
 								new Vector2Int(2,0),
-								new Vector2Int(2,1),
+								//new Vector2Int(2,1),
 								new Vector2Int(2,2),
 								new Vector2Int(2,3),
 								new Vector2Int(2,4),
@@ -494,67 +220,18 @@ public class XP2 : MonoBehaviour
 								new Vector2Int(4,5)
 				}
 			));
-		*/
-		// shuffle trial for each level
-		//ListExtension.Shuffle(densityOne);
-		//ListExtension.Shuffle(densityTwo);
-		//ListExtension.Shuffle(densityThree);
-		// select trials to add
-		//trials.AddRange(densityOne.GetRange(0, 3));
-		//trials.AddRange(densityTwo.GetRange(0, 3));
-		//trials.AddRange(densityThree.GetRange(1, 1));
-		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 1), new Vector2Int(1, 1), new List<Vector2Int>
+
+		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 2), new Vector2Int(0, 1), new List<Vector2Int>
 				{
 								new Vector2Int(0,0),
-								new Vector2Int(0,2),
-								new Vector2Int(0,4),
-								new Vector2Int(2,1),
-								new Vector2Int(2,3),
-								new Vector2Int(2,5),
-								new Vector2Int(4,0),
-								new Vector2Int(4,2),
-								new Vector2Int(4,4)
-				}
-			));
-		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 1), new Vector2Int(1, 1), new List<Vector2Int>
-				{
-								new Vector2Int(0,1),
-								new Vector2Int(0,2),
-								new Vector2Int(0,3),
-								new Vector2Int(0,5),
-
-								new Vector2Int(1,0),
-								new Vector2Int(1,2),
-								new Vector2Int(1,4),
-
-								new Vector2Int(2,0),
-								new Vector2Int(2,1),
-								new Vector2Int(2,3),
-								new Vector2Int(2,4),
-								new Vector2Int(2,5),
-
-								new Vector2Int(3,0),
-								new Vector2Int(3,2),
-								new Vector2Int(3,4),
-
-								new Vector2Int(4,1),
-								new Vector2Int(4,2),
-								new Vector2Int(4,3),
-								new Vector2Int(4,5),
-				}
-			));
-
-		trials.Add(new Tuple<Vector2Int, Vector2Int, List<Vector2Int>>(new Vector2Int(3, 1), new Vector2Int(1, 1), new List<Vector2Int>
-				{
-								new Vector2Int(0,0),
-								new Vector2Int(0,1),
+								//new Vector2Int(0,1),
 								new Vector2Int(0,2),
 								new Vector2Int(0,3),
 								new Vector2Int(0,4),
 								new Vector2Int(0,5),
 
 								new Vector2Int(1,0),
-								//new Vector2Int(1,1),
+								new Vector2Int(1,1),
 								new Vector2Int(1,2),
 								new Vector2Int(1,3),
 								new Vector2Int(1,4),
@@ -580,17 +257,10 @@ public class XP2 : MonoBehaviour
 								new Vector2Int(4,3),
 								new Vector2Int(4,4),
 								new Vector2Int(4,5)
-
-
 				}
 			));
-		//shuffle all trials
-		//ListExtension.Shuffle(trials);
 		totalTrials = trials.Count();
 	}
-
-
-
 	private void HandleConnecting(object sender, MqttConnectionEventArgs e)
 	{
 		Debug.Log("Application connecting to MQTT Broker @" + e.address + ":" + e.port + "...");
@@ -711,8 +381,8 @@ public class XP2 : MonoBehaviour
 			/*if (GUI.Button(new Rect(midX + 5, midY - 75, componentWidth, componentHeight), "USERI TRAINING"))
 			{
 				numeroParticipant = int.Parse(stringParticipant);
-				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.User;
-				currTaskMode = TaskMode.USER_INTERRUPT;
+				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.None;
+				currTaskMode = TaskMode.USER_CONTROL;
 				expanDialSticks.SetOverlayMode(currOverlayMode);
 				expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
@@ -724,11 +394,12 @@ public class XP2 : MonoBehaviour
 				unknownParticipant = false;
 			}*/
 
-			if (GUI.Button(new Rect(midX + 5, midY - 50, componentWidth, componentHeight), "USERO | USERI"))
+			if (GUI.Button(new Rect(midX + 5, midY - 50, componentWidth, componentHeight), "SMS | USER"))
 			{
 				numeroParticipant = int.Parse(stringParticipant);
-				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.User;
-				currTaskMode = TaskMode.USER_INTERRUPT;
+				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.None;
+				currTaskMode = TaskMode.USER_CONTROL;
+				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
 				expanDialSticks.SetOverlayMode(currOverlayMode);
 				expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
@@ -740,11 +411,12 @@ public class XP2 : MonoBehaviour
 				unknownParticipant = false;
 			}
 
-			if (GUI.Button(new Rect(midX + 5, midY - 25, componentWidth, componentHeight), "SYSTEMO | USERI"))
+			if (GUI.Button(new Rect(midX + 5, midY - 25, componentWidth, componentHeight), "SSM | USER"))
 			{
 				numeroParticipant = int.Parse(stringParticipant);
-				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.System;
-				currTaskMode = TaskMode.USER_INTERRUPT;
+				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.None;
+				currTaskMode = TaskMode.USER_CONTROL;
+				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SpeedAndSeparationMonitoring);
 				expanDialSticks.SetOverlayMode(currOverlayMode);
 				expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
@@ -759,8 +431,8 @@ public class XP2 : MonoBehaviour
 			/*if (GUI.Button(new Rect(midX + 5, midY, componentWidth, componentHeight), "SYSTEMI TRAINING"))
 			{
 				numeroParticipant = int.Parse(stringParticipant);
-				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.User;
-				currTaskMode = TaskMode.SYSTEM_INTERRUPT;
+				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.None;
+				currTaskMode = TaskMode.SYSTEM_CONTROL;
 				expanDialSticks.SetOverlayMode(currOverlayMode);
 				expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
@@ -773,11 +445,12 @@ public class XP2 : MonoBehaviour
 			}*/
 
 
-			if (GUI.Button(new Rect(midX + 5, midY + 25, componentWidth, componentHeight), "USERO | SYSTEMI"))
+			if (GUI.Button(new Rect(midX + 5, midY + 25, componentWidth, componentHeight), "SMS | SYSTEM"))
 			{
 				numeroParticipant = int.Parse(stringParticipant);
-				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.User;
-				currTaskMode = TaskMode.SYSTEM_INTERRUPT;
+				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.None;
+				currTaskMode = TaskMode.SYSTEM_CONTROL;
+				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
 				expanDialSticks.SetOverlayMode(currOverlayMode);
 				expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
@@ -789,11 +462,12 @@ public class XP2 : MonoBehaviour
 				unknownParticipant = false;
 			}
 
-			if (GUI.Button(new Rect(midX + 5, midY + 50, componentWidth, componentHeight), "SYSTEMO | SYSTEMI"))
+			if (GUI.Button(new Rect(midX + 5, midY + 50, componentWidth, componentHeight), "SSM | SYSTEM"))
 			{
 				numeroParticipant = int.Parse(stringParticipant);
-				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.System;
-				currTaskMode = TaskMode.SYSTEM_INTERRUPT;
+				currOverlayMode = ExpanDialSticks.SafetyOverlayMode.None;
+				currTaskMode = TaskMode.SYSTEM_CONTROL;
+				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SpeedAndSeparationMonitoring);
 				expanDialSticks.SetOverlayMode(currOverlayMode);
 				expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 				expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
@@ -955,7 +629,6 @@ public class XP2 : MonoBehaviour
 		}
 
 	}
-
 	void AllWhite(float duration)
 	{
 		for (int i = 0; i < expanDialSticks.NbRows; i++)
@@ -983,7 +656,7 @@ public class XP2 : MonoBehaviour
 		//expanDialSticks.setBorderBackground(Color.black);
 	}
 
-	private IEnumerator TriggerUserInterruptTask()
+	private IEnumerator TriggerUserControlTask()
 	{
 		MetricsActive = false;
 		// Fetch model
@@ -998,13 +671,11 @@ public class XP2 : MonoBehaviour
 
 		// Reset Texture and Projector
 		PrepareResetTextureAndProjector(0.1f);
-
 		string participantNumber = "<pos=0%><b>P" + numeroParticipant + "</b>";
 		string trialProgress = "<pos=90%><b>" + (totalTrials - trials.Count()) + "/" + totalTrials + "</b>";
 		string legend = participantNumber + trialProgress;
 		//expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 0.1f, Color.black, legend, new Vector3(90f, -90f, 0f));
 		expanDialSticks.setBorderBackground(Color.white);
-
 		expanDialSticks.triggerTextureChange();
 		expanDialSticks.triggerProjectorChange();
 		yield return new WaitForSeconds(0.1f);
@@ -1013,7 +684,6 @@ public class XP2 : MonoBehaviour
 		AllWhite(colorChangeDuration);
 		expanDialSticks.triggerTextureChange();
 		yield return new WaitForSeconds(colorChangeDuration);
-
 
 		// Move up the target
 		expanDialSticks.modelMatrix[secondTarget.x, secondTarget.y].TargetPosition = targetPos;
@@ -1036,21 +706,6 @@ public class XP2 : MonoBehaviour
 		string targetMsg = "TARGET " + secondTarget.ToString();
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(targetMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 
-		// Trigger distractors
-		if (!training)
-		{
-			String shapeChangeMsg = "SYSTEM_TRIGGER_SHAPE_CHANGE";
-			foreach (Vector2Int distractor in distractorList)
-			{
-				shapeChangeMsg += " " + new Vector3Int(distractor.x, distractor.y, distractorPos).ToString();
-				expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetPosition = distractorPos;
-				expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetShapeChangeDuration = longShapeChangeDuration;
-			}
-			expanDialSticks.triggerShapeChange();
-			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(shapeChangeMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-			MetricsActive = true;
-			yield return new WaitForSeconds(0.25f);
-		}
 
 
 		// Texture First Target
@@ -1103,11 +758,25 @@ public class XP2 : MonoBehaviour
 		string taskEndMsg = "SYSTEM_TASK_END " + secondTarget.ToString() + " CADRAN " + cadranRotation + " AIGUILLE " + aiguilleRotation;
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(taskEndMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 
-		// Trigger texture and shape reset
-		PrepareResetTextureAndProjector(0.1f);
-		expanDialSticks.triggerTextureChange();
-		expanDialSticks.triggerProjectorChange();
-		yield return new WaitForSeconds(0.1f);
+		// Trigger distractors
+		if (!training)
+		{
+		
+			String shapeChangeMsg = "SYSTEM_TRIGGER_SHAPE_CHANGE";
+			foreach (Vector2Int distractor in distractorList)
+			{
+				shapeChangeMsg += " " + new Vector3Int(distractor.x, distractor.y, distractorPos).ToString();
+				expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetPosition = distractorPos;
+				expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetShapeChangeDuration = shortShapeChangeDuration;
+			}
+
+			expanDialSticks.modelMatrix[secondTarget.x, secondTarget.y].TargetPosition = 0;
+			expanDialSticks.modelMatrix[secondTarget.x, secondTarget.y].TargetShapeChangeDuration = shortShapeChangeDuration;
+			expanDialSticks.triggerShapeChange();
+			expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(shapeChangeMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+			MetricsActive = true;
+			yield return new WaitForSeconds(shortShapeChangeDuration);
+		}
 
 		// wait for shape-change completion
 		shapeChangeEnded = false;
@@ -1120,22 +789,32 @@ public class XP2 : MonoBehaviour
 
 				foreach (Vector2Int distractor in distractorList)
 				{
-
-					if (expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentReaching ||
+					if (expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentReaching) shapeChangeEnded = false;
+					
+					/*if (expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentReaching ||
 						expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentPosition < distractorPos - 1 ||
 						expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentPosition > distractorPos + 1) shapeChangeEnded = false;
+					*/
 				}
 				yield return new WaitForSeconds(COMPLETION_INTERVAL);
 			}
 		}
+
+		// Trigger texture and shape reset
+		PrepareResetTextureAndProjector(0.1f);
+		expanDialSticks.triggerTextureChange();
+		expanDialSticks.triggerProjectorChange();
+		yield return new WaitForSeconds(shortShapeChangeDuration);
 
 		// blacking
 		AllBlack(colorChangeDuration);
 		expanDialSticks.triggerTextureChange();
 		yield return new WaitForSeconds(colorChangeDuration);
 
+
 		// Trigger shape reset
 		PrepareResetShape(shortShapeChangeDuration);
+		AllBlack(shortShapeChangeDuration);
 		expanDialSticks.triggerShapeChange();
 		yield return new WaitForSeconds(shortShapeChangeDuration);
 
@@ -1156,7 +835,7 @@ public class XP2 : MonoBehaviour
 		triggerNextTrial = true;
 	}
 
-	private IEnumerator TriggerSystemInterruptTask()
+	private IEnumerator TriggerSystemControlTask()
 	{
 		MetricsActive = false;
 		String msg;
@@ -1179,11 +858,9 @@ public class XP2 : MonoBehaviour
 		string legend = participantNumber + trialProgress;
 		//expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 0.1f, Color.black, legend, new Vector3(90f, -90f, 0f));
 		expanDialSticks.setBorderBackground(Color.white);
-
 		expanDialSticks.triggerTextureChange();
 		expanDialSticks.triggerProjectorChange();
 		yield return new WaitForSeconds(0.1f);
-
 
 		// whiting
 		AllWhite(colorChangeDuration);
@@ -1244,22 +921,6 @@ public class XP2 : MonoBehaviour
 			{
 				if (distractorIndex < distractorLength && currTime - prevDistractorTime >= DISTRACTOR_INTERVAL)
 				{
-					// Trigger distractors
-					/*Vector2Int distractor = distractorList[distractorIndex++];
-					if (!training)
-					{
-						msg = "SYSTEM_TRIGGER_SHAPE_CHANGE";
-						msg += " " + new Vector3Int(distractor.x, distractor.y, distractorPos).ToString();
-						expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetPosition = distractorPos;
-						expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetShapeChangeDuration = longShapeChangeDuration;
-						expanDialSticks.triggerShapeChange();
-						expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-						MetricsActive = true;
-					}
-					if (distractorIndex >= distractorLength) DISTRACTOR_INTERVAL = 5f;
-					else DISTRACTOR_INTERVAL = Random.Range(0.5f, 1.5f);
-					prevDistractorTime = currTime;*/
-
 					if (!training)
 					{
 						String shapeChangeMsg = "SYSTEM_TRIGGER_SHAPE_CHANGE";
@@ -1268,8 +929,10 @@ public class XP2 : MonoBehaviour
 							shapeChangeMsg += " " + new Vector3Int(distractor.x, distractor.y, distractorPos).ToString();
 
 							expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetPosition = distractorPos;
-							expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetShapeChangeDuration = longShapeChangeDuration;
+							expanDialSticks.modelMatrix[distractor.x, distractor.y].TargetShapeChangeDuration = shortShapeChangeDuration;
 						}
+						expanDialSticks.modelMatrix[secondTarget.x, secondTarget.y].TargetPosition = 0;
+						expanDialSticks.modelMatrix[secondTarget.x, secondTarget.y].TargetShapeChangeDuration = shortShapeChangeDuration;
 						expanDialSticks.triggerShapeChange();
 						expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(shapeChangeMsg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 						MetricsActive = true;
@@ -1282,8 +945,17 @@ public class XP2 : MonoBehaviour
 				//Debug.Log("BEGIN_TARGET: " + (cadranRotation - anglePerStep / 2f) + " <= " + aiguilleRotation + " <=  " + (cadranRotation + anglePerStep / 2f));
 				if (distractorIndex >= distractorLength && currTime - prevDistractorTime >= DISTRACTOR_INTERVAL)
 				{
-					if (aiguilleRotation >= (cadranRotation - anglePerStep / 2f) % 360f && aiguilleRotation <= (cadranRotation + anglePerStep / 2f) % 360f)
+					shapeChangeEnded = true;
+					Debug.Log("waiting for shape-change to complete...");
+
+					foreach (Vector2Int distractor in distractorList)
 					{
+						if (expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentReaching) shapeChangeEnded = false;
+					}
+
+					if (shapeChangeEnded && aiguilleRotation >= (cadranRotation - anglePerStep / 2f) % 360f && aiguilleRotation <= (cadranRotation + anglePerStep / 2f) % 360f)
+					{
+						
 						gaugeState = END_TARGET_STOP;
 					}
 
@@ -1312,17 +984,8 @@ public class XP2 : MonoBehaviour
 		msg = "USER_TASK_END " + secondTarget.ToString() + " CADRAN " + cadranRotation + " AIGUILLE " + aiguilleRotation;
 		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(msg), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
 
-
-		// Reset texture and projector
-		PrepareResetTextureAndProjector(0.1f);
-		expanDialSticks.triggerTextureChange();
-		expanDialSticks.triggerProjectorChange();
-		yield return new WaitForSeconds(0.1f);
-
-
 		// wait for shape-change completion
 		shapeChangeEnded = false;
-
 		if (!training)
 		{
 			while (!shapeChangeEnded)
@@ -1332,23 +995,29 @@ public class XP2 : MonoBehaviour
 
 				foreach (Vector2Int distractor in distractorList)
 				{
-
-					if (expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentReaching ||
-						expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentPosition < distractorPos - 1 ||
-						expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentPosition > distractorPos + 1) shapeChangeEnded = false;
+					if (expanDialSticks.viewMatrix[distractor.x, distractor.y].CurrentReaching) shapeChangeEnded = false;
 				}
 				yield return new WaitForSeconds(COMPLETION_INTERVAL);
 			}
 		}
+
+		// Trigger texture and shape reset
+		PrepareResetTextureAndProjector(0.1f);
+		expanDialSticks.triggerTextureChange();
+		expanDialSticks.triggerProjectorChange();
+		yield return new WaitForSeconds(shortShapeChangeDuration);
+
 
 		// blacking
 		AllBlack(colorChangeDuration);
 		expanDialSticks.triggerTextureChange();
 		yield return new WaitForSeconds(colorChangeDuration);
 
+		// Trigger shape reset
 		PrepareResetShape(shortShapeChangeDuration);
 		expanDialSticks.triggerShapeChange();
 		yield return new WaitForSeconds(shortShapeChangeDuration);
+
 
 		// Wait for shape-change completion
 		bool resetEnded = false;
@@ -1375,11 +1044,11 @@ public class XP2 : MonoBehaviour
 
 			switch (currTaskMode)
 			{
-				case TaskMode.USER_INTERRUPT:
-					StartCoroutine(TriggerUserInterruptTask());
+				case TaskMode.USER_CONTROL:
+					StartCoroutine(TriggerUserControlTask());
 					break;
-				case TaskMode.SYSTEM_INTERRUPT:
-					StartCoroutine(TriggerSystemInterruptTask());
+				case TaskMode.SYSTEM_CONTROL:
+					StartCoroutine(TriggerSystemControlTask());
 					break;
 				default:
 					break;
@@ -1711,6 +1380,8 @@ public class XP2 : MonoBehaviour
 		{
 			currTime = Time.time;
 
+			Debug.Log("(0, 2) CurrentReaching: " + expanDialSticks.modelMatrix[0, 2].CurrentReaching);
+			Debug.Log("(0, 2) CurrentPosition: " + expanDialSticks.modelMatrix[0, 2].CurrentPosition);
 			if (triggerNextTrial == true)
 			{
 				triggerNextTrial = false;

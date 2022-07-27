@@ -15,7 +15,7 @@ using System.Globalization;
 using Leap.Unity;
 using Random = UnityEngine.Random;
 
-public class Test : MonoBehaviour
+public class MiscApp : MonoBehaviour
 {
 
 	public GameObject expanDialSticksPrefab;
@@ -63,7 +63,6 @@ public class Test : MonoBehaviour
 	public const string MQTT_SYSTEM_RECORDER = "SYSTEM_RECORDER";
 	public const string CMD_START = "START";
 	public const string CMD_STOP = "STOP";
-	private bool started = false;
 
 
 	void Start()
@@ -85,6 +84,8 @@ public class Test : MonoBehaviour
 		expanDialSticks.onHoldingChanged += HandleHoldingChanged;
 		expanDialSticks.onReachingChanged += HandleReachingChanged;
 
+		expanDialSticks.SetOverlayMode(ExpanDialSticks.SafetyOverlayMode.User);
+		expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SpeedAndSeparationMonitoring);
 		connected = false;
 
 		// init trials
@@ -107,9 +108,6 @@ public class Test : MonoBehaviour
 	private void HandleConnected(object sender, MqttConnectionEventArgs e)
 	{
 		Debug.Log("Application connected.");
-		expanDialSticks.client.Publish(MQTT_CAMERA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_EMPATICA_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
-		expanDialSticks.client.Publish(MQTT_SYSTEM_RECORDER, System.Text.Encoding.UTF8.GetBytes(CMD_START), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, true);
 		connected = true;
 
 	}
@@ -166,51 +164,14 @@ public class Test : MonoBehaviour
 				Application.Quit();
 #endif
 	}
-	
 	void OnGUI()
 	{
+		// Make a text field that modifies stringToEdit.
+		float midX = Screen.width / 2.0f;
+		float midY = Screen.height / 2.0f;
+		float componentHeight = 20;
+		float componentWidth = 50;
 
-		if (connected && !started)
-		{
-
-			float midX = Screen.width / 2.0f;
-			float midY = Screen.height / 2.0f;
-			float componentHeight = 20;
-			float componentWidth = 50;
-
-			if (GUI.Button(new Rect(midX, midY + 50, 50, componentHeight), "SSM"))
-			{
-				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SpeedAndSeparationMonitoring);
-				expanDialSticks.SetOverlayMode(ExpanDialSticks.SafetyOverlayMode.Debug);
-				started = true;
-			}
-
-			if (GUI.Button(new Rect(midX, midY + 25, 50, componentHeight), "SMS"))
-			{
-
-				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
-				expanDialSticks.SetOverlayMode(ExpanDialSticks.SafetyOverlayMode.Debug);
-				started = true;
-			}
-			if (GUI.Button(new Rect(midX, midY + 0, 50, componentHeight), "USER ZONE"))
-			{
-
-				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
-				expanDialSticks.SetOverlayMode(ExpanDialSticks.SafetyOverlayMode.User);
-
-				started = true;
-			}
-			if (GUI.Button(new Rect(midX, midY -25, 50, componentHeight), "SYSTEM ZONE"))
-			{
-
-				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
-				expanDialSticks.SetOverlayMode(ExpanDialSticks.SafetyOverlayMode.System);
-				started = true;
-			}
-
-		}
-		/*
-		
 		stringCameraX = GUI.TextField(new Rect(midX - 100, 50, 50, componentHeight), stringCameraX, 25);
 		stringCameraY = GUI.TextField(new Rect(midX - 50, 50, 50, componentHeight), stringCameraY, 25);
 		stringCameraZ = GUI.TextField(new Rect(midX     , 50, 50, componentHeight), stringCameraZ, 25);
@@ -260,8 +221,7 @@ public class Test : MonoBehaviour
 			}
 			expanDialSticks.triggerProjectorChange();
 			expanDialSticks.triggerTextureChange();
-		
-		}*/
+		}
 	}
 
 	void Update()
@@ -274,71 +234,29 @@ public class Test : MonoBehaviour
 				Quit();
 			}
 
-			if (Input.GetKeyDown("a"))
+			if (Input.GetKeyDown("p"))
 			{
-				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
-				expanDialSticks.SetOverlayMode(ExpanDialSticks.SafetyOverlayMode.Debug);
-			}
-
-			if (Input.GetKeyDown("z"))
-			{
-				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SpeedAndSeparationMonitoring);
-				expanDialSticks.SetOverlayMode(ExpanDialSticks.SafetyOverlayMode.Debug);
-			}
-
-			if (Input.GetKeyDown("e"))
-			{
-				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
-				expanDialSticks.SetOverlayMode(ExpanDialSticks.SafetyOverlayMode.User);
-			}
-			if (Input.GetKeyDown("r"))
-			{
-				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SafetyRatedMonitoredStop);
-				expanDialSticks.SetOverlayMode(ExpanDialSticks.SafetyOverlayMode.System);
-			}
-
-			if (Input.GetKeyDown("q"))
-			{
-
 				for (int i = 0; i < expanDialSticks.NbRows; i++)
 				{
 					for (int j = 0; j < expanDialSticks.NbColumns; j++)
 					{
-							expanDialSticks.modelMatrix[i, j].TargetPosition = (sbyte)((expanDialSticks.modelMatrix[i, j].CurrentPosition == 40) ? 0 : 40);
-							expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = 2f;
+						expanDialSticks.modelMatrix[i, j].TargetPosition = 0;
+						expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = 4f;
 					}
 				}
 				expanDialSticks.triggerShapeChange();
-
-			}
-			if (Input.GetKeyDown("d"))
-			{
-
-				int i = 2;
-				int j = 4;
-				expanDialSticks.modelMatrix[i, j].TargetPosition = (sbyte)((expanDialSticks.modelMatrix[i, j].CurrentPosition == 40) ? 0 : 40);
-				expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = 6f;
-				expanDialSticks.triggerShapeChange();
 			}
 
-			if (Input.GetKeyDown("f"))
+			if (Input.GetKeyDown("n"))
 			{
-
-				int i = 0;
-				int j = 3;
-				expanDialSticks.modelMatrix[i, j].TargetPosition = (sbyte)((expanDialSticks.modelMatrix[i, j].CurrentPosition == 40) ? 0 : 40);
-				expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = 6f;
-
-				i = 2;
-				j = 4;
-				expanDialSticks.modelMatrix[i, j].TargetPosition = (sbyte)((expanDialSticks.modelMatrix[i, j].CurrentPosition == 40) ? 0 : 40);
-				expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = 6f;
-
-				i = 4;
-				j = 3;
-				expanDialSticks.modelMatrix[i, j].TargetPosition = (sbyte)((expanDialSticks.modelMatrix[i, j].CurrentPosition == 40) ? 0 : 40);
-				expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = 6f;
-
+				for (int i = 0; i < expanDialSticks.NbRows; i++)
+				{
+					for (int j = 0; j < expanDialSticks.NbColumns; j++)
+					{
+						expanDialSticks.modelMatrix[i, j].TargetPosition = 40;
+						expanDialSticks.modelMatrix[i, j].TargetShapeChangeDuration = 4f;
+					}
+				}
 				expanDialSticks.triggerShapeChange();
 			}
 		}

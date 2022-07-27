@@ -12,6 +12,9 @@ using uPLibrary.Networking.M2Mqtt.Exceptions;
 using TMPro;
 using System;
 using System.Globalization;
+using System.Threading;
+using System.IO;
+using Valve.Newtonsoft.Json;
 
 public class Manipulation
 {
@@ -59,8 +62,23 @@ public class DataPhysApp : MonoBehaviour
 	private bool connected = false;
 	public float EVENT_INTERVAL = 0.5f; // 0.2f;
 	private float lastRising = 0f;
+	public float LEGEND_SIZE = 0.5f;
 
-	private const float JOYSTICK_THRESHOLD = 10f;
+	public float FONT_SIZE_H0 = 0.10f;
+	public float LINE_HEIGHT_H0 = 0.12f;
+	public float FONT_SIZE_H1 = 0.08f;
+	public float LINE_HEIGHT_H1 = 0.10f;
+	public float FONT_SIZE_H2 = 0.06f;
+	public float LINE_HEIGHT_H2 = 0.08f;
+	public float FONT_SIZE_H3 = 0.04f;
+	public float LINE_HEIGHT_H3 = 0.06f;
+	public float FONT_SIZE_H4 = 0.02f;
+	public float LINE_HEIGHT_H4 = 0.04f;
+	public float LINE_HEIGHT_MISC1 = 0.6f;
+	public float LINE_HEIGHT_MISC2 = 0.4f;
+	public float LINE_HEIGHT_MISC3 = 0.2f;
+
+	private const float JOYSTICK_THRESHOLD = 25f;
 	private const float TRANSITION_DELAY = 0.25f;
 
 
@@ -71,15 +89,74 @@ public class DataPhysApp : MonoBehaviour
 	private int rotation = 0;
 	private Queue<Vector3> errors;
 	private Manipulation manipulation;
+	private bool started = false;
 
 	private const int RIGHT = 0x0001;
 	private const int LEFT = 0x0010;
 	private const int UP = 0x0100;
 	private const int DOWN = 0x1000;
 
+	private ConcurrentQueue<Action> scenarioInputs;
+	void generateScenario()
+	{
+		scenarioInputs = new ConcurrentQueue<Action>();
+
+		// Zoom Both Axis in (2,2)
+		scenarioInputs.Enqueue(() => ZoomBothIn(2, 2));
+		// Pan Right
+		scenarioInputs.Enqueue(() => PanRight(1));
+		// Pan Right
+		scenarioInputs.Enqueue(() => PanRight(1));
+		// Pan Right
+		scenarioInputs.Enqueue(() => PanRight(1));
+		// Pan Left
+		scenarioInputs.Enqueue(() => PanLeft(1));
+		// Pan Left
+		scenarioInputs.Enqueue(() => PanLeft(1));
+		// Pan Left
+		scenarioInputs.Enqueue(() => PanLeft(1));
+
+	}
+	void OnGUI()
+	{
+		// Make a text field that modifies stringToEdit.
+		float midX = Screen.width / 2.0f;
+		float midY = Screen.height / 2.0f;
+		float componentHeight = 20;
+		float componentWidth = 250;
+
+		if (!started)
+		{
+
+			if (GUI.Button(new Rect(midX + 5, midY - 50, componentWidth, componentHeight), "UNSAFE"))
+			{
+				expanDialSticks.SetOverlayMode(ExpanDialSticks.SafetyOverlayMode.None);
+				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.None);
+				started = true;
+			}
+
+			if (GUI.Button(new Rect(midX + 5, midY - 25, componentWidth, componentHeight), "INCOHERENT"))
+			{
+				expanDialSticks.SetOverlayMode(ExpanDialSticks.SafetyOverlayMode.None);
+				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SpeedAndSeparationMonitoring);
+				started = true;
+			}
+
+			if (GUI.Button(new Rect(midX + 5, midY, componentWidth, componentHeight), "ALL"))
+			{
+				expanDialSticks.SetOverlayMode(ExpanDialSticks.SafetyOverlayMode.User);
+				expanDialSticks.SetSafetyMode(ExpanDialSticks.SafetyMotionMode.SpeedAndSeparationMonitoring);
+				started = true;
+			}
+
+		}
+
+	}
 	void Start()
 	{
+		Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 		expanDialSticks = expanDialSticksPrefab.GetComponent<ExpanDialSticks>();
+		// Listen to events
 		// Listen to events
 		expanDialSticks.OnConnecting += HandleConnecting;
 		expanDialSticks.OnConnected += HandleConnected;
@@ -91,7 +168,7 @@ public class DataPhysApp : MonoBehaviour
 		expanDialSticks.OnPositionChanged += HandlePositionChanged;
 		expanDialSticks.onHoldingChanged += HandleHoldingChanged;
 		expanDialSticks.onReachingChanged += HandleReachingChanged;
-
+		generateScenario();
 		connected = false;
 
 		directions = new Vector2[expanDialSticks.NbRows, expanDialSticks.NbColumns];
@@ -99,6 +176,9 @@ public class DataPhysApp : MonoBehaviour
 			for (int j = 0; j < directions.GetLength(1); j++)
 				directions[i, j] = Vector2.zero;
 		dataPhysModel = new DataPhysModel(expanDialSticks.NbRows, expanDialSticks.NbColumns);
+		dataSet = dataPhysModel.DataSet();
+		// Write the contents of the variable someClass to a file.
+		ZoomBothIn(2, 2);
 		errors = new Queue<Vector3>();
 		// Connection to MQTT Broker
 		expanDialSticks.client_MqttConnect();
@@ -111,7 +191,7 @@ public class DataPhysApp : MonoBehaviour
 		float textRotation = dataSet.orientation * 90f;
 
 		expanDialSticks[row, column].TargetText = "<b>" + (int)datum + " Wh </b>";//xLabel + "\n<b>" + yLabel;
-		expanDialSticks[row, column].TargetColor = new Color(1f - coeff, 1f - coeff, 1f);
+		expanDialSticks[row, column].TargetColor = new Color(1f - coeff, 1f - coeff, 1f) ;
 		expanDialSticks[row, column].TargetTextRotation = textRotation;
 		expanDialSticks[row, column].TargetTextureChangeDuration = 1f;
 
@@ -120,9 +200,12 @@ public class DataPhysApp : MonoBehaviour
 	}
 	public void LegendFromLabels()
 	{
-		string xLegendFirst = "<line-height=6><size=4>";
-		string xLegendSecond = "<line-height=8><size=6>";
-		string xLegendThird = "<line-height=10><size=8>";
+		string xLegendFirst =  "<line-height=" + LINE_HEIGHT_H3 + "><size=" + FONT_SIZE_H3 + ">";
+		int xLegendFirstSizeInit = xLegendFirst.Length;
+		string xLegendSecond = "<line-height=" + LINE_HEIGHT_H2 + "><size=" + FONT_SIZE_H2 + ">";
+		int xLegendSecondSizeInit = xLegendSecond.Length;
+		string xLegendThird = "<line-height="+ LINE_HEIGHT_H1 +"><size="+ FONT_SIZE_H1 + ">";
+		int xLegendThirdSizeInit = xLegendThird.Length;
 
 		for (int i = 0; i < dataSet.xLabels.Length; i++)
 		{
@@ -149,12 +232,12 @@ public class DataPhysApp : MonoBehaviour
 			}
 		}
 		string xLegend = "";
-		if (xLegendFirst != "<line-height=6><size=4>") xLegend += xLegendFirst + "\n";
-		if (xLegendSecond != "<line-height=8><size=6>") xLegend += xLegendSecond + "\n";
-		if (xLegendThird != "<line-height=10><size=8>") xLegend += xLegendThird + "\n";
+		if (xLegendFirst.Length > xLegendFirstSizeInit) xLegend += xLegendFirst + "\n";
+		if (xLegendSecond.Length > xLegendSecondSizeInit) xLegend += xLegendSecond + "\n";
+		if (xLegendThird.Length > xLegendThirdSizeInit) xLegend += xLegendThird + "\n";
 
 
-		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, 16, Color.black, xLegend, new Vector3(90f, -90f, 0f));
+		expanDialSticks.setBottomBorderText(TextAlignmentOptions.Center, LEGEND_SIZE, Color.black, xLegend, new Vector3(90f, -90f, 0f));
 
 		string yLegend = "";
 
@@ -165,25 +248,28 @@ public class DataPhysApp : MonoBehaviour
 			switch (subLabels.Length)
 			{
 				case 1:
-					yLegend += "<line-height=10><size=8>" + subLabels[0] + "<line-height=60>\n";
+					yLegend += "<line-height=" + LINE_HEIGHT_H1 + "><size=" + FONT_SIZE_H1 + ">" + subLabels[0] + "<line-height=" + LINE_HEIGHT_MISC1 + ">\n";
 					break;
 				case 2:
-					yLegend += "<line-height=8><size=6>" + subLabels[0] + "\n";
-					yLegend += "<line-height=10><size=8>" + subLabels[1] + "\n";
-					yLegend += "<line-height=42>\n";
+					yLegend += "<line-height=" + LINE_HEIGHT_H2 + "><size=" + FONT_SIZE_H2 + ">" + subLabels[0] + "\n";
+					yLegend += "<line-height=" + LINE_HEIGHT_H1 + "><size=" + FONT_SIZE_H1 + ">" + subLabels[1] + "\n";
+					yLegend += "<line-height=" + LINE_HEIGHT_MISC2 + ">\n";
 					break;
 				case 3:
-					yLegend += "<line-height=6><size=4>" + subLabels[0] + "\n";
-					yLegend += "<line-height=8><size=6>" + subLabels[1] + "\n";
-					yLegend += "<line-height=10><size=8>" + subLabels[2] + "\n";
-					yLegend += "<line-height=36>\n";
+					yLegend += "<line-height=" + LINE_HEIGHT_H3 + "><size=" + FONT_SIZE_H3 + ">" + subLabels[0] + "\n";
+					yLegend += "<line-height=" + LINE_HEIGHT_H2 + "><size=" + FONT_SIZE_H2 + ">" + subLabels[1] + "\n";
+					yLegend += "<line-height=" + LINE_HEIGHT_H1 + "><size=" + FONT_SIZE_H1 + ">" + subLabels[2] + "\n";
+					yLegend += "<line-height=" + LINE_HEIGHT_MISC3 + ">\n";
 					break;
 				default:
-					yLegend += "<line-height=10>" + subLabels[0] + "<line-height=60>\n";
+					yLegend += "<line-height=" + LINE_HEIGHT_H1 + "> " + subLabels[0] + "<line-height=" + LINE_HEIGHT_MISC1 + " >\n";
 					break;
 			}
 		}
-		expanDialSticks.setLeftBorderText(TextAlignmentOptions.Center, 16, Color.black, yLegend, new Vector3(90f, -90f, 0f));
+		string dataLegend = "<line-height=" + LINE_HEIGHT_H1 + "><size=" + FONT_SIZE_H1 + ">" + "<b>Energy\nConsumption</b>";
+		expanDialSticks.setLeftBorderText(TextAlignmentOptions.Center, LEGEND_SIZE, Color.black, yLegend, new Vector3(90f, -90f, 0f));
+		expanDialSticks.setLeftCornerText(TextAlignmentOptions.Center, LEGEND_SIZE, Color.black, dataLegend, new Vector3(90f, -90f, 0f));
+
 	}
 
 	IEnumerator TriggerTransition()
@@ -361,6 +447,8 @@ public class DataPhysApp : MonoBehaviour
 		Debug.Log("ExpanDialSticks connected.");
 		connected = true;
 
+		//ZoomBothIn(2, 2);
+
 	}
 
 	private void HandleDisconnected(object sender, MqttConnectionEventArgs e)
@@ -371,7 +459,10 @@ public class DataPhysApp : MonoBehaviour
 
 	private void HandleXAxisChanged(object sender, ExpanDialStickEventArgs e)
 	{
-		//Debug.Log("HandleXAxisChanged -> (" + e.i + '|' + e.j + '|' + e.diff + ")");
+		// prevent sensor aberation value
+		if (Math.Abs(e.next) >= JOYSTICK_THRESHOLD)
+			Debug.Log("HandleXAxisChanged -> (" + e.i + '|' + e.j + '|' + e.diff + ") = " + e.next);
+		if (Math.Abs(e.next - e.prev) > 100f) return;
 		directions[e.i, e.j].x = (e.next >= JOYSTICK_THRESHOLD || e.next <= -JOYSTICK_THRESHOLD) ? e.next : 0f;
 		if (e.prev < JOYSTICK_THRESHOLD && e.next >= JOYSTICK_THRESHOLD)
 		{
@@ -395,6 +486,9 @@ public class DataPhysApp : MonoBehaviour
 
 	private void HandleYAxisChanged(object sender, ExpanDialStickEventArgs e)
 	{
+		if (Math.Abs(e.next) >= JOYSTICK_THRESHOLD)
+			Debug.Log("HandleYAxisChanged -> (" + e.i + '|' + e.j + '|' + e.diff + ") = " + e.next);
+		if (Math.Abs(e.next - e.prev) > 100f) return;
 		directions[e.i, e.j].y = (e.next >= JOYSTICK_THRESHOLD || e.next <= -JOYSTICK_THRESHOLD)? e.next : 0f;
 		if (e.prev < JOYSTICK_THRESHOLD && e.next >= JOYSTICK_THRESHOLD)
 		{
@@ -697,7 +791,7 @@ public class DataPhysApp : MonoBehaviour
 				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_IN, xCenter, DataPhysModel.Y_AXIS_IDLE, yCenter);
 				break;
 			case DataPhysModel.Z_AXIS_270:
-				ans = DataPhysModel.ZOOM_ERROR_NOT_FOUND;dataPhysModel.Zoom(DataPhysModel.X_AXIS_IDLE, yCenter, DataPhysModel.Y_AXIS_IN, xCenter);
+				ans = dataPhysModel.Zoom(DataPhysModel.X_AXIS_IDLE, yCenter, DataPhysModel.Y_AXIS_IN, xCenter);
 			break;
 		}
 		dataTransition = true;
@@ -1323,7 +1417,7 @@ void Update()
 						else if (direction.x >= JOYSTICK_THRESHOLD)
 						{
 							//Debug.Log("PAN UP FOUND!");
-							int ans = PanUp(1);
+							int ans = PanDown(1);
 							if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
 							{
 								errors.Enqueue(new Vector3(i, j, ct));
@@ -1337,7 +1431,7 @@ void Update()
 						else if (direction.x <= -JOYSTICK_THRESHOLD)
 						{
 							//Debug.Log("PAN DOWN FOUND!");
-							int ans = PanDown(1);
+							int ans = PanUp(1);
 							if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
 							{
 								errors.Enqueue(new Vector3(i, j, ct));
@@ -1351,7 +1445,7 @@ void Update()
 						else if (direction.y >= JOYSTICK_THRESHOLD)
 						{
 							//Debug.Log("PAN RIGHT FOUND!");
-							int ans = PanRight(1);
+							int ans = PanLeft(1);
 							if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
 							{
 								errors.Enqueue(new Vector3(i, j, ct));
@@ -1365,7 +1459,7 @@ void Update()
 						else if (direction.y <= -JOYSTICK_THRESHOLD)
 						{
 							//Debug.Log("PAN LEFT FOUND!");
-							int ans = PanLeft(1);
+							int ans = PanRight(1);
 							if (ans == DataPhysModel.PAN_ERROR_NOT_FOUND || ans == DataPhysModel.PAN_ERROR_OUT_OF_BOUNDS)
 							{
 								errors.Enqueue(new Vector3(i, j, ct));
@@ -1385,7 +1479,7 @@ void Update()
 		}
 
 		// check if ExpanDialSticks is connected
-		if (connected)
+		if (connected && started)
 		{
 			if (Input.GetKey("escape"))
 			{
@@ -1458,12 +1552,20 @@ void Update()
 					expanDialSticks.triggerTextureChange();
 				}
 			}
-			
+
+
+			if (Input.GetKeyDown(KeyCode.N))
+			{
+				Action action;
+				while (!scenarioInputs.TryDequeue(out action)) ;
+				action();
+			}
 
 			// ZOOM IN TOP LEFT TO BOTTOM RIGHT
 			if (Input.GetKeyDown(KeyCode.KeypadPlus))
 			{
-
+				ZoomBothIn(2, 2);
+				/*
 				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, 0, -JOYSTICK_THRESHOLD, -JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 
@@ -1474,12 +1576,12 @@ void Update()
 				HandleXAxisChanged(new object(), e);
 
 				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 1, 0, -JOYSTICK_THRESHOLD, -JOYSTICK_THRESHOLD);
-				HandleYAxisChanged(new object(), e);
+				HandleYAxisChanged(new object(), e);*/
 
 			}
 			if (Input.GetKeyUp(KeyCode.KeypadPlus))
 			{
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, -JOYSTICK_THRESHOLD, 0, JOYSTICK_THRESHOLD);
+				/*ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, -JOYSTICK_THRESHOLD, 0, JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 
 				e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, JOYSTICK_THRESHOLD, 0, -JOYSTICK_THRESHOLD);
@@ -1489,7 +1591,7 @@ void Update()
 				HandleXAxisChanged(new object(), e);
 
 				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 1, -JOYSTICK_THRESHOLD, 0, JOYSTICK_THRESHOLD);
-				HandleYAxisChanged(new object(), e);
+				HandleYAxisChanged(new object(), e);*/
 			}
 
 
@@ -1497,7 +1599,8 @@ void Update()
 			if (Input.GetKeyDown(KeyCode.KeypadMinus))
 			{
 
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, 0, JOYSTICK_THRESHOLD, JOYSTICK_THRESHOLD);
+				ZoomBothOut(2, 2);
+				/*ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, 0, JOYSTICK_THRESHOLD, JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 
 				e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, 0, -JOYSTICK_THRESHOLD, -JOYSTICK_THRESHOLD);
@@ -1507,12 +1610,11 @@ void Update()
 				HandleXAxisChanged(new object(), e);
 
 				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 1, 0, JOYSTICK_THRESHOLD, JOYSTICK_THRESHOLD);
-				HandleYAxisChanged(new object(), e);
-
+				HandleYAxisChanged(new object(), e);*/
 			}
 			if (Input.GetKeyUp(KeyCode.KeypadMinus))
 			{
-				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, JOYSTICK_THRESHOLD, 0, -JOYSTICK_THRESHOLD);
+				/*ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, JOYSTICK_THRESHOLD, 0, -JOYSTICK_THRESHOLD);
 				HandleXAxisChanged(new object(), e);
 
 				e = new ExpanDialStickEventArgs(DateTime.Now, 3, 0, -JOYSTICK_THRESHOLD, 0, JOYSTICK_THRESHOLD);
@@ -1522,7 +1624,7 @@ void Update()
 				HandleXAxisChanged(new object(), e);
 
 				e = new ExpanDialStickEventArgs(DateTime.Now, 4, 1, JOYSTICK_THRESHOLD, 0, -JOYSTICK_THRESHOLD);
-				HandleYAxisChanged(new object(), e);
+				HandleYAxisChanged(new object(), e);*/
 			}
 
 			// UP
@@ -1581,11 +1683,13 @@ void Update()
 				HandleYAxisChanged(new object(), e);*/
 			}
 
+			// ROTATE CCW
 			if (Input.GetKeyDown(KeyCode.A))
 			{
 				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 2, 5, 0, -JOYSTICK_THRESHOLD, -JOYSTICK_THRESHOLD);
 				HandleRotationChanged(new object(), e);
 			}
+			// ROTATE CW
 			if (Input.GetKeyDown(KeyCode.E))
 			{
 				ExpanDialStickEventArgs e = new ExpanDialStickEventArgs(DateTime.Now, 2, 5, 0, JOYSTICK_THRESHOLD, JOYSTICK_THRESHOLD);
