@@ -132,9 +132,9 @@ public class ExpanDialSticks : MonoBehaviour
 	private GameObject rightArmObject;
 	private IArmController leftArm;
 	private IArmController rightArm;
-	public enum SafetyMotionMode {SafetyRatedMonitoredStop, SpeedAndSeparationMonitoring};
+	public enum SafetyMotionMode {SafetyRatedMonitoredStop, SpeedAndSeparationMonitoring, None};
 	public SafetyMotionMode safetyMotionMode = SafetyMotionMode.SafetyRatedMonitoredStop;
-	public enum SafetyOverlayMode {User, System, Mixed};
+	public enum SafetyOverlayMode {User, System, Mixed, Debug, None};
 	public SafetyOverlayMode safetyOverlayMode = SafetyOverlayMode.User;
 	private int nbSeparationLevels = 1;
 
@@ -272,6 +272,7 @@ public class ExpanDialSticks : MonoBehaviour
 	public event EventHandler<ExpanDialStickEventArgs> OnClickChanged = (sender, e) => {};
 	public event EventHandler<ExpanDialStickEventArgs> OnRotationChanged = (sender, e) => {};
 	public event EventHandler<ExpanDialStickEventArgs> OnPositionChanged = (sender, e) => {};
+	public event EventHandler<ExpanDialStickEventArgs> OnActuationChanged = (sender, e) => { };
 	public event EventHandler<ExpanDialStickEventArgs> onHoldingChanged = (sender, e) => {};
 	public event EventHandler<ExpanDialStickEventArgs> onReachingChanged = (sender, e) => {};
 	public event EventHandler<ExpanDialStickEventArgs> onProximityChanged = (sender, e) => { };
@@ -292,6 +293,11 @@ public class ExpanDialSticks : MonoBehaviour
 	public int NbColumns{
 		get => nbColumns;
 	}
+	public int NbSeparationLevels
+	{
+		get => this.nbSeparationLevels;
+	}
+
 	public float DistanceFromSARCamera
 	{
 		get => SARCameraDistanceFromMatrix;
@@ -315,6 +321,9 @@ public class ExpanDialSticks : MonoBehaviour
 		safetyMotionMode = motionMode;
 		switch (safetyMotionMode)
 		{
+			case SafetyMotionMode.None:
+				nbSeparationLevels = 0;
+				break;
 			case SafetyMotionMode.SafetyRatedMonitoredStop:
 				nbSeparationLevels = 2;
 				break;
@@ -346,13 +355,24 @@ public class ExpanDialSticks : MonoBehaviour
 		switch (safetyOverlayMode)
 		{
 			case SafetyOverlayMode.User:
+				safeGuard.GizmosOn = false;
 				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.User, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.State);
 				break;
 			case SafetyOverlayMode.System:
+				safeGuard.GizmosOn = false;
 				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.System, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.State);
 				break;
 			case SafetyOverlayMode.Mixed:
+				safeGuard.GizmosOn = false;
 				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.Mixed, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.State);
+				break;
+			case SafetyOverlayMode.Debug:
+				safeGuard.GizmosOn = true;
+				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.None, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.State);
+				break;
+			case SafetyOverlayMode.None:
+				safeGuard.GizmosOn = false;
+				safeGuard.setOverlayMode(SafeGuard.SafetyOverlayMode.None, SafeGuard.SemioticMode.Icon, SafeGuard.FeedbackMode.State);
 				break;
 		}
 	}
@@ -1336,10 +1356,16 @@ public class ExpanDialSticks : MonoBehaviour
 							//Debug.Log("(" + i + ", " + j + ") Dial Event.");
 						}
 
-						if (events[4] != 0f && !modelMatrix[i, j].CurrentHolding && !modelMatrix[i, j].CurrentReaching) // Push/Pull events
+						if (events[4] != 0f && !modelMatrix[i, j].CurrentHolding) // Push/Pull events
 						{
-							OnPositionChanged(this, new ExpanDialStickEventArgs(t, i, j, modelMatrix[i, j].CurrentPosition - events[4], modelMatrix[i, j].CurrentPosition, events[4]));
-							//Debug.Log("(" + i + ", " + j + ") Encoder Event.");
+							Debug.Log("(" + i + ", " + j + ") Encoder Event.");
+							if (!modelMatrix[i, j].CurrentReaching) // USER INPUT
+							{
+								OnPositionChanged(this, new ExpanDialStickEventArgs(t, i, j, modelMatrix[i, j].CurrentPosition - events[4], modelMatrix[i, j].CurrentPosition, events[4]));
+							} else // SYSTEM OUTPUT
+							{
+								OnActuationChanged(this, new ExpanDialStickEventArgs(t, i, j, modelMatrix[i, j].CurrentPosition - events[4], modelMatrix[i, j].CurrentPosition, events[4]));
+							}
 						}
 
 

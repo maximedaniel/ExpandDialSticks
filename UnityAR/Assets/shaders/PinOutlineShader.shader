@@ -55,7 +55,7 @@ Shader "Outlined/PinSilhouetteShader" {
 				Pass{
 					Name "BASE"
 					Cull back
-					Offset 0, 0
+					Offset 0, 100
 				//Blend Zero One
 				Blend SrcAlpha OneMinusSrcAlpha
 			CGPROGRAM

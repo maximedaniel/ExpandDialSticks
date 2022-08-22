@@ -13,11 +13,17 @@ public class SafeGuard : MonoBehaviour
 	Projector projector;
 
 	public ExpanDialSticks pins;
+	private bool gizmosOn = false;
+	public float stopZoneWidth = 0.06f;
+	public float oneThirdZoneWidth = 0.12f;
+	public float twoThirdZoneWidth = 0.18f;
+	public float fullZoneWidth = 0.24f;
+
 	private const float warningZoneRadius = 0.06f;
 
-	private const float pinFirstOutlineWidth = 0.01f / 100f;
-	private const float pinSecondOutlineWidth = pinFirstOutlineWidth + 0.04f / 100f;
-	private const float pinThirdOutlineWidth = pinSecondOutlineWidth + 0.01f / 100f;
+	private const float pinFirstOutlineWidth = 0.02f / 100f;
+	private const float pinSecondOutlineWidth = pinFirstOutlineWidth + 0.08f / 100f;
+	private const float pinThirdOutlineWidth = pinSecondOutlineWidth + 0.02f / 100f;
 
 	private const float dotFirstOutlineWidth = 0.003f / 100f;
 	private const float bodyFirstOutlineWidth = 0.1f/100f;
@@ -124,7 +130,7 @@ public class SafeGuard : MonoBehaviour
 	private float[] _lineLeftArmRadius, _lineRightArmRadius;
 	//private int _lineIndex = 0;
 
-	public enum SafetyOverlayMode {User, System, Mixed};
+	public enum SafetyOverlayMode {User, System, Mixed, None};
 	private SafetyOverlayMode overlayMode = SafetyOverlayMode.User;
 	public enum SemioticMode { None, Index, Symbol, Icon};
 	private SemioticMode semioticMode = SemioticMode.Icon;
@@ -147,9 +153,6 @@ public class SafeGuard : MonoBehaviour
 	private GameObject currRightArmCollider = null;
 	private GameObject prevRightHandCollider = null;
 	private GameObject prevRightArmCollider = null;
-	private List<Vector3> currUnsafeTransitions = null;
-	private List<Vector3> nextUnsafeTransitions = null;
-
 	// LEFT HAND
 	private Vector3 leftHandPos = Vector3.zero;
 	private Vector3 leftHandScale = Vector3.zero;
@@ -188,8 +191,24 @@ public class SafeGuard : MonoBehaviour
 	public const float recoveryRateIn = (feedbackMaxGamma - feedbackMinGamma) / feedbackInDuration;
 	public const float recoveryRateOut = (feedbackMaxGamma - feedbackMinGamma) / feedbackOutDuration;
 
-
 	public float distanceFromSafetyCamera = 1f;
+	// EaseIn EaseOut transition
+	private List<Vector3> easeIns = null;
+	private List<Vector3> easeOuts = null;
+	private Color[,] _currStopIconColors;
+	private Color[,] _targetStopIconColors;
+	private Color _currStopZoneColor;
+	private Color _targetStopZoneColor;
+
+	/*private List<Vector3> currUnsafeTransitions = null;
+	private List<Vector3> nextUnsafeTransitions = null;*/
+
+
+	public bool GizmosOn
+	{
+		get => this.gizmosOn;
+		set => this.gizmosOn = value;
+	}
 	public static Vector3 ProjectPointLine(Vector3 point, Vector3 lineStart, Vector3 lineEnd)
 	{
 		Vector3 relativePoint = point - lineStart;
@@ -323,8 +342,18 @@ public class SafeGuard : MonoBehaviour
 		projector.orthographicSize = cam.orthographicSize;
 		projector.material.color = new Color(1f, 1f, 1f, 1f);
 
-		currUnsafeTransitions = new List<Vector3>();
-		nextUnsafeTransitions = new List<Vector3>();
+		_currStopIconColors = new Color[pins.NbRows, pins.NbColumns];
+		_targetStopIconColors = new Color[pins.NbRows, pins.NbColumns];
+		for (int i = 0; i < pins.NbRows; i++) 
+			for (int j = 0; j < pins.NbColumns; j++)
+			{
+				_currStopIconColors[i, j] = new Color(1f, 0f, 0f, 0f);
+				_targetStopIconColors[i, j] = new Color(1f, 0f, 0f, 0f);
+
+			}
+		_currStopZoneColor = new Color(1f, 0f, 0f, 0f);
+		_targetStopZoneColor = new Color(1f, 0f, 0f, 0f);
+
 
 		_foreHandMatrices =  new Matrix4x4[32];
 		_backHandMatrices = new Matrix4x4[32];
@@ -735,16 +764,86 @@ public class SafeGuard : MonoBehaviour
 		}
 
 	}
-	
-	private void GenerateSystemOverlay()
+	private void FetchUserSafetyZones()
 	{
 
-		for (int i = 0; i < currUnsafeTransitions.Count; i++)
+
+		if (currLeftHandCollider != null && currLeftArmCollider != null)
 		{
-			Vector3 unsafeTransition = currUnsafeTransitions[i];
-			int row = (int)unsafeTransition.x;
-			int column = (int)unsafeTransition.y;
-			float distanceGamma = unsafeTransition.z;
+			// Left Hand Zone
+			SphereCollider sc = currLeftHandCollider.GetComponent<SphereCollider>();
+			Vector3 handColliderPosition = currLeftHandCollider.transform.position;
+			//backgroundDistance = +(sc.radius * 2.0f + pins.height);
+			//handColliderPosition.y = backgroundDistance;
+			Vector3 handColliderScale = new Vector3((sc.radius + MyCapsuleHand.STOP_RADIUS) * 2.0f, (sc.radius + MyCapsuleHand.STOP_RADIUS) * 2.0f, (sc.radius + MyCapsuleHand.STOP_RADIUS) * 2.0f);
+
+			// Save for shader
+			leftHandPos = handColliderPosition;
+			leftHandScale = handColliderScale;
+			leftHandRadius = sc.radius;
+
+			// Left Arm Zone
+			CapsuleCollider capsuleCollider1 = currLeftArmCollider.GetComponent<CapsuleCollider>();
+			Vector3 forwardArmColliderPosition = currLeftArmCollider.transform.position + currLeftArmCollider.transform.forward * (capsuleCollider1.height / 2.0f);
+			Vector3 backwardArmColliderPosition = currLeftArmCollider.transform.position - currLeftArmCollider.transform.forward * (capsuleCollider1.height / 2.0f);
+			Vector3 armColliderPosition = backwardArmColliderPosition + (forwardArmColliderPosition - backwardArmColliderPosition) / 2.0f;
+			Quaternion armColliderRotation = Quaternion.LookRotation(forwardArmColliderPosition - backwardArmColliderPosition) * Quaternion.AngleAxis(90, Vector3.right); ; // Quaternion.Euler(_forearmColliders[0].transform.rotation.eulerAngles.x, _forearmColliders[0].transform.rotation.eulerAngles.y, _forearmColliders[0].transform.rotation.eulerAngles.z);
+			Vector3 colliderScale = new Vector3((capsuleCollider1.radius + MyCapsuleHand.STOP_RADIUS) * 2f, capsuleCollider1.height / 2.0f, (capsuleCollider1.radius + MyCapsuleHand.STOP_RADIUS) * 2f);
+			Vector3 frontToBackArm = Vector3.Normalize(backwardArmColliderPosition - forwardArmColliderPosition);
+			float distFrontArmOutOfHand = sc.radius - Vector3.Magnitude(handColliderPosition - forwardArmColliderPosition);
+
+
+			// Save for shader
+			leftFrontArmPos = forwardArmColliderPosition + frontToBackArm * distFrontArmOutOfHand;
+			leftBackArmPos = backwardArmColliderPosition;
+			leftArmRadius = capsuleCollider1.radius;
+			leftArmPos = armColliderPosition;
+			leftArmRotation = armColliderRotation;
+			leftArmScale = colliderScale;
+		}
+
+		// Generate Right Hand Zone
+		if (currRightHandCollider != null && currRightArmCollider != null)
+		{
+			// Right Hand Zone
+			// prevRightHandCollider = pins.rightHand.GetHandCollider();
+			SphereCollider sc = currRightHandCollider.GetComponent<SphereCollider>();
+			Vector3 handColliderPosition = currRightHandCollider.transform.position;
+			//backgroundDistance = +(sc.radius * 2.0f + pins.height);
+			//handColliderPosition.y = backgroundDistance;
+			Vector3 handColliderScale = new Vector3((sc.radius + MyCapsuleHand.STOP_RADIUS) * 2.0f, (sc.radius + MyCapsuleHand.STOP_RADIUS) * 2.0f, (sc.radius + MyCapsuleHand.STOP_RADIUS) * 2.0f);
+
+			rightHandPos = handColliderPosition;
+			rightHandScale = handColliderScale;
+			rightHandRadius = sc.radius;
+
+			// Right Arm Zone
+			// prevRightArmCollider = pins.rightHand.GetArmCollider();
+			CapsuleCollider capsuleCollider1 = currRightArmCollider.GetComponent<CapsuleCollider>();
+			Vector3 forwardArmColliderPosition = currRightArmCollider.transform.position + currRightArmCollider.transform.forward * (capsuleCollider1.height / 2.0f);
+			Vector3 backwardArmColliderPosition = currRightArmCollider.transform.position - currRightArmCollider.transform.forward * (capsuleCollider1.height / 2.0f);
+			Vector3 armColliderPosition = backwardArmColliderPosition + (forwardArmColliderPosition - backwardArmColliderPosition) / 2.0f;
+			Quaternion armColliderRotation = Quaternion.LookRotation(forwardArmColliderPosition - backwardArmColliderPosition) * Quaternion.AngleAxis(90, Vector3.right); ; // Quaternion.Euler(_forearmColliders[0].transform.rotation.eulerAngles.x, _forearmColliders[0].transform.rotation.eulerAngles.y, _forearmColliders[0].transform.rotation.eulerAngles.z);
+			Vector3 colliderScale = new Vector3((capsuleCollider1.radius + MyCapsuleHand.STOP_RADIUS) * 2f, capsuleCollider1.height / 2.0f, (capsuleCollider1.radius + MyCapsuleHand.STOP_RADIUS) * 2f);
+			Vector3 frontToBackArm = Vector3.Normalize(backwardArmColliderPosition - forwardArmColliderPosition);
+			float distFrontArmOutOfHand = sc.radius - Vector3.Magnitude(handColliderPosition - forwardArmColliderPosition);
+
+			// Save for shader
+			rightFrontArmPos = forwardArmColliderPosition + frontToBackArm * distFrontArmOutOfHand;
+			rightBackArmPos = backwardArmColliderPosition;
+			rightArmRadius = capsuleCollider1.radius;
+			rightArmPos = armColliderPosition;
+			rightArmRotation = armColliderRotation;
+			rightArmScale = colliderScale;
+		}
+
+	}
+
+	private void GenerateSystemOverlay()
+	{
+		for (int row = 0; row < pins.NbRows; row++)
+			for (int column = 0; column < pins.NbColumns; column++)
+			{
 			int paused = pins.viewMatrix[row, column].CurrentPaused;
 			int feedforwarded = pins.viewMatrix[row, column].CurrentFeedForwarded;
 			int displacement = (paused != 0) ? paused : feedforwarded;
@@ -767,152 +866,109 @@ public class SafeGuard : MonoBehaviour
 			);
 
 			//Color dotColor = (displacement > 0) ? Color.Lerp(_middleDivergingColor, _rightDivergingColor, displacement / 40f) : Color.Lerp(_middleDivergingColor, _leftDivergingColor, -displacement / 40f);
-			Color dotColor = gradient.Evaluate(distanceGamma); // new Color(1f, 0f, 0f, distanceGamma);
-			float safetyDiameter = pins.diameter + MyCapsuleHand.STOP_RADIUS * 2f;
-			float safetyRadius = safetyDiameter / 2.0f;
+			_currStopIconColors[row, column].a = Mathf.MoveTowards(_currStopIconColors[row, column].a, _targetStopIconColors[row, column].a, recoveryRateIn * Time.deltaTime);
+			Color dotColor = _currStopIconColors[row, column]; // gradient.Evaluate(distanceGamma);
+			if(_currStopIconColors[row, column].a >= 0f)
+				{
+					float safetyDiameter = (pins.diameter + MyCapsuleHand.STOP_RADIUS * 2f) * 2f;
+					Debug.Log(safetyDiameter);
+					float safetyRadius = safetyDiameter / 2.0f;
 
-			_dotColors[_dotIndex] = dotColor; //(feedbackMode != FeedbackMode.State) ? dotColor : new Color(1f, 1f, 1f, 0f);//Color.white;
-			_dotFirstOutlineColors[_dotIndex] = Color.black;
-			_dotFirstOutlineWidths[_dotIndex] = dotFirstOutlineWidth;
-			/*_dotSecondOutlineColors[_dotIndex] = Color.black;
-			_dotSecondOutlineWidths[_dotIndex] = 0.0f;
-			_dotThirdOutlineColors[_dotIndex] = Color.black;
-			_dotThirdOutlineWidths[_dotIndex] = 0.0f;
-			_dotFourthOutlineColors[_dotIndex] = Color.black;
-			_dotFourthOutlineWidths[_dotIndex] = 0.0f;
-			_dotFifthOutlineColors[_dotIndex] = Color.black;
-			_dotFifthOutlineWidths[_dotIndex] = 0.0f;*/
+					_dotColors[_dotIndex] = dotColor; //(feedbackMode != FeedbackMode.State) ? dotColor : new Color(1f, 1f, 1f, 0f);//Color.white;
+					_dotFirstOutlineColors[_dotIndex] = new Vector4(0f, 0f, 0f, dotColor.a); //Color.black;
+					_dotFirstOutlineWidths[_dotIndex] = dotFirstOutlineWidth * dotColor.a;
 
-			// left hand mask
-			_dotLeftHandCenters[_dotIndex] = dotPos;
-			_dotLeftHandRadius[_dotIndex] = safetyRadius;
-			// left arm mask
-			_dotLeftBackArmCenters[_dotIndex] = dotPos;
-			_dotLeftFrontArmCenters[_dotIndex] = dotPos;
-			_dotLeftArmRadius[_dotIndex] = safetyRadius;
-			// right hand mask
-			_dotRightHandCenters[_dotIndex] = dotPos;
-			_dotRightHandRadius[_dotIndex] = safetyRadius;
-			// right arm mask
-			_dotRightBackArmCenters[_dotIndex] = dotPos;
-			_dotRightFrontArmCenters[_dotIndex] = dotPos;
-			_dotRightArmRadius[_dotIndex] = safetyRadius;
-			_dotIndex++;
+					//_dotSecondOutlineColors[_dotIndex] = Color.black;
+					//_dotSecondOutlineWidths[_dotIndex] = 0.0f;
+					//_dotThirdOutlineColors[_dotIndex] = Color.black;
+					//_dotThirdOutlineWidths[_dotIndex] = 0.0f;
+					//_dotFourthOutlineColors[_dotIndex] = Color.black;
+					//_dotFourthOutlineWidths[_dotIndex] = 0.0f;
+					//_dotFifthOutlineColors[_dotIndex] = Color.black;
+					//_dotFifthOutlineWidths[_dotIndex] = 0.0f;
 
-			// Generate safety zone
-			float ZDepth = (row * pins.NbColumns + column) / 1000f;
-			Vector3 pinPos = new Vector3(pin.position.x, -pins.height * 4f, pin.position.z);
-			Vector3 pinScale = new Vector3(safetyDiameter, pin.localScale.y, safetyDiameter);
+					// left hand mask
+					_dotLeftHandCenters[_dotIndex] = dotPos;
+					_dotLeftHandRadius[_dotIndex] = safetyRadius;
+					// left arm mask
+					_dotLeftBackArmCenters[_dotIndex] = dotPos;
+					_dotLeftFrontArmCenters[_dotIndex] = dotPos;
+					_dotLeftArmRadius[_dotIndex] = safetyRadius;
+					// right hand mask
+					_dotRightHandCenters[_dotIndex] = dotPos;
+					_dotRightHandRadius[_dotIndex] = safetyRadius;
+					// right arm mask
+					_dotRightBackArmCenters[_dotIndex] = dotPos;
+					_dotRightFrontArmCenters[_dotIndex] = dotPos;
+					_dotRightArmRadius[_dotIndex] = safetyRadius;
+					_dotIndex++;
 
-			_pinMatrices[_pinIndex] = Matrix4x4.TRS(pinPos, Quaternion.identity, pinScale);
-			_pinColors[_pinIndex] = new Vector4(1f, 1f, 1f, 0f);//distanceGamma); //Color.white;
-			_pinFirstOutlineColors[_pinIndex] = Color.black;
-			_pinFirstOutlineWidths[_pinIndex] = pinFirstOutlineWidth;
-			_pinSecondOutlineColors[_pinIndex] = dotColor;
-			_pinSecondOutlineWidths[_pinIndex] = pinSecondOutlineWidth;
-			_pinThirdOutlineColors[_pinIndex] = Color.black;
-			_pinThirdOutlineWidths[_pinIndex] = pinThirdOutlineWidth;
-			_pinIndex++;
+					// Generate safety zone
+					float ZDepth = (row * pins.NbColumns + column) / 1000f;
+					Vector3 pinPos = new Vector3(pin.position.x, -pins.height * 4f, pin.position.z);
+					Vector3 pinScale = new Vector3(safetyDiameter, pin.localScale.y, safetyDiameter);
+
+					_pinMatrices[_pinIndex] = Matrix4x4.TRS(pinPos, Quaternion.identity, (dotColor.a > 0f) ? pinScale : Vector3.zero );
+					_pinColors[_pinIndex] = new Vector4(1f, 1f, 1f, 0f);//distanceGamma); //Color.white;
+					_pinFirstOutlineColors[_pinIndex] = new Vector4(0f, 0f, 0f, dotColor.a);  //Color.black;
+					_pinFirstOutlineWidths[_pinIndex] = pinFirstOutlineWidth * dotColor.a;
+					_pinSecondOutlineColors[_pinIndex] = dotColor;
+					_pinSecondOutlineWidths[_pinIndex] = pinSecondOutlineWidth * dotColor.a;
+					_pinThirdOutlineColors[_pinIndex] = new Vector4(0f, 0f, 0f, dotColor.a); //Color.black;
+					_pinThirdOutlineWidths[_pinIndex] = pinThirdOutlineWidth * dotColor.a;
+					_pinIndex++;
 
 
-			// Generate Plane
+					// Generate Plane
 
-			Vector3 planePos = new Vector3(pin.position.x, 0.03f, pin.position.z);
-			Quaternion planeRot = pin.rotation * Quaternion.AngleAxis(90, pin.up);
-			Vector3 planeScale = new Vector3(minOrthographicSize, 0.01f, minOrthographicSize);
-			_planeMatrices[_planeIndex] = Matrix4x4.TRS(
-					planePos,
-					planeRot,
-					planeScale
-			);
-			float displacementPercent = Mathf.InverseLerp(-40f, 40f, displacement);
-			int directionAmount = Mathf.RoundToInt(Mathf.Lerp(0f, 30f, displacementPercent));
-			Graphics.CopyTexture(_shapeTextures[directionAmount], 0, 0, _iconTextureArray, _planeIndex, 0); // i is the index of the texture
-			_iconTextureIndexes[_planeIndex] = _planeIndex;
-			_planeColors[_planeIndex] = new Color(1f, 1f, 1f, (distanceGamma < 1f) ? 0f : 1f);//dotColor;
-			_planeOutlineColors[_planeIndex] = Vector4.zero;
-			_planeOutlineWidths[_planeIndex] = 0;
-			_planeSecondOutlineColors[_planeIndex] = Vector4.zero;
-			_planeSecondOutlineWidths[_planeIndex] = 0;
-			// left hand mask
-			_planeLeftHandCenters[_planeIndex] = dotPos;
-			_planeLeftHandRadius[_planeIndex] = safetyRadius;
-			// left arm mask
-			_planeLeftBackArmCenters[_planeIndex] = dotPos;
-			_planeLeftFrontArmCenters[_planeIndex] = dotPos;
-			_planeLeftArmRadius[_planeIndex] = safetyRadius;
-			// right hand mask
-			_planeRightHandCenters[_planeIndex] = dotPos;
-			_planeRightHandRadius[_planeIndex] = safetyRadius;
-			// right arm mask
-			_planeRightBackArmCenters[_planeIndex] = dotPos;
-			_planeRightFrontArmCenters[_planeIndex] = dotPos;
-			_planeRightArmRadius[_planeIndex] = safetyRadius;
-			_planeIndex++;
+					Vector3 planePos = new Vector3(pin.position.x, 0.03f, pin.position.z);
+					Quaternion planeRot = pin.rotation * Quaternion.AngleAxis(90, pin.up);
+					Vector3 planeScale = new Vector3(minOrthographicSize, 0.01f, minOrthographicSize);
+					_planeMatrices[_planeIndex] = Matrix4x4.TRS(
+							planePos,
+							planeRot,
+							planeScale
+					);
+					float displacementPercent = Mathf.InverseLerp(-40f, 40f, displacement);
+					int directionAmount = Mathf.RoundToInt(Mathf.Lerp(0f, 30f, displacementPercent));
+					Graphics.CopyTexture(_shapeTextures[directionAmount], 0, 0, _iconTextureArray, _planeIndex, 0); // i is the index of the texture
+					_iconTextureIndexes[_planeIndex] = _planeIndex;
+					_planeColors[_planeIndex] = new Vector4(1f, 1f, 1f, dotColor.a); //new Vector4(1f, 1f, 1f, dotColor.a); //new Color(1f, 1f, 1f, (distanceGamma < 1f) ? 0f : 1f);//dotColor;
+					_planeOutlineColors[_planeIndex] = Vector4.zero;
+					_planeOutlineWidths[_planeIndex] = 0;
+					_planeSecondOutlineColors[_planeIndex] = Vector4.zero;
+					_planeSecondOutlineWidths[_planeIndex] = 0;
+					// left hand mask
+					_planeLeftHandCenters[_planeIndex] = dotPos;
+					_planeLeftHandRadius[_planeIndex] = safetyRadius;
+					// left arm mask
+					_planeLeftBackArmCenters[_planeIndex] = dotPos;
+					_planeLeftFrontArmCenters[_planeIndex] = dotPos;
+					_planeLeftArmRadius[_planeIndex] = safetyRadius;
+					// right hand mask
+					_planeRightHandCenters[_planeIndex] = dotPos;
+					_planeRightHandRadius[_planeIndex] = safetyRadius;
+					// right arm mask
+					_planeRightBackArmCenters[_planeIndex] = dotPos;
+					_planeRightFrontArmCenters[_planeIndex] = dotPos;
+					_planeRightArmRadius[_planeIndex] = safetyRadius;
+					_planeIndex++;
 
-			/*
-			_dotColors[_dotIndex] = dotColor; // new Color(1f, 0f, 0f, (distanceGamma <= 1f) ? 0f : 1f); //(feedbackMode != FeedbackMode.State) ? dotColor : new Color(1f, 1f, 1f, 0f);//Color.white;
-			_dotFirstOutlineColors[_dotIndex] = Color.black;
-			_dotFirstOutlineWidths[_dotIndex] = dotFirstOutlineWidth;
-
-			// left hand mask
-			_dotLeftHandCenters[_dotIndex] = dotPos;
-			_dotLeftHandRadius[_dotIndex] = safetyRadius;
-			// left arm mask
-			_dotLeftBackArmCenters[_dotIndex] = dotPos;
-			_dotLeftFrontArmCenters[_dotIndex] = dotPos;
-			_dotLeftArmRadius[_dotIndex] = safetyRadius;
-			// right hand mask
-			_dotRightHandCenters[_dotIndex] = dotPos;
-			_dotRightHandRadius[_dotIndex] = safetyRadius;
-			// right arm mask
-			_dotRightBackArmCenters[_dotIndex] = dotPos;
-			_dotRightFrontArmCenters[_dotIndex] = dotPos;
-			_dotRightArmRadius[_dotIndex] = safetyRadius;
-			_dotIndex++;
-
-			// Generate Plane
-
-			Vector3 planePos = dotPos;
-			planePos.y += dotDiameter + 0.01f;
-			Quaternion planeRot = pin.rotation * Quaternion.AngleAxis(90, pin.up);
-			Vector3 planeScale = new Vector3(minOrthographicSize + 0.01f, 0.01f, minOrthographicSize + 0.01f);
-			_planeMatrices[_planeIndex] = Matrix4x4.TRS(
-					planePos,
-					planeRot,
-					planeScale
-			);
-			float displacementPercent = Mathf.InverseLerp(-40f, 40f, displacement);
-			int directionAmount = Mathf.RoundToInt(Mathf.Lerp(0f, 30f, displacementPercent));
-			Graphics.CopyTexture(_shapeTextures[directionAmount], 0, 0, _iconTextureArray, _planeIndex, 0); // i is the index of the texture
-			_iconTextureIndexes[_planeIndex] = _planeIndex;
-			_planeColors[_planeIndex] = new Color(1f, 1f, 1f, (distanceGamma <= 1f)?0f:1f);//dotColor;
-			_planeOutlineColors[_planeIndex] = Vector4.zero;
-			_planeOutlineWidths[_planeIndex] = 0;
-			_planeSecondOutlineColors[_planeIndex] = Vector4.zero;
-			_planeSecondOutlineWidths[_planeIndex] = 0;
-			// left hand mask
-			_planeLeftHandCenters[_planeIndex] = dotPos;
-			_planeLeftHandRadius[_planeIndex] = safetyRadius;
-			// left arm mask
-			_planeLeftBackArmCenters[_planeIndex] = dotPos;
-			_planeLeftFrontArmCenters[_planeIndex] = dotPos;
-			_planeLeftArmRadius[_planeIndex] = safetyRadius;
-			// right hand mask
-			_planeRightHandCenters[_planeIndex] = dotPos;
-			_planeRightHandRadius[_planeIndex] = safetyRadius;
-			// right arm mask
-			_planeRightBackArmCenters[_planeIndex] = dotPos;
-			_planeRightFrontArmCenters[_planeIndex] = dotPos;
-			_planeRightArmRadius[_planeIndex] = safetyRadius;
-			_planeIndex++;*/
-		}
+				}
+			}
 	}
 	private void GenerateUserOverlay()
 	{
-		Color bodyColor = gradient.Evaluate(bodyGamma); // new Color(1f, 0f, 0f, distanceGamma);
+		// Gradient from yellow to red
+		/*Color bodyColor = gradient.Evaluate(bodyGamma); // new Color(1f, 0f, 0f, distanceGamma);
 		float bodyAlpha = (bodyGamma > 0f) ? 1f : 0f; // new Color(1f, 0f, 0f, distanceGamma);
-		bodyColor.a = bodyAlpha;
+		bodyColor.a = bodyAlpha;*/
+
+		_currStopZoneColor.a = Mathf.MoveTowards(_currStopZoneColor.a, _targetStopZoneColor.a, recoveryRateIn * Time.deltaTime);
+		/*Color bodyColor = Color.red; // new Color(1f, 0f, 0f, distanceGamma);
+		Vector3.MoveTowards(bodyColor, new Color(bodyColor.r, bodyColor.g, bodyColor.b, stopZone), step);
+		float bodyAlpha = bodyGamma; // new Color(1f, 0f, 0f, distanceGamma);
+		bodyColor.a = bodyAlpha;*/
 
 		// Generate Left Forearm Zone
 		if (currLeftHandCollider != null && currLeftArmCollider != null)
@@ -933,11 +989,11 @@ public class SafeGuard : MonoBehaviour
 			Vector3 foreLeftHandPos = new Vector3(leftHandPos.x, foregroundDistance, leftHandPos.z);
 			_foreHandMatrices[_foreHandIndex] = Matrix4x4.TRS(foreLeftHandPos, Quaternion.identity, leftHandScale);
 			_foreHandColors[_foreHandIndex] = new Vector4(1f, 1f, 1f, 0f); //new Vector4(1f, 1f, 1f, bodyGamma);
-			_foreHandFirstOutlineColors[_foreHandIndex] = Color.black;// new Vector4(1f, 0f, 0f, bodyGamma);
+			_foreHandFirstOutlineColors[_foreHandIndex] = new Vector4(0f, 0f, 0f, _currStopZoneColor.a);// Color.black
 			_foreHandFirstOutlineWidths[_foreHandIndex] = bodyFirstOutlineWidth;
-			_foreHandSecondOutlineColors[_foreHandIndex] = bodyColor;//new Vector4(1f, 0f, 0f, bodyGamma);
+			_foreHandSecondOutlineColors[_foreHandIndex] = _currStopZoneColor;//new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreHandSecondOutlineWidths[_foreHandIndex] = bodySecondOutlineWidth;
-			_foreHandThirdOutlineColors[_foreHandIndex] = Color.black;/// new Vector4(1f, 0f, 0f, bodyGamma);
+			_foreHandThirdOutlineColors[_foreHandIndex] = new Vector4(0f, 0f, 0f, _currStopZoneColor.a);// Color.black
 			_foreHandThirdOutlineWidths[_foreHandIndex] = bodyThirdOutlineWidth;
 			_foreHandIndex++;
 
@@ -966,11 +1022,11 @@ public class SafeGuard : MonoBehaviour
 				leftArmScale
 				);
 			_foreArmColors[_foreArmIndex] = new Vector4(1f, 1f, 1f, 0f); //new Vector4(1f, 1f, 1f, bodyGamma);
-			_foreArmFirstOutlineColors[_foreArmIndex] = Color.black;// new Vector4(1f, 0f, 0f, bodyGamma);
+			_foreArmFirstOutlineColors[_foreArmIndex] = new Vector4(0f, 0f, 0f, _currStopZoneColor.a); //Color.black;// new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreArmFirstOutlineWidths[_foreArmIndex] = bodyFirstOutlineWidth;
-			_foreArmSecondOutlineColors[_foreArmIndex] = bodyColor;// new Vector4(1f, 0f, 0f, bodyGamma);
+			_foreArmSecondOutlineColors[_foreArmIndex] = _currStopZoneColor;// new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreArmSecondOutlineWidths[_foreArmIndex] = bodySecondOutlineWidth;
-			_foreArmThirdOutlineColors[_foreArmIndex] = Color.black;// new Vector4(1f, 0f, 0f, bodyGamma);
+			_foreArmThirdOutlineColors[_foreArmIndex] = new Vector4(0f, 0f, 0f, _currStopZoneColor.a); //Color.black;// new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreArmThirdOutlineWidths[_foreArmIndex] = bodyThirdOutlineWidth;
 			_foreArmIndex++;
 		}
@@ -993,11 +1049,11 @@ public class SafeGuard : MonoBehaviour
 			Vector3 foreRightHandPos = new Vector3(rightHandPos.x, foregroundDistance, rightHandPos.z);
 			_foreHandMatrices[_foreHandIndex] = Matrix4x4.TRS(foreRightHandPos, Quaternion.identity, rightHandScale);
 			_foreHandColors[_foreHandIndex] = new Vector4(1f, 1f, 1f, 0f); //new Vector4(1f, 1f, 1f, bodyGamma);
-			_foreHandFirstOutlineColors[_foreHandIndex] = Color.black;// new Vector4(1f, 0f, 0f, bodyGamma);
+			_foreHandFirstOutlineColors[_foreHandIndex] = new Vector4(0f, 0f, 0f, _currStopZoneColor.a);  //Color.black;// new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreHandFirstOutlineWidths[_foreHandIndex] = bodyFirstOutlineWidth;
-			_foreHandSecondOutlineColors[_foreHandIndex] = bodyColor;// new Vector4(1f, 0f, 0f, bodyGamma);
+			_foreHandSecondOutlineColors[_foreHandIndex] = _currStopZoneColor;// new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreHandSecondOutlineWidths[_foreHandIndex] = bodySecondOutlineWidth;
-			_foreHandThirdOutlineColors[_foreHandIndex] = Color.black;// new Vector4(1f, 0f, 0f, bodyGamma);
+			_foreHandThirdOutlineColors[_foreHandIndex] = new Vector4(0f, 0f, 0f, _currStopZoneColor.a); // Color.black;// new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreHandThirdOutlineWidths[_foreHandIndex] = bodyThirdOutlineWidth;
 			_foreHandIndex++;
 
@@ -1026,113 +1082,339 @@ public class SafeGuard : MonoBehaviour
 				rightArmScale
 				);
 			_foreArmColors[_foreArmIndex] = new Vector4(1f, 1f, 1f, 0f); //new Vector4(1f, 1f, 1f, bodyGamma);
-			_foreArmFirstOutlineColors[_foreArmIndex] = Color.black;// new Vector4(1f, 0f, 0f, bodyGamma);
+			_foreArmFirstOutlineColors[_foreArmIndex] = new Vector4(0f, 0f, 0f, _currStopZoneColor.a); //Color.black;// new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreArmFirstOutlineWidths[_foreArmIndex] = bodyFirstOutlineWidth;
-			_foreArmSecondOutlineColors[_foreArmIndex] = bodyColor;// new Vector4(1f, 0f, 0f, bodyGamma);
+			_foreArmSecondOutlineColors[_foreArmIndex] = _currStopZoneColor;// new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreArmSecondOutlineWidths[_foreArmIndex] = bodySecondOutlineWidth;
-			_foreArmThirdOutlineColors[_foreArmIndex] = Color.black;// new Vector4(1f, 0f, 0f, bodyGamma);
+			_foreArmThirdOutlineColors[_foreArmIndex] = new Vector4(0f, 0f, 0f, _currStopZoneColor.a); //Color.black;// new Vector4(1f, 0f, 0f, bodyGamma);
 			_foreArmThirdOutlineWidths[_foreArmIndex] = bodyThirdOutlineWidth;
 			_foreArmIndex++;
 		}
 
 
-		for (int i = 0; i < currUnsafeTransitions.Count; i++)
+
+		for (int row = 0; row < pins.NbRows; row++)
 		{
+			for (int column = 0; column < pins.NbColumns; column++)
+			{
 
-			Vector3 unsafeTransition = currUnsafeTransitions[i];
-			int row = (int)unsafeTransition.x;
-			int column = (int)unsafeTransition.y;
-			float distanceGamma = unsafeTransition.z;
-			int paused = pins.viewMatrix[row, column].CurrentPaused;
-			int feedforwarded = pins.viewMatrix[row, column].CurrentFeedForwarded;
-			int displacement = (paused != 0) ? paused : feedforwarded;
-			Transform pin = pins.viewMatrix[row, column].transform;
+				int paused = pins.viewMatrix[row, column].CurrentPaused;
+				int feedforwarded = pins.viewMatrix[row, column].CurrentFeedForwarded;
+				int displacement = (paused != 0) ? paused : feedforwarded;
+				Transform pin = pins.viewMatrix[row, column].transform;
 
-			// Generate dots adjust dot diameter under body
-			Vector3 dotPos = pin.position;
-			Quaternion dotRot = pin.rotation;
-			float distance = pins.viewMatrix[row, column].CurrentDistance;
-			float scaleDistanceCoeff = 0f; // 1f - (Mathf.Clamp(distance, minScaleDistance, maxScaleDistance) - minScaleDistance) / (maxScaleDistance - minScaleDistance);
-			float dotDiameter = Mathf.Lerp(minOrthographicSize, maxOrthographicSize, scaleDistanceCoeff);
+				// Generate dots adjust dot diameter under body
+				Vector3 dotPos = pin.position;
+				Quaternion dotRot = pin.rotation;
+				float distance = pins.viewMatrix[row, column].CurrentDistance;
+				float scaleDistanceCoeff = 0f; // 1f - (Mathf.Clamp(distance, minScaleDistance, maxScaleDistance) - minScaleDistance) / (maxScaleDistance - minScaleDistance);
+				float dotDiameter = Mathf.Lerp(minOrthographicSize, maxOrthographicSize, scaleDistanceCoeff);
+
+				//Color dotColor = (displacement > 0) ? Color.Lerp(_middleDivergingColor, _rightDivergingColor, displacement / 40f) : Color.Lerp(_middleDivergingColor, _leftDivergingColor, -displacement / 40f);
+				_currStopIconColors[row, column].a = Mathf.MoveTowards(_currStopIconColors[row, column].a, _targetStopIconColors[row, column].a, recoveryRateIn * Time.deltaTime);
+				Color dotColor = _currStopIconColors[row, column];
+				
+				if(_currStopIconColors[row, column].a > 0f)
+				{
+					dotPos = new Vector3(pin.position.x, 0f, pin.position.z);
+					Vector3 dotScale = new Vector3(dotDiameter, 0.01f, dotDiameter);
+					_dotMatrices[_dotIndex] = Matrix4x4.TRS(
+						dotPos,
+						dotRot,
+						dotScale
+					);
 
 
-			dotPos = new Vector3(pin.position.x, 0f, pin.position.z);
-			Vector3 dotScale = new Vector3(dotDiameter, 0.01f, dotDiameter);
-			_dotMatrices[_dotIndex] = Matrix4x4.TRS(
-				dotPos,
-				dotRot,
-				dotScale
-			);
+					float safetyDiameter = pins.diameter + MyCapsuleHand.STOP_RADIUS * 2f;
+					float safetyRadius = safetyDiameter / 2.0f;
 
-			//Color dotColor = (displacement > 0) ? Color.Lerp(_middleDivergingColor, _rightDivergingColor, displacement / 40f) : Color.Lerp(_middleDivergingColor, _leftDivergingColor, -displacement / 40f);
-			Color dotColor = gradient.Evaluate(distanceGamma); // new Color(1f, 0f, 0f, distanceGamma);
-			float safetyDiameter = pins.diameter + MyCapsuleHand.STOP_RADIUS * 2f;
-			float safetyRadius = safetyDiameter / 2.0f;
+					_dotColors[_dotIndex] = dotColor; //(feedbackMode != FeedbackMode.State) ? dotColor : new Color(1f, 1f, 1f, 0f);//Color.white;
+					_dotFirstOutlineColors[_dotIndex] = new Color(0f, 0f, 0f, dotColor.a);
+					_dotFirstOutlineWidths[_dotIndex] = dotFirstOutlineWidth * dotColor.a;
+					/*_dotSecondOutlineColors[_dotIndex] = Color.black;
+					_dotSecondOutlineWidths[_dotIndex] = 0.0f;
+					_dotThirdOutlineColors[_dotIndex] = Color.black;
+					_dotThirdOutlineWidths[_dotIndex] = 0.0f;
+					_dotFourthOutlineColors[_dotIndex] = Color.black;
+					_dotFourthOutlineWidths[_dotIndex] = 0.0f;
+					_dotFifthOutlineColors[_dotIndex] = Color.black;
+					_dotFifthOutlineWidths[_dotIndex] = 0.0f;*/
 
-			_dotColors[_dotIndex] = dotColor; //(feedbackMode != FeedbackMode.State) ? dotColor : new Color(1f, 1f, 1f, 0f);//Color.white;
-			_dotFirstOutlineColors[_dotIndex] = Color.black;
-			_dotFirstOutlineWidths[_dotIndex] = dotFirstOutlineWidth;
-			/*_dotSecondOutlineColors[_dotIndex] = Color.black;
-			_dotSecondOutlineWidths[_dotIndex] = 0.0f;
-			_dotThirdOutlineColors[_dotIndex] = Color.black;
-			_dotThirdOutlineWidths[_dotIndex] = 0.0f;
-			_dotFourthOutlineColors[_dotIndex] = Color.black;
-			_dotFourthOutlineWidths[_dotIndex] = 0.0f;
-			_dotFifthOutlineColors[_dotIndex] = Color.black;
-			_dotFifthOutlineWidths[_dotIndex] = 0.0f;*/
+					// left hand mask
+					_dotLeftHandCenters[_dotIndex] = dotPos;
+					_dotLeftHandRadius[_dotIndex] = safetyRadius;
+					// left arm mask
+					_dotLeftBackArmCenters[_dotIndex] = dotPos;
+					_dotLeftFrontArmCenters[_dotIndex] = dotPos;
+					_dotLeftArmRadius[_dotIndex] = safetyRadius;
+					// right hand mask
+					_dotRightHandCenters[_dotIndex] = dotPos;
+					_dotRightHandRadius[_dotIndex] = safetyRadius;
+					// right arm mask
+					_dotRightBackArmCenters[_dotIndex] = dotPos;
+					_dotRightFrontArmCenters[_dotIndex] = dotPos;
+					_dotRightArmRadius[_dotIndex] = safetyRadius;
+					_dotIndex++;
 
-			// left hand mask
-			_dotLeftHandCenters[_dotIndex] = dotPos;
-			_dotLeftHandRadius[_dotIndex] = safetyRadius;
-			// left arm mask
-			_dotLeftBackArmCenters[_dotIndex] = dotPos;
-			_dotLeftFrontArmCenters[_dotIndex] = dotPos;
-			_dotLeftArmRadius[_dotIndex] = safetyRadius;
-			// right hand mask
-			_dotRightHandCenters[_dotIndex] = dotPos;
-			_dotRightHandRadius[_dotIndex] = safetyRadius;
-			// right arm mask
-			_dotRightBackArmCenters[_dotIndex] = dotPos;
-			_dotRightFrontArmCenters[_dotIndex] = dotPos;
-			_dotRightArmRadius[_dotIndex] = safetyRadius;
-			_dotIndex++;
-			
-			// Generate Plane
+					// Generate Plane
 
-			Vector3 planePos = new Vector3(pin.position.x, 0.03f, pin.position.z);
-			Quaternion planeRot = pin.rotation * Quaternion.AngleAxis(90, pin.up);
-			Vector3 planeScale = new Vector3(minOrthographicSize, 0.01f, minOrthographicSize);
-			_planeMatrices[_planeIndex] = Matrix4x4.TRS(
-					planePos,
-					planeRot,
-					planeScale
-			);
-			float displacementPercent = Mathf.InverseLerp(-40f, 40f, displacement);
-			int directionAmount = Mathf.RoundToInt(Mathf.Lerp(0f, 30f, displacementPercent));
-			Graphics.CopyTexture(_shapeTextures[directionAmount], 0, 0, _iconTextureArray, _planeIndex, 0); // i is the index of the texture
-			_iconTextureIndexes[_planeIndex] = _planeIndex;
-			_planeColors[_planeIndex] = new Color(1f, 1f, 1f, (distanceGamma <1f)?0f:1f);//dotColor;
-			_planeOutlineColors[_planeIndex] = Vector4.zero;
-			_planeOutlineWidths[_planeIndex] = 0;
-			_planeSecondOutlineColors[_planeIndex] = Vector4.zero;
-			_planeSecondOutlineWidths[_planeIndex] = 0;
-			// left hand mask
-			_planeLeftHandCenters[_planeIndex] = dotPos;
-			_planeLeftHandRadius[_planeIndex] = safetyRadius;
-			// left arm mask
-			_planeLeftBackArmCenters[_planeIndex] = dotPos;
-			_planeLeftFrontArmCenters[_planeIndex] = dotPos;
-			_planeLeftArmRadius[_planeIndex] = safetyRadius;
-			// right hand mask
-			_planeRightHandCenters[_planeIndex] = dotPos;
-			_planeRightHandRadius[_planeIndex] = safetyRadius;
-			// right arm mask
-			_planeRightBackArmCenters[_planeIndex] = dotPos;
-			_planeRightFrontArmCenters[_planeIndex] = dotPos;
-			_planeRightArmRadius[_planeIndex] = safetyRadius;
-			_planeIndex++;
+					Vector3 planePos = new Vector3(pin.position.x, 0.03f, pin.position.z);
+					Quaternion planeRot = pin.rotation * Quaternion.AngleAxis(90, pin.up);
+					Vector3 planeScale = new Vector3(minOrthographicSize, 0.01f, minOrthographicSize);
+					_planeMatrices[_planeIndex] = Matrix4x4.TRS(
+							planePos,
+							planeRot,
+							planeScale
+					);
+					float displacementPercent = Mathf.InverseLerp(-40f, 40f, displacement);
+					int directionAmount = Mathf.RoundToInt(Mathf.Lerp(0f, 30f, displacementPercent));
+					Graphics.CopyTexture(_shapeTextures[directionAmount], 0, 0, _iconTextureArray, _planeIndex, 0); // i is the index of the texture
+					_iconTextureIndexes[_planeIndex] = _planeIndex;
+					_planeColors[_planeIndex] = new Color(1f, 1f, 1f, dotColor.a);//dotColor;
+					_planeOutlineColors[_planeIndex] = Vector4.zero;
+					_planeOutlineWidths[_planeIndex] = 0;
+					_planeSecondOutlineColors[_planeIndex] = Vector4.zero;
+					_planeSecondOutlineWidths[_planeIndex] = 0;
+					// left hand mask
+					_planeLeftHandCenters[_planeIndex] = dotPos;
+					_planeLeftHandRadius[_planeIndex] = safetyRadius;
+					// left arm mask
+					_planeLeftBackArmCenters[_planeIndex] = dotPos;
+					_planeLeftFrontArmCenters[_planeIndex] = dotPos;
+					_planeLeftArmRadius[_planeIndex] = safetyRadius;
+					// right hand mask
+					_planeRightHandCenters[_planeIndex] = dotPos;
+					_planeRightHandRadius[_planeIndex] = safetyRadius;
+					// right arm mask
+					_planeRightBackArmCenters[_planeIndex] = dotPos;
+					_planeRightFrontArmCenters[_planeIndex] = dotPos;
+					_planeRightArmRadius[_planeIndex] = safetyRadius;
+					_planeIndex++;
+				}
+			}
 		}
 	}
+
+
+	public void RenderUserZones()
+	{
+		IArmController[] arms = { pins.LeftArm, pins.RightArm };
+		foreach (IArmController arm in arms)
+		{
+
+			if (arm != null && arm.IsActive())
+			{
+				for (int i = 0; i < 1; i++) //pins.LeftArm.GetNbHandCollider()
+				{
+					// Fetch hand model
+					GameObject handCollider = arm.GetHandColliderAt(i);
+					SphereCollider sphereCollider = handCollider.GetComponent<SphereCollider>();
+					Vector3 handColliderPosition = handCollider.transform.position;
+					Vector3 handColliderScale = new Vector3(
+						(sphereCollider.radius) * 2.0f,
+						(sphereCollider.radius) * 2.0f,
+						(sphereCollider.radius) * 2.0f
+						);
+
+					Vector3 handPos = handColliderPosition;
+					Vector3 handScale = handColliderScale;
+					float handRadius = sphereCollider.radius;
+
+					// Fetch arm model
+					GameObject armCollider = arm.GetArmColliderAt(i);
+					CapsuleCollider capsuleCollider = armCollider.GetComponent<CapsuleCollider>();
+					Vector3 forwardArmColliderPosition = armCollider.transform.position + armCollider.transform.forward * (capsuleCollider.height / 2.0f);
+					Vector3 backwardArmColliderPosition = armCollider.transform.position - armCollider.transform.forward * (capsuleCollider.height / 2.0f);
+					Vector3 armColliderPosition = backwardArmColliderPosition + (forwardArmColliderPosition - backwardArmColliderPosition) / 2.0f;
+					Quaternion armColliderRotation = Quaternion.LookRotation(forwardArmColliderPosition - backwardArmColliderPosition) * Quaternion.AngleAxis(90, Vector3.right); ; // Quaternion.Euler(_forearmColliders[0].transform.rotation.eulerAngles.x, _forearmColliders[0].transform.rotation.eulerAngles.y, _forearmColliders[0].transform.rotation.eulerAngles.z);
+					Vector3 colliderScale = new Vector3(
+						(capsuleCollider.radius) * 2f,
+						capsuleCollider.height / 2.0f,
+						(capsuleCollider.radius) * 2f
+						);
+					Vector3 frontToBackArm = Vector3.Normalize(backwardArmColliderPosition - forwardArmColliderPosition);
+					float distFrontArmOutOfHand = sphereCollider.radius - Vector3.Magnitude(handColliderPosition - forwardArmColliderPosition);
+
+
+					// Save for shader
+					Vector3 frontArmPos = forwardArmColliderPosition + frontToBackArm * distFrontArmOutOfHand;
+					Vector3 backArmPos = backwardArmColliderPosition;
+					float armRadius = capsuleCollider.radius;
+					Vector3 armPos = armColliderPosition;
+					Quaternion armRotation = armColliderRotation;
+					Vector3 armScale = colliderScale;
+
+					// Generate Meshes
+					float gradientCoeff = (float)i / (float)(arm.GetNbHandCollider() - 1);
+					Color zoneColor = gradient.Evaluate(gradientCoeff);
+					//Debug.Log("gradientCoeff = " + gradientCoeff + ", zoneColor = " + zoneColor);
+					zoneColor.a = 0.5f;
+					_foreHandMatrices[_foreHandIndex] = Matrix4x4.TRS(handPos, Quaternion.identity, handScale);
+					_foreHandColors[_foreHandIndex] = new Vector4(0f, 0f, 0f, 0.5f); // Color.zero; // zoneColor; //new Vector4(1f, 1f, 1f, bodyGamma);
+					_foreHandFirstOutlineColors[_foreHandIndex] = Color.black;// Color.black
+					_foreHandFirstOutlineWidths[_foreHandIndex] = 0f; //0.005f; // stopZoneWidth;
+					_foreHandSecondOutlineColors[_foreHandIndex] = Color.yellow;//new Vector4(1f, 0f, 0f, bodyGamma);
+					_foreHandSecondOutlineWidths[_foreHandIndex] = 0; // oneThirdZoneWidth;
+					_foreHandThirdOutlineColors[_foreHandIndex] = Color.green;// Color.black
+					_foreHandThirdOutlineWidths[_foreHandIndex] = 0; // twoThirdZoneWidth;
+					_foreHandIndex++;
+
+					_foreArmMatrices[_foreArmIndex] = Matrix4x4.TRS(armPos, armRotation, armScale);
+					_foreArmColors[_foreArmIndex] = new Vector4(0f, 0f, 0f, 0.5f);  //Vector4.zero; //zoneColor; //new Vector4(1f, 1f, 1f, bodyGamma);
+					_foreArmFirstOutlineColors[_foreArmIndex] = Color.black;// Color.black
+					_foreArmFirstOutlineWidths[_foreArmIndex] = 0f; // 0.005f; // stopZoneWidth;
+					_foreArmSecondOutlineColors[_foreArmIndex] = Color.yellow;//new Vector4(1f, 0f, 0f, bodyGamma);
+					_foreArmSecondOutlineWidths[_foreArmIndex] = 0; // oneThirdZoneWidth;
+					_foreArmThirdOutlineColors[_foreArmIndex] = Color.green;// Color.black
+					_foreArmThirdOutlineWidths[_foreArmIndex] = 0; //  twoThirdZoneWidth;
+					_foreArmIndex++;
+				}
+			}
+		}
+
+
+		// Render
+		CombineInstance[] foreCombine = new CombineInstance[_foreHandIndex + _foreArmIndex];
+		for (int i = 0; i < _foreHandIndex; i++)
+		{
+			foreCombine[i].mesh = _handMesh;
+			foreCombine[i].transform = _foreHandMatrices[i];
+		}
+		for (int i = 0; i < _foreArmIndex; i++)
+		{
+			foreCombine[_foreHandIndex + i].mesh = _armMesh;
+			foreCombine[_foreHandIndex + i].transform = _foreArmMatrices[i];
+		}
+		Mesh foreBodyMesh = new Mesh();
+		foreBodyMesh.CombineMeshes(foreCombine);
+
+		MaterialPropertyBlock foreBodyBlock = new MaterialPropertyBlock();
+		Matrix4x4[] _foreBodyMatrices = new Matrix4x4[] { Matrix4x4.identity };
+		foreBodyBlock.SetVectorArray("_Color", _foreArmColors);
+		/*for (int i = 0; i < _foreArmColors.Length; i++)
+		{
+			Debug.Log("_foreArmColors[" + i + "] = " + _foreArmColors[i]);
+		}*/
+		foreBodyBlock.SetVectorArray("_FirstOutlineColor", _foreArmFirstOutlineColors);
+		foreBodyBlock.SetFloatArray("_FirstOutlineWidth", _foreArmFirstOutlineWidths);
+		foreBodyBlock.SetVectorArray("_SecondOutlineColor", _foreArmSecondOutlineColors);
+		foreBodyBlock.SetFloatArray("_SecondOutlineWidth", _foreArmSecondOutlineWidths);
+		foreBodyBlock.SetVectorArray("_ThirdOutlineColor", _foreArmThirdOutlineColors);
+		foreBodyBlock.SetFloatArray("_ThirdOutlineWidth", _foreArmThirdOutlineWidths);
+		Graphics.DrawMeshInstanced(foreBodyMesh, 0, _armMat, _foreBodyMatrices, _foreBodyMatrices.Length, foreBodyBlock, UnityEngine.Rendering.ShadowCastingMode.Off, false, SEPARATION_LAYER);
+
+	}
+
+	public void RenderAllSafetyZones()
+	{
+		IArmController[] arms = { pins.LeftArm, pins.RightArm };
+		foreach (IArmController arm in arms)
+		{
+	
+			if (arm != null && arm.IsActive())
+			{
+				for (int i = 0; i < 1; i++) //pins.LeftArm.GetNbHandCollider()
+				{
+					// Fetch hand model
+					GameObject handCollider = arm.GetHandColliderAt(i);
+					SphereCollider sphereCollider = handCollider.GetComponent<SphereCollider>();
+					Vector3 handColliderPosition = handCollider.transform.position;
+					Vector3 handColliderScale = new Vector3(
+						(sphereCollider.radius - MyCapsuleHand.STOP_RADIUS) * 2.0f,
+						(sphereCollider.radius - MyCapsuleHand.STOP_RADIUS) * 2.0f,
+						(sphereCollider.radius - MyCapsuleHand.STOP_RADIUS) * 2.0f
+						);
+
+					Vector3 handPos = handColliderPosition;
+					Vector3 handScale = handColliderScale;
+					float handRadius = sphereCollider.radius;
+
+					// Fetch arm model
+					GameObject armCollider = arm.GetArmColliderAt(i);
+					CapsuleCollider capsuleCollider = armCollider.GetComponent<CapsuleCollider>();
+					Vector3 forwardArmColliderPosition = armCollider.transform.position + armCollider.transform.forward * (capsuleCollider.height / 2.0f);
+					Vector3 backwardArmColliderPosition = armCollider.transform.position - armCollider.transform.forward * (capsuleCollider.height / 2.0f);
+					Vector3 armColliderPosition = backwardArmColliderPosition + (forwardArmColliderPosition - backwardArmColliderPosition) / 2.0f;
+					Quaternion armColliderRotation = Quaternion.LookRotation(forwardArmColliderPosition - backwardArmColliderPosition) * Quaternion.AngleAxis(90, Vector3.right); ; // Quaternion.Euler(_forearmColliders[0].transform.rotation.eulerAngles.x, _forearmColliders[0].transform.rotation.eulerAngles.y, _forearmColliders[0].transform.rotation.eulerAngles.z);
+					Vector3 colliderScale = new Vector3(
+						(capsuleCollider.radius - MyCapsuleHand.STOP_RADIUS) * 2f,
+						capsuleCollider.height / 2.0f,
+						(capsuleCollider.radius - MyCapsuleHand.STOP_RADIUS) * 2f
+						);; 
+					Vector3 frontToBackArm = Vector3.Normalize(backwardArmColliderPosition - forwardArmColliderPosition);
+					float distFrontArmOutOfHand = sphereCollider.radius - Vector3.Magnitude(handColliderPosition - forwardArmColliderPosition);
+
+
+					// Save for shader
+					Vector3 frontArmPos = forwardArmColliderPosition + frontToBackArm * distFrontArmOutOfHand;
+					Vector3 backArmPos = backwardArmColliderPosition;
+					float armRadius = capsuleCollider.radius;
+					Vector3 armPos = armColliderPosition;
+					Quaternion armRotation = armColliderRotation;
+					Vector3 armScale = colliderScale;
+
+					// Generate Meshes
+					float gradientCoeff = (float)i / (float)(arm.GetNbHandCollider() - 1);
+					Color zoneColor = gradient.Evaluate(gradientCoeff);
+					//Debug.Log("gradientCoeff = " + gradientCoeff + ", zoneColor = " + zoneColor);
+					zoneColor.a = 0.5f;
+					_foreHandMatrices[_foreHandIndex] = Matrix4x4.TRS(handPos, Quaternion.identity, handScale);
+					_foreHandColors[_foreHandIndex] = Vector4.zero; // zoneColor; //new Vector4(1f, 1f, 1f, bodyGamma);
+					_foreHandFirstOutlineColors[_foreHandIndex] = Color.red;// Color.black
+					_foreHandFirstOutlineWidths[_foreHandIndex] = (pins.NbSeparationLevels >= 2) ? stopZoneWidth : 0f;
+					_foreHandSecondOutlineColors[_foreHandIndex] = new Color(254/(float)255, 153/(float)255, 41/(float)255); // Color.yellow;//new Vector4(1f, 0f, 0f, bodyGamma);
+					_foreHandSecondOutlineWidths[_foreHandIndex] = (pins.NbSeparationLevels >= 3) ? oneThirdZoneWidth : 0f;
+					_foreHandThirdOutlineColors[_foreHandIndex] = Color.yellow;
+					_foreHandThirdOutlineWidths[_foreHandIndex] = (pins.NbSeparationLevels >= 3) ? twoThirdZoneWidth : 0f;
+					_foreHandIndex++;
+
+					_foreArmMatrices[_foreArmIndex] = Matrix4x4.TRS(armPos, armRotation, armScale);
+					_foreArmColors[_foreArmIndex] = Vector4.zero; //zoneColor; //new Vector4(1f, 1f, 1f, bodyGamma);
+					_foreArmFirstOutlineColors[_foreArmIndex] = Color.red;// Color.black
+					_foreArmFirstOutlineWidths[_foreArmIndex] = (pins.NbSeparationLevels >= 2) ? stopZoneWidth : 0f;
+					_foreArmSecondOutlineColors[_foreArmIndex] = new Color(254 / (float)255, 153 / (float)255, 41 / (float)255); // Color.yellow;//new Vector4(1f, 0f, 0f, bodyGamma);
+					_foreArmSecondOutlineWidths[_foreArmIndex] = (pins.NbSeparationLevels >= 3) ? oneThirdZoneWidth : 0f;
+					_foreArmThirdOutlineColors[_foreArmIndex] = Color.yellow;
+					_foreArmThirdOutlineWidths[_foreArmIndex] = (pins.NbSeparationLevels >= 3) ? twoThirdZoneWidth : 0f;
+					_foreArmIndex++;
+				}
+			}
+		}
+		
+
+		// Render
+		CombineInstance[] foreCombine = new CombineInstance[_foreHandIndex + _foreArmIndex];
+		for (int i = 0; i < _foreHandIndex; i++)
+		{
+			foreCombine[i].mesh = _handMesh;
+			foreCombine[i].transform = _foreHandMatrices[i];
+		}
+		for (int i = 0; i < _foreArmIndex; i++)
+		{
+			foreCombine[_foreHandIndex + i].mesh = _armMesh;
+			foreCombine[_foreHandIndex + i].transform = _foreArmMatrices[i];
+		}
+		Mesh foreBodyMesh = new Mesh();
+		foreBodyMesh.CombineMeshes(foreCombine);
+
+		MaterialPropertyBlock foreBodyBlock = new MaterialPropertyBlock();
+		Matrix4x4[] _foreBodyMatrices = new Matrix4x4[] { Matrix4x4.identity };
+		foreBodyBlock.SetVectorArray("_Color", _foreArmColors);
+		/*for (int i = 0; i < _foreArmColors.Length; i++)
+		{
+			Debug.Log("_foreArmColors[" + i + "] = " + _foreArmColors[i]);
+		}*/
+		foreBodyBlock.SetVectorArray("_FirstOutlineColor", _foreArmFirstOutlineColors);
+		foreBodyBlock.SetFloatArray("_FirstOutlineWidth", _foreArmFirstOutlineWidths);
+		foreBodyBlock.SetVectorArray("_SecondOutlineColor", _foreArmSecondOutlineColors);
+		foreBodyBlock.SetFloatArray("_SecondOutlineWidth", _foreArmSecondOutlineWidths);
+		foreBodyBlock.SetVectorArray("_ThirdOutlineColor", _foreArmThirdOutlineColors);
+		foreBodyBlock.SetFloatArray("_ThirdOutlineWidth", _foreArmThirdOutlineWidths);
+		Graphics.DrawMeshInstanced(foreBodyMesh, 0, _armMat, _foreBodyMatrices, _foreBodyMatrices.Length, foreBodyBlock, UnityEngine.Rendering.ShadowCastingMode.Off, false, SEPARATION_LAYER);
+
+	}
+
+
 	// Update is called once per frame
 	public void Update()
     {
@@ -1173,6 +1455,13 @@ public class SafeGuard : MonoBehaviour
 				break;
 		}
 
+		if (gizmosOn)
+		{
+			//RenderUserZones();
+			RenderAllSafetyZones();
+			return;
+		}
+
 		//float minScaleDistance = 0f;
 		//float maxScaleDistance = minOrthographicSize;
 
@@ -1202,9 +1491,9 @@ public class SafeGuard : MonoBehaviour
 			}
 		}
 		FetchUserBody();
-		nextUnsafeTransitions.Clear();
+		//nextUnsafeTransitions.Clear();
 
-		float dynamicFeedbackMaxGamma = 0f;
+		_targetStopZoneColor.a = feedbackMinGamma;
 		for (int row = 0; row < pins.NbRows; row++)
 		{
 			for (int column = 0; column < pins.NbColumns; column++)
@@ -1214,88 +1503,44 @@ public class SafeGuard : MonoBehaviour
 				Transform pin = pins.viewMatrix[row, column].transform;
 				bool reaching = pins.viewMatrix[row, column].CurrentReaching;
 				int displacement = (paused != 0) ? paused : feedforwarded;
-				//if (reaching || displacement != 0) // if moving pins or paused or feedforwarded
+
 				if (displacement != 0) // if moving pins or paused or feedforwarded
 				{
 
 					float distanceGamma = pins.collisionMatrix[row, column].Gamma();
 					float distance = pins.collisionMatrix[row, column].Distance();
 
-					if (distanceGamma > 0f)
+					if (distanceGamma == 1f) 
 					{
-						float finalGamma = distanceGamma;// (distanceGamma < 1f) ? 0f: 1f; // (distanceGamma < 1f) ? 0.6f : distanceGamma; 
-						dynamicFeedbackMaxGamma = Mathf.Max(finalGamma, dynamicFeedbackMaxGamma);
-						//Debug.Log(row + " " + column + " finalGamma:" + finalGamma);
-						Vector3 nextUnsafeTransition = new Vector3(row, column, finalGamma);
-						//Debug.Log("nextUnsafeTransition => " + nextUnsafeTransition);
-						nextUnsafeTransitions.Add(nextUnsafeTransition);
-						int matchIndex = currUnsafeTransitions.FindIndex(currUnsafeTransition => (currUnsafeTransition.x == nextUnsafeTransition.x && currUnsafeTransition.y == nextUnsafeTransition.y));
+						_targetStopIconColors[row, column].a = feedbackMaxGamma;
+						_targetStopZoneColor.a = feedbackMaxGamma;
+					} else
+					{
 
-
-						if (matchIndex != -1) // next unsafe already exist then ease-in
-						{
-							Vector3 currUnsafeTransition = currUnsafeTransitions[matchIndex];
-							currUnsafeTransition.z = Mathf.MoveTowards(currUnsafeTransition.z, nextUnsafeTransition.z, recoveryRateIn * Time.deltaTime);
-							currUnsafeTransitions[matchIndex] = currUnsafeTransition;
-						}
-						else // next unsafe does not already exist then ease-in
-						{
-							Vector3 currUnsafeTransition = new Vector3(row, column, 0f);
-							currUnsafeTransition.z = Mathf.MoveTowards(currUnsafeTransition.z, nextUnsafeTransition.z, recoveryRateIn * Time.deltaTime);
-							currUnsafeTransitions.Add(currUnsafeTransition);
-
-						}
+						_targetStopIconColors[row, column].a = feedbackMinGamma;
 					}
 					
 				}
 			}
 		}
-		List<Vector3> transitionsToRemove = new List<Vector3>();
-		for(int i = 0; i < currUnsafeTransitions.Count; i++)
+
+		//if (_targetStopZoneColor.a == feedbackMinGamma && _currStopZoneColor.a == feedbackMinGamma)
+		//{
+		switch (overlayMode)
 		{
-			Vector3 currUnsafeTransition = currUnsafeTransitions[i];
-
-			int matchIndex = nextUnsafeTransitions.FindIndex(nextUnsafeTransition => (nextUnsafeTransition.x == currUnsafeTransition.x && nextUnsafeTransition.y == currUnsafeTransition.y));
-
-
-			if (matchIndex == -1) // curr unsafe does not exist anymore then ease-in
-			{
-				if(currUnsafeTransition.z > 0f)
-				{
-					currUnsafeTransition.z = Mathf.MoveTowards(currUnsafeTransition.z, feedbackMinGamma, recoveryRateOut * Time.deltaTime);
-					currUnsafeTransitions[i] = currUnsafeTransition;
-					//Debug.Log(currUnsafeTransitions[i]);
-				} else
-				{
-					transitionsToRemove.Add(currUnsafeTransition);
-				}
-			}
+			case SafetyOverlayMode.User:
+				GenerateUserOverlay();
+				break;
+			case SafetyOverlayMode.System:
+				GenerateSystemOverlay();
+				break;
+			case SafetyOverlayMode.None:
+				break;
+			default:
+				break;
 		}
-		currUnsafeTransitions.RemoveAll(currUnsafeTransition => transitionsToRemove.Contains(currUnsafeTransition));
-
-		if (nextUnsafeTransitions.Count == 0) bodyGamma = Mathf.MoveTowards(bodyGamma, feedbackMinGamma, recoveryRateOut * Time.deltaTime);
-		else bodyGamma = Mathf.MoveTowards(bodyGamma, dynamicFeedbackMaxGamma, recoveryRateIn * Time.deltaTime);
-
-		if (currUnsafeTransitions.Count > 0)
-		{
-			switch (overlayMode)
-			{
-				case SafetyOverlayMode.User:
-					GenerateUserOverlay();
-					break;
-				case SafetyOverlayMode.System:
-					GenerateSystemOverlay();
-					break;
-			}
-
-			/*for (int i = 0; i < _dotIndex; i++)
-			{
-				_dotFirstOutlineColors[i] = new Vector4(1f, 1f, 1f, 0f);
-				_dotSecondOutlineColors[i] = new Vector4(1f, 1f, 1f, 0f);
-				_dotThirdOutlineColors[i] = new Vector4(1f, 1f, 1f, 0f);
-			}*/
-			Render();
-		}
+		Render();
+		//}
 
 	}
 }

@@ -114,17 +114,25 @@ public class MyFakeCapsuleHand : MonoBehaviour, IArmController
         }*/
     }
 
-	public GameObject GetHandColliderAt(int index)
-	{
+    public int GetNbHandCollider()
+    {
+        return _handColliders.Length;
+    }
+    public GameObject GetHandColliderAt(int index)
+    {
         return _handColliders[index];
-	}
+    }
 
-	public GameObject GetArmColliderAt(int index)
+    public int GetNbArmCollider()
+    {
+        return _forearmColliders.Length;
+    }
+    public GameObject GetArmColliderAt(int index)
     {
         return _forearmColliders[index];
     }
 
-	public bool IsActive()
+    public bool IsActive()
 	{
         return true;
 	}

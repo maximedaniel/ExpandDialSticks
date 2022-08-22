@@ -34,7 +34,7 @@ public class ExpanDialStickCollision: MonoBehaviour
 
 	//private List<GameObject> goList = new List<GameObject>();
 
-	private const int SEPARATION_LAYER = 10; // Safety Level 0
+	private const int SEPARATION_LAYER = 9; // Application
 	private float proximity = 0f;
 	private float gamma = 0f;
 	private float distance = 0f;
@@ -65,6 +65,17 @@ public class ExpanDialStickCollision: MonoBehaviour
 	private GameObject rightHandCollider = null;
 	private GameObject leftArmCollider = null;
 	private GameObject rightArmCollider = null;
+
+	Gradient gradient;
+	GradientColorKey[] colorKey;
+	GradientAlphaKey[] alphaKey;
+	public Mesh _separationMesh;
+	public Material _separationMat;
+	private Matrix4x4[] _separationMatrices;
+	private Vector4[] _separationColors, _separationFirstOutlineColors, _separationSecondOutlineColors, _separationThirdOutlineColors;
+	private float[] _separationFirstOutlineWidths, _separationSecondOutlineWidths, _separationThirdOutlineWidths;
+	private int _separationIndex = 0;
+	private bool _debugOn = false;
 	//private bool collisionDetected = false;
 
 	// Getters and Setters
@@ -344,6 +355,70 @@ public class ExpanDialStickCollision: MonoBehaviour
 	void Start()
 	{
 
+		_separationMatrices = new Matrix4x4[32];
+		_separationColors = new Vector4[32];
+
+		_separationFirstOutlineColors = new Vector4[32];
+		_separationFirstOutlineWidths = new float[32];
+
+		_separationSecondOutlineColors = new Vector4[32];
+		_separationSecondOutlineWidths = new float[32];
+
+		_separationThirdOutlineColors = new Vector4[32];
+		_separationThirdOutlineWidths = new float[32];
+
+		gradient = new Gradient();
+
+		// Populate the color keys at the relative time 0 and 1 (0 and 100%)
+		colorKey = new GradientColorKey[6];
+		// 255,255,229
+		colorKey[0].color = new Color(255 / (float)255, 255 / (float)255, 229 / (float)255);
+		colorKey[0].time = 0.0f;
+		// 254,227,145
+		colorKey[1].color = new Color(254 / (float)255, 227 / (float)255, 145 / (float)255);
+		colorKey[1].time = 0.01f;
+		colorKey[2].color = new Color(254 / (float)255, 227 / (float)255, 145 / (float)255);
+		colorKey[2].time = 0.49f;
+		// 254,153,41
+		colorKey[3].color = new Color(254 / (float)255, 153 / (float)255, 41 / (float)255);
+		colorKey[3].time = 0.50f;
+		colorKey[4].color = new Color(254 / (float)255, 153 / (float)255, 41 / (float)255);
+		colorKey[4].time = 0.99f;
+		// rgba(153,52,4,255)
+		colorKey[5].color = new Color(153/(float)255, 52/ (float)255, 4/ (float)255);
+		colorKey[5].time = 1f;
+
+		// Populate the alpha  keys at relative time 0 and 1  (0 and 100%)
+		alphaKey = new GradientAlphaKey[2];
+		alphaKey[0].alpha = 1.0f;
+		alphaKey[0].time = 0.0f;
+		alphaKey[1].alpha = 1.0f;
+		alphaKey[1].time = 1f;
+
+
+
+		gradient.SetKeys(colorKey, alphaKey);
+
+		/*
+		gradient = new Gradient();
+		// Populate the color keys at the relative time 0 and 1 (0 and 100%)
+		colorKey = new GradientColorKey[3];
+		colorKey[0].color = Color.green;
+		colorKey[0].time = 0.0f;
+		colorKey[1].color = Color.yellow;
+		colorKey[1].time = 0.5f;
+		colorKey[2].color = Color.red;
+		colorKey[2].time = 1.0f;
+		// Populate the alpha  keys at relative time 0 and 1  (0 and 100%)
+		alphaKey = new GradientAlphaKey[3];
+		alphaKey[0].alpha = 1.0f;
+		alphaKey[0].time = 0.0f;
+		alphaKey[1].alpha = 1.0f;
+		alphaKey[1].time = 0.5f;
+		alphaKey[2].alpha = 1.0f;
+		alphaKey[2].time = 1.0f;
+		gradient.SetKeys(colorKey, alphaKey);*/
+
 	}
 
 	void OnDrawGizmos()
@@ -353,10 +428,61 @@ public class ExpanDialStickCollision: MonoBehaviour
 			(this.separationLevel == 3) ? 1f : 0f,
 			(this.separationLevel == 2) ? 1f : 0f
 			);
-		Handles.Label(this.startPos + this.direction * 0.5f, this.minDistance.ToString("F")+ "<" +this.distance.ToString("F") + "<" + this.maxDistance.ToString("F"));
-		Handles.DrawLine(startPos, endPos);*/
+		//Handles.Label(this.startPos + this.direction * 0.5f, this.minDistance.ToString("F")+ "<" +this.distance.ToString("F") + "<" + this.maxDistance.ToString("F"));
+		//Handles.DrawLine(startPos, endPos);
+		Handles.DrawLine(this.endPos - this.direction * (this.minDistance / this.distance), this.startPos);*/
 	}
 
+	/*private void OnDrawGizmos()
+	{
+		DrawLine(this.endPos - this.direction * (this.minDistance / this.distance), this.startPos, 5f, Color.HSVToRGB(1f - this.proximity, 0f, 0f));
+
+	}*/
+
+	void DrawSeparationDistance()
+	{
+
+		//Debug.Log(this.startPos + ", " + this.endPos + ", " + this.minDistance + ", " + this.maxDistance);
+		// Left Arm Foreground
+		_separationIndex = 0;
+		//this.endPos - this.direction * (this.minDistance / this.distance), this.startPos;
+		Vector3 separationDistance = this.direction - this.direction.normalized * (this.minDistance  - MyCapsuleHand.STOP_RADIUS);
+		Vector3 separationPos = this.startPos +  separationDistance * 0.5f; // this.startPos + this.direction * 0.5f;
+		
+		Quaternion separationRotation = Quaternion.LookRotation(separationDistance) * Quaternion.AngleAxis(90, Vector3.right); ; // Quaternion.Euler(_forearmColliders[0].transform.rotation.eulerAngles.x, _forearmColliders[0].transform.rotation.eulerAngles.y, _forearmColliders[0].transform.rotation.eulerAngles.z);
+		Vector3 separationScale = new Vector3(0.005f, separationDistance.magnitude/2f, 0.005f);
+		_separationMatrices[_separationIndex] = Matrix4x4.TRS(
+			separationPos,
+			separationRotation,
+			separationScale
+			);
+		_separationColors[_separationIndex] = gradient.Evaluate(this.proximity);  //new Vector4(0f, 0f, 0f, 1f); //new Vector4(1f, 1f, 1f, bodyGamma);
+		_separationFirstOutlineColors[_separationIndex] = new Vector4(0f, 0f, 0f, 1f); //Color.black;// new Vector4(1f, 0f, 0f, bodyGamma);
+		_separationFirstOutlineWidths[_separationIndex] = 0.000005f;
+		_separationSecondOutlineColors[_separationIndex] = new Vector4(0f, 0f, 0f, 1f);// new Vector4(1f, 0f, 0f, bodyGamma);
+		_separationSecondOutlineWidths[_separationIndex] = 0f;
+		_separationThirdOutlineColors[_separationIndex] = new Vector4(0f, 0f, 0f, 1f); //Color.black;// new Vector4(1f, 0f, 0f, bodyGamma);
+		_separationThirdOutlineWidths[_separationIndex] = 0f;
+		_separationIndex++;
+
+		MaterialPropertyBlock separationBlock = new MaterialPropertyBlock();
+		separationBlock.SetVectorArray("_Color", _separationColors);
+		separationBlock.SetVectorArray("_FirstOutlineColor", _separationFirstOutlineColors);
+		separationBlock.SetFloatArray("_FirstOutlineWidth", _separationFirstOutlineWidths);
+		separationBlock.SetVectorArray("_SecondOutlineColor", _separationSecondOutlineColors);
+		separationBlock.SetFloatArray("_SecondOutlineWidth", _separationSecondOutlineWidths);
+		separationBlock.SetVectorArray("_ThirdOutlineColor", _separationThirdOutlineColors);
+		separationBlock.SetFloatArray("_ThirdOutlineWidth", _separationThirdOutlineWidths);
+		Graphics.DrawMeshInstanced(_separationMesh, 0, _separationMat, _separationMatrices, _separationMatrices.Length, separationBlock, UnityEngine.Rendering.ShadowCastingMode.Off, false, SEPARATION_LAYER);
+
+	}
+	private void Update()
+	{
+		if (_debugOn)
+		{
+			DrawSeparationDistance();
+		}
+	}
 	void FixedUpdate()
 	{
 		startPos = Vector3.zero;
@@ -414,7 +540,7 @@ public class ExpanDialStickCollision: MonoBehaviour
 
 			computeDistance = true;
 		}
-		if (computeDistance)
+		if (computeDistance && nbSeparationLevels > 0)
 		{
 			(Vector3 startPos, Vector3 endPos, float minDistance, float maxDistance) = GetDirectionsFromBody(
 				this.transform,
@@ -449,7 +575,7 @@ public class ExpanDialStickCollision: MonoBehaviour
 			this.separationLevel = (int)Mathf.Lerp(1.99f, nbSeparationLevels + 0.99f, 1f - this.gamma);
 			float coeff = Mathf.Max(0, separationLevel - 1) / (float)(nbSeparationLevels - 1f);
 			this.proximity = 1f - coeff;
-
+			//Debug.DrawLine(this.endPos - this.direction * (this.minDistance/this.distance), this.startPos, Color.HSVToRGB(coeff, 0f, 0f));
 			/*if (Row == 0 && Column == 1)
 			{
 				Debug.DrawLine(startPos, startPos + new Vector3(direction.x, 0f, direction.z), new Color(horizontalGamma, 0f, 0f, 1f));
@@ -481,6 +607,30 @@ public class ExpanDialStickCollision: MonoBehaviour
 		}
 		separationLevel = nbSeparationLevels;
 		proximity = 0f;
+	}
+	private void DrawLine(Vector3 p1, Vector3 p2, float width, Color color)
+	{
+		Gizmos.color = color;
+		int count = Mathf.CeilToInt(width); // how many lines are needed.
+		if (count == 1)
+			Gizmos.DrawLine(p1, p2) ;
+		else
+		{
+			Camera c = Camera.current;
+			if (c == null)
+			{
+				Debug.LogError("Camera.current is null");
+				return;
+			}
+			Vector3 v1 = (p2 - p1).normalized; // line direction
+			Vector3 v2 = (c.transform.position - p1).normalized; // direction to camera
+			Vector3 n = Vector3.Cross(v1, v2); // normal vector
+			for (int i = 0; i < count; i++)
+			{
+				Vector3 o = n * width * ((float)i / (count - 1) - 0.5f);
+				Gizmos.DrawLine(p1 + o, p2 + o);
+			}
+		}
 	}
 
 	private void OnTriggerStay(Collider other)

@@ -181,7 +181,7 @@ public class Device
 }
 
 
-
+[Serializable]
 public class DataPhysModel
 {
     // NAVIGATION
@@ -233,7 +233,7 @@ public class DataPhysModel
     private float[,] MIN_DATA;
     private float[,] MAX_DATA;
     private DateTime startDate = new DateTime(2021, 1, 1);
-    private string[] buildingNames = new string[] { "ESTIA1", "ESTIA2", "ESTIA3", "ESTIA4", "ESTIA5", "ESTIA6", "ESTIA7"};
+    private string[] buildingNames = new string[] { "BUILDING1", "BUILDING2", "BUILDING3", "BUILDING4", "BUILDING5", "BUILDING6", "BUILDING7" };
     private string[] roomNames = new string[] { "ROOM1", "ROOM2", "ROOM3", "ROOM4", "ROOM5", "ROOM6", "ROOM7"};
     private string[] deviceNames = new string[] { "DEVICE1", "DEVICE2", "DEVICE3", "DEVICE4", "DEVICE5", "DEVICE6", "DEVICE7"};
     
@@ -435,7 +435,66 @@ public class DataPhysModel
     }
     private void FillRooms()
     {
+
+
         float minMonths = float.PositiveInfinity;
+        float maxMonths = float.NegativeInfinity;
+        float minDays = float.PositiveInfinity;
+        float maxDays = float.NegativeInfinity;
+        float minHours = float.PositiveInfinity;
+        float maxHours = float.NegativeInfinity;
+
+        for (int i = 0; i < rooms.Count; i++)
+        {
+            Room room = rooms[i];
+            float[] randoms = generateShuffledDistribution(rooms.Count * hours.Count, i * 2);
+            // walk hours, days and months
+            DateTime currentDate = startDate;
+            int nbMonths = 12;
+            for (int m = 0; m < nbMonths; m++)
+            {
+                DateTime monthDate = currentDate.AddMonths(m);
+                int nbDays = DateTime.DaysInMonth(monthDate.Year, monthDate.Month);
+                float sumDays = 0f;
+                for (int d = 0; d < nbDays; d++)
+                {
+                    DateTime dayDate = monthDate.AddDays(d);
+                    int nbHours = 24;
+                    float sumHours = 0f;
+                    for (int h = 0; h < nbHours; h++)
+                    {
+                        DateTime hourDate = dayDate.AddHours(h);
+                        float hourVal = randoms[(int)((h / (float)nbHours) * (rooms.Count * hours.Count - 1))]; // DEMO
+                        //float hourVal = randoms[i * ((dayDate.DayOfYear - 1) * nbHours + h)];
+                        room.hours.Add(hourDate, hourVal);
+                        //sumHours += hourVal;
+                        if (hourVal > maxHours) maxHours = hourVal;
+                        if (hourVal < minHours) minHours = hourVal;
+                    }
+                    sumHours = randoms[d % (rooms.Count * hours.Count - 1)]; // DEMO
+                    room.days.Add(dayDate, sumHours);
+                    //sumDays += sumHours;
+                    if (sumHours > maxDays) maxDays = sumHours;
+                    if (sumHours < minDays) minDays = sumHours;
+                }
+                sumDays = randoms[m % (rooms.Count * hours.Count - 1)]; // DEMO
+                room.months.Add(monthDate, sumDays);
+                if (sumDays > maxMonths) maxMonths = sumDays;
+                if (sumDays < minMonths) minMonths = sumDays;
+            }
+        }
+
+        MIN_DATA[TIME_SCALE_HOUR, SPACE_SCALE_ROOM] = minHours;
+        MAX_DATA[TIME_SCALE_HOUR, SPACE_SCALE_ROOM] = maxHours;
+
+        MIN_DATA[TIME_SCALE_DAY, SPACE_SCALE_ROOM] = minDays;
+        MAX_DATA[TIME_SCALE_DAY, SPACE_SCALE_ROOM] = maxDays;
+
+        MIN_DATA[TIME_SCALE_MONTH, SPACE_SCALE_ROOM] = minMonths;
+        MAX_DATA[TIME_SCALE_MONTH, SPACE_SCALE_ROOM] = maxMonths;
+        //randoms = null;
+
+        /*float minMonths = float.PositiveInfinity;
         float maxMonths = float.NegativeInfinity;
         float minDays = float.PositiveInfinity;
         float maxDays = float.NegativeInfinity;
@@ -490,7 +549,8 @@ public class DataPhysModel
         MAX_DATA[TIME_SCALE_DAY, SPACE_SCALE_ROOM] = maxDays;
 
         MIN_DATA[TIME_SCALE_MONTH, SPACE_SCALE_ROOM] = minMonths;
-        MAX_DATA[TIME_SCALE_MONTH, SPACE_SCALE_ROOM] = maxMonths;
+        MAX_DATA[TIME_SCALE_MONTH, SPACE_SCALE_ROOM] = maxMonths;*/
+
     }
     private void FillBuildings()
     {
@@ -1413,16 +1473,37 @@ public class DataPhysModel
     }
 
     private float[] generateShuffledDistribution(int size)
-	{
-
+    {
         float[] distrib = new float[size];
+
         for (var i = 0; i < distrib.Length; i++)
         {
             if (i % (30*24) == 0) UnityEngine.Random.InitState((int)DateTime.Now.Ticks);
             if (i % 24 == 0) UnityEngine.Random.InitState((int)DateTime.Now.Ticks);
-            distrib[i] = (float)rng.normal(u: 20f, s: 20f);
+            distrib[i] = (float)Math.Abs(rng.normal(u: 0f, s: 20f));
         }
         shuffle(distrib, 1);
+        return distrib;
+    }
+    private float[] generateShuffledDistribution(int size, int roomIndex)
+	{
+        float[] randomValues = { 
+            4, 10, 14, 25, 40, 26,
+            2, 0, 15, 4, 19, 8,
+            11, 39, 3, 29, 28, 12,
+            24, 15, 4, 36, 7, 32};
+
+        float[] distrib = new float[size];
+        for (int i = 0; i < size; i++) distrib[i] = randomValues[(i + roomIndex) % (randomValues.Length - 1)];
+        /*float[] distrib = new float[size];
+
+        for (var i = 0; i < distrib.Length; i++)
+        {
+            if (i % (30*24) == 0) UnityEngine.Random.InitState((int)DateTime.Now.Ticks);
+            if (i % 24 == 0) UnityEngine.Random.InitState((int)DateTime.Now.Ticks);
+            distrib[i] = (float)Math.Abs(rng.normal(u: 0f, s: 20f));
+        }
+        shuffle(distrib, 1);*/
         return distrib;
     }
 
