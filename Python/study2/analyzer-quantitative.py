@@ -10,6 +10,7 @@ from mystats import statistics
 import sys
 from anytree import Node, RenderTree
 from utils import *
+from . import ConfidencePlotter
 
 # Get the current working directory
 cwd = os.getcwd()
@@ -74,14 +75,17 @@ df_quant = df_quant.loc[~df_quant['Modality'].isin(CONTROL_NAMES), :]
 # [Participant 9] No GSR/BVP data to process for trial 7-8
 #INCOMPLETE_PARTICIPANTS = [0,6, 8,9]
 #df_quant = df_quant.loc[~df_quant['Participant'].isin(INCOMPLETE_PARTICIPANTS), :]
-factor_names_list = [['Target_X'],['Trial'],['Task'],['Modality'],['Task', 'Modality']]
-factor_types_list = [[ float],[ float],[str], [str], [str, str]]
+factor_names_list = [['Task', 'Modality']]
+factor_types_list = [[str, str]]
 
+# variable_name_list = [
+#     'EDA_Response_Mean', 'EDA_Response_Max',
+#     'EDA_Level_Mean', 'EDA_Level_Max',
+#     'BVP_Peak_Mean', 'BVP_Peak_Max',
+#     'BVP_Rate_Mean', 'BVP_Rate_Max'
+# ]
 variable_name_list = [
-    'EDA_Response_Mean', 'EDA_Response_Max',
-    'EDA_Level_Mean', 'EDA_Level_Max',
-    'BVP_Peak_Mean', 'BVP_Peak_Max',
-    'BVP_Rate_Mean', 'BVP_Rate_Max'
+    'EDA_Response_Max',
 ]
 for factor_names, factor_types in zip(factor_names_list, factor_types_list):
     multifactor_name = ' x '.join(factor_names)
@@ -135,4 +139,7 @@ for factor_names, factor_types in zip(factor_names_list, factor_types_list):
     for index, variable_name in enumerate(variable_name_list):
             title = "[%s] %s" %(multifactor_name, variable_name)
             print(title)
-            statistics.Statistics.quantPaired(pathToImgDir, title, df_variable_list[index], silent=True)
+            plotImgFile = pathToImgDir + '/' + title + '.png', 
+            ConfidencePlotter.ConfidencePlotter(plotImgFile, title, df_variable_list[index], statDf=None)
+            exit()
+            #statistics.Statistics.quantPaired(pathToImgDir, title, df_variable_list[index], silent=False)

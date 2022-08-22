@@ -19,7 +19,7 @@ TASK_NAMES = ['SYSI', 'USERI']
 MODALITY_NAMES = ['USERO-REST', 'USERO', 'SYSO-REST', 'SYSO']
 INPUT_COLUMN_NAMES = ['DATE', 'PARTICIPANT', 'SESSION', 'TASK', 'MODALITY', 'GSR', 'BVP', 'TMP',
        'TARGET_POSITION', 'TARGET_USER_ROTATION', 'TARGET_SYSTEM_ROTATION', 
-       'TRIAL_START', 'TRIAL_END', 'SC_START', 'SC_END', 
+       'TRIAL_START', 'TRIAL_END', 'SC_START', 'DENSITY', 'SC_END', 
         # left hand and arm transform
         'LEFT_HAND_POSITION_X', 'LEFT_HAND_POSITION_Y', 'LEFT_HAND_POSITION_Z', 'LEFT_HAND_RADIUS',
         'LEFT_ARM_POSITION_X','LEFT_ARM_POSITION_Y', 'LEFT_ARM_POSITION_Z',
@@ -40,7 +40,7 @@ INPUT_COLUMN_NAMES = ['DATE', 'PARTICIPANT', 'SESSION', 'TASK', 'MODALITY', 'GSR
        'PIN_POSITION29']
 
 OUTPUT_COLUMN_NAMES = [ 
-    'Date', 'Participant', 'Task', 'Modality', 'Trial' , 
+    'Date', 'Participant', 'Task', 'Modality', 'Trial' , 'Density',
     'Target_X', 'Target_Y',
     'SC_Count_Mean', 'SC_Count_SD', 'SC_Count_Max', 'SC_Count_Min',
     'SC_Amplitude_Mean', 'SC_Amplitude_SD', 'SC_Amplitude_Max', 'SC_Amplitude_Min',
@@ -99,6 +99,8 @@ for participant in range (0, len(participants)):
                 df_trial = df_session.loc[trial_start_index:trial_end_index]
                 # PROCESS EACH SHAPE-CHANGE
                 sc_start_index = df_trial[df_trial['SC_START'] == 1].index.values[-1]
+                sc_density = df_trial.loc[~np.isnan(df_trial['DENSITY']), 'DENSITY']
+                sc_density = sc_density.values[0] if len(sc_density.values) else np.nan
                 sc_end_index = df_trial[df_trial['SC_END'] == 1].index.values[-1] # take last because multiple values sometime due to error (but not critical)
                 #print("%s <-> %s" %(sc_start_index, sc_end_index))
                 df_sc = df_trial.loc[sc_start_index:sc_end_index]
@@ -108,6 +110,7 @@ for participant in range (0, len(participants)):
                     'Task':task, 
                     'Modality': modality,
                     'Trial' : trial_index,
+                    'Density' : sc_density,
 
                     'Target_X': np.nan,
                     'Target_Y': np.nan,

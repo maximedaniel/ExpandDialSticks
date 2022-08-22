@@ -56,50 +56,24 @@ df_qual.insert(1, "Modality", modalities_indexes)
 df_qual.insert(1, "Task", tasks_indexes)
 df_qual.insert(1, "Participant", participants_indexes)
 
-# Compute UEQ-S 
-# ueqs_score_headers = ["HEDONIC", "PRAGMATIC", "OVERALL"]
 
-# for row i ndf_qual:
-#     print(row)
-#     assert 0
-# get all ueq-s items for the current leaf
-# print(child_name)
-# df_items_ueqs = df_child.loc[:, all_quality_list]
-# df_items_ueqs_signed = df_items_ueqs - 4
-# df_skale_means_per_person = pd.DataFrame(columns=['Pragmatic Quality', 'Hedonic Quality', 'Overall'])
-# df_skale_means_per_person['Pragmatic Quality'] = df_items_ueqs_signed.loc[:, pragmatic_quality_list].mean(axis=1)
-# df_skale_means_per_person['Hedonic Quality'] = df_items_ueqs_signed.loc[:, hedonic_quality_list].mean(axis=1)
-# df_skale_means_per_person['Overall'] = df_items_ueqs_signed.loc[:, all_quality_list].mean(axis=1)
-# df_skale_means_per_person = df_skale_means_per_person.reset_index()
-# print(df_skale_means_per_person)
-# df_item_ueqs_desc = statistics.Statistics.describePlus(df_items_ueqs_signed)
-# df_skale_means_per_person_desc = statistics.Statistics.describePlus(df_skale_means_per_person)
-# print(df_skale_means_per_person_desc)
-
-# df_user_sms = df_stress[(df_stress['TASK'] == 'USER') & (df_stress['MODALITY'] == 'SMS')]
-# df_user_ssm = df_stress[(df_stress['TASK'] == 'USER') & (df_stress['MODALITY'] == 'SSM')]
-# df_system_sms = df_stress[(df_stress['TASK'] == 'SYSTEM') & (df_stress['MODALITY'] == 'SMS')]
-# df_system_ssm = df_stress[(df_stress['TASK'] == 'SYSTEM') & (df_stress['MODALITY'] == 'SSM')]
 factor_names_list = [ ['Task', 'Modality']]
 factor_types_list = [[str, str]]
 
-variable_name_list = [
-#'INSECURE⇔SECURE', 'ANXIOUS⇔RELAXED', 'UNCOMFORTABLE⇔COMFORTABLE', 'LACK_CONTROL⇔IN_CONTROL',
-#'THREATENING⇔SAFE', 'UNFAMILIAR⇔FAMILIAR', 'UNRELIABLE⇔RELIABLE', 'SCARY⇔CALMING',
-'OBSTRUCTIVE⇔SUPPORTIVE', 'COMPLICATED⇔EASY', 'INEFFICIENT⇔EFFICIENT', 'CONFUSING⇔CLEAR', 
-'BORING⇔EXCITING', 'NOT_INTERESTING⇔INTERESTING', 'CONVENTIONAL⇔INVENTIVE', 'USUAL⇔LEADING_EDGE',
-#'UNPREDICTABLE⇔PREDICTABLE', 'EGOISTIC⇔ALTRUISTIC', 'PROTECTING_ROBOT⇔PROTECTING_USER'
+pragmatic_quality_list = [
+'OBSTRUCTIVE⇔SUPPORTIVE', 'COMPLICATED⇔EASY', 'INEFFICIENT⇔EFFICIENT', 'CONFUSING⇔CLEAR'
 ]
+hedonic_quality_list = [
+'BORING⇔EXCITING', 'NOT_INTERESTING⇔INTERESTING', 'CONVENTIONAL⇔INVENTIVE', 'USUAL⇔LEADING_EDGE',
+]
+all_quality_list = pragmatic_quality_list + hedonic_quality_list
+variable_name_list = ['Pragmatic Quality', 'Hedonic Quality', 'Overall']
 
 variable_scale_list = [
-    5, 5, 5,
-    5, 5, 5,
-    5, 5, 7,
-    7, 7, 7,
-    7, 7, 7,
-    7, 5, 5,
-    5
+    7, 7, 7
 ]
+
+
 for factor_names, factor_types in zip(factor_names_list, factor_types_list):
     multifactor_name = ' x '.join(factor_names)
 
@@ -142,15 +116,40 @@ for factor_names, factor_types in zip(factor_names_list, factor_types_list):
             else "(df_qual['{0}'] == {1})".format(factor_name, child_factor_value)
         for factor_name, factor_type, child_factor_value in zip(factor_names, factor_types, child_factor_values)
         ]))]
+        # get all ueq-s items for the current leaf
+        print(child_name)
+        df_items_ueqs = df_child.loc[:, all_quality_list]
+        df_items_ueqs_signed = df_items_ueqs - 4
+        df_skale_means_per_person = pd.DataFrame(columns=['Pragmatic Quality', 'Hedonic Quality', 'Overall'])
+        df_skale_means_per_person['Pragmatic Quality'] = df_items_ueqs_signed.loc[:, pragmatic_quality_list].mean(axis=1)
+        df_skale_means_per_person['Hedonic Quality'] = df_items_ueqs_signed.loc[:, hedonic_quality_list].mean(axis=1)
+        df_skale_means_per_person['Overall'] = df_items_ueqs_signed.loc[:, all_quality_list].mean(axis=1)
+        df_skale_means_per_person = df_skale_means_per_person.reset_index()
+        print(df_skale_means_per_person)
+        df_item_ueqs_desc = statistics.Statistics.describePlus(df_items_ueqs_signed)
+        df_skale_means_per_person_desc = statistics.Statistics.describePlus(df_skale_means_per_person)
+        print(df_skale_means_per_person_desc)
+
         # Fill variable dataframe
         for index, variable_name in enumerate(variable_name_list):
             df_variable = pd.DataFrame(
             columns=[child_name],
-            data=df_child[variable_name].values
+            data=df_skale_means_per_person[variable_name].values
             )
             df_variable_list[index] = pd.concat([df_variable_list[index], df_variable], axis=1)
     # Perform inferential statistics
     for index, variable_name in enumerate(variable_name_list):
             title = "[%s] %s" %(multifactor_name, variable_name)
             print(title)
-            statistics.Statistics.qualOrdinalPaired(pathToImgDir, title, df_variable_list[index], variable_scale_list[index], silent=False)
+            print( df_variable_list[index])
+            try:
+                statistics.Statistics.qualOrdinalPaired(pathToImgDir, title, df_variable_list[index], variable_scale_list[index], silent=False)
+            except Exception as e:
+                print(e)
+        # Fill variable dataframe
+        # for index, variable_name in enumerate(variable_name_list):
+        #     df_variable = pd.DataFrame(
+        #     columns=[child_name],
+        #     data=df_child[variable_name].values
+        #     )
+        #     df_variable_list[index] = pd.concat([df_variable_list[index], df_variable], axis=1)

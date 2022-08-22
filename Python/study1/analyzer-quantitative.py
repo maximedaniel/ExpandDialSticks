@@ -13,6 +13,7 @@ from plotter.SpacePlotter import SpacePlotter
 from plotter.SignalPlotter import SignalPlotter 
 from anytree import Node, RenderTree
 from utils import *
+from mystats import ConfidencePlotter
 
 # Get the current working directory
 cwd = os.getcwd()
@@ -133,8 +134,8 @@ df_quant = df_quant.loc[~df_quant['Modality'].isin(CONTROL_NAMES), :]
 # fig.tight_layout()
 # plt.show()
 
-factor_names_list = [['Trial'], ['Task','Modality']]
-factor_types_list = [[int], [str, str] ]
+factor_names_list = [ ['Task','Modality']]
+factor_types_list = [ [str, str] ]
 
 #variable_name_list = [
 #   'EDA_Response_Mean', 'EDA_Response_Max',
@@ -197,4 +198,7 @@ for factor_names, factor_types in zip(factor_names_list, factor_types_list):
     for index, variable_name in enumerate(variable_name_list):
             title = "[%s] %s" %(multifactor_name, variable_name)
             print(title)
-            statistics.Statistics.quantPaired(pathToImgDir, title, df_variable_list[index], silent= False)
+            plotImgFile = pathToImgDir + '/' + title + '.png'
+            ConfidencePlotter.ConfidencePlotter(plotImgFile, title, df_variable_list[index], statDf=None)
+            exit()
+            #statistics.Statistics.quantPaired(pathToImgDir, title, df_variable_list[index], silent= False)

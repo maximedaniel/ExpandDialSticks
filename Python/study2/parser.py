@@ -34,7 +34,7 @@ df_seq = pd.read_excel(sequence_filename, index_col=0)
 df_physio_columns = ['PARTICIPANT', 'SESSION', 'TASK', 'MODALITY', 'DATE', 'GSR', 'BVP', 'TMP']
 df_log_columns = ['PARTICIPANT','SESSION', 'TASK', 'MODALITY', 'DATE', 
         'TARGET_POSITION', 'TARGET_USER_ROTATION', 'TARGET_SYSTEM_ROTATION',
-        'TRIAL_START', 'TRIAL_END', 'SC_START', 'SC_END',
+        'TRIAL_START', 'TRIAL_END', 'SC_START', 'DENSITY', 'SC_END',
         # left hand and arm transform
         'LEFT_HAND_POSITION_X','LEFT_HAND_POSITION_Y','LEFT_HAND_POSITION_Z','LEFT_HAND_RADIUS' ,
         'LEFT_ARM_POSITION_X','LEFT_ARM_POSITION_Y','LEFT_ARM_POSITION_Z',
@@ -170,6 +170,7 @@ for participant_index in range(0, nb_participant):
                                 'TRIAL_START': np.nan,
                                 'TRIAL_END': np.nan,
                                 'SC_START': np.nan,
+                                'DENSITY': np.nan,
                                 'SC_END': np.nan,
                                 # left hand and arm transform
                                 'LEFT_HAND_POSITION_X': np.nan,
@@ -255,6 +256,7 @@ for participant_index in range(0, nb_participant):
 
                             if parts[0] == KEY_SC_START:
                                 row['SC_START'] = 1
+                                row['DENSITY'] = int((len(parts)-1)/3)
                                 modified_index = True
 
                             if is_in_trial and (parts[0] == KEY_TRIAL_END or line_index == len(lines) - 1):

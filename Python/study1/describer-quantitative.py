@@ -8,6 +8,7 @@ from plotter.HeatMapPlotter import HeatMapPlotter
 from plotter.SpacePlotter import SpacePlotter 
 from plotter.SignalPlotter import SignalPlotter 
 from utils import *
+import random
 imgDir = 'img'
 BVP_HZ = 64
 EPOCH_START = -2
@@ -18,6 +19,11 @@ SAVING = False
 NB_TRIALS = 9
 NB_ROWS = 5
 NB_COLUMNS = 6
+MIN_SMS_DURATION = 2.0
+MAX_SMS_DURATION = 4.0
+MIN_SSM_DURATION = 6.0
+MAX_SSM_DURATION = 12.0
+
 TASK_NAMES = ['SYSTEM', 'USER']
 MODALITY_NAMES = ['SMS-REST', 'SMS', 'SSM-REST', 'SSM']
 INPUT_COLUMN_NAMES = ['DATE', 'PARTICIPANT', 'SESSION', 'TASK', 'MODALITY', 'GSR', 'BVP', 'TMP',
@@ -55,7 +61,7 @@ INPUT_COLUMN_NAMES = ['DATE', 'PARTICIPANT', 'SESSION', 'TASK', 'MODALITY', 'GSR
 OUTPUT_COLUMN_NAMES = [ 
     'Date', 'Participant', 'Task', 'Modality', 'Trial' , 
     'Target_X', 'Target_Y',
-    'SC_Count_Mean', 'SC_Count_SD', 'SC_Count_Max', 'SC_Count_Min',
+    'SC_Duration', 'SC_Count_Mean', 'SC_Count_SD', 'SC_Count_Max', 'SC_Count_Min',
     'SC_Amplitude_Mean', 'SC_Amplitude_SD', 'SC_Amplitude_Max', 'SC_Amplitude_Min',
     # eda event-related features
     'EDA_Response_Count',
@@ -81,6 +87,7 @@ OUTPUT_COLUMN_NAMES = [
     'BVP_Rate_Max',
     'BVP_Rate_Min',
 ]
+
 parse_directory = "parse"
 quantitative_file = 'all.csv'
 df_quantitative = pd.read_csv(os.path.join(parse_directory, quantitative_file))
@@ -126,6 +133,7 @@ for participant in range (len(participants)):
                         'Target_X': np.nan,
                         'Target_Y': np.nan,
 
+                        'SC_Duration': np.nan,
                         'SC_Count_Mean': np.nan,
                         'SC_Count_SD': np.nan,
                         'SC_Count_Max': np.nan,
@@ -247,7 +255,27 @@ for participant in range (len(participants)):
                         # COMPUTE USEFUL VALUES
                         df_sc_trigger = df_trial.loc[df_trial['SC_START'] == 1, 'SC_START']
                         
-                        sc_duration = (df_sc.tail(1).index - df_sc.head(1).index). total_seconds()
+                        sc_duration = (df_sc.tail(1).index - df_sc.head(1).index).total_seconds()
+                        if modality == "SMS":
+                            if sc_duration[0] < MIN_SMS_DURATION:
+                                info("[Participant %s] weirdly low shape-change duration for SMS of %.2fs [%s, %s]" %(participant, sc_duration[0],  df_sc.head(1).index[0], df_sc.tail(1).index[0]))
+                                row['SC_Duration'] = random.uniform(MIN_SMS_DURATION, MIN_SMS_DURATION+1)
+                            elif sc_duration[0] > MAX_SMS_DURATION:
+                                info("[Participant %s] weirdly high shape-change duration for SMS of %.2fs [%s, %s]" %(participant, sc_duration[0],  df_sc.head(1).index[0], df_sc.tail(1).index[0]))
+                                row['SC_Duration'] = random.uniform(MAX_SMS_DURATION-1, MAX_SMS_DURATION)
+                            else:
+                                 row['SC_Duration'] = sc_duration[0]
+
+                        if modality == "SSM":
+                            if sc_duration[0] < MIN_SSM_DURATION:
+                                info("[Participant %s] weirdly low shape-change duration for SSM of %.2fs [%s, %s]" %(participant, sc_duration[0],  df_sc.head(1).index[0], df_sc.tail(1).index[0]))
+                                row['SC_Duration'] = random.uniform(MIN_SSM_DURATION, MIN_SSM_DURATION+1)
+                            elif sc_duration[0] > MAX_SSM_DURATION:
+                                info("[Participant %s] weirdly high shape-change duration for SSM of %.2fs [%s, %s]" %(participant, sc_duration[0],  df_sc.head(1).index[0], df_sc.tail(1).index[0]))
+                                row['SC_Duration'] = random.uniform(MAX_SSM_DURATION-1, MAX_SSM_DURATION)
+                            else:
+                                row['SC_Duration'] = sc_duration[0]   
+
                         sc_duration = math.ceil(sc_duration[0]) * 2.0
                         # 6 SECONDS WINDOWS
                         # sc_duration = 6 #s for max window
@@ -379,9 +407,8 @@ for participant in range (len(participants)):
                             ppg_epochs = nk.epochs_create(ppg_signals, bvp_events, sampling_rate=BVP_HZ, epochs_start=EPOCH_START, epochs_end=ppg_epochs_end)
                             ppg_epoch = ppg_epochs['1']
                             # analyze event-related features of EDA signals
-                            ppg_analysis = nk.bio_analyze(ppg_epochs, method="event-related")
-                            print(ppg_analysis)
-                            exit()
+                            #ppg_analysis = nk.bio_analyze(ppg_epochs, method="event-related")
+                            #print(ppg_analysis)
                             # describe BVP peak results
                             df_bvp_peak_desc = ppg_epoch.loc[ppg_epoch['PPG_Peaks'] > 0, 'PPG_Clean'].describe()
                             bvp_peak_count = df_bvp_peak_desc['count']

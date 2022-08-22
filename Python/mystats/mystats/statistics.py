@@ -20,6 +20,36 @@ from .  import BoxPlotter
 
 
 class Statistics:
+    
+    @staticmethod
+    def describePlus(sheetDf):
+        description = sheetDf.describe()
+        # compute confidence interval
+        low_ci = []
+        high_ci = []
+        for columnName in sheetDf.columns.values:
+          column_ci = pg.compute_bootci(sheetDf.loc[~np.isnan(sheetDf[columnName]), columnName],func='mean')
+          low_ci.append(column_ci[0])
+          high_ci.append(column_ci[1])
+        description.loc['cil'] = low_ci
+        description.loc['cih'] = high_ci
+        return description
+
+    @staticmethod
+    def normalityAsumption(sheetDf):
+        normalityDf = pd.DataFrame(columns=sheetDf.columns.values)
+        statistics = []
+        pvalues = []
+        areNormal = []
+        for columnName in sheetDf.columns.values:
+            normality_stats = pg.normality(sheetDf.loc[~np.isnan(sheetDf[columnName]), columnName])
+            statistics.append(normality_stats['W'].values[0])
+            pvalues.append(normality_stats['pval'].values[0])
+            areNormal.append(normality_stats['normal'].values[0])
+        normalityDf.loc['stat'] = statistics
+        normalityDf.loc['pval'] = pvalues
+        normalityDf.loc['norm'] = areNormal
+        return normalityDf
 
     @staticmethod
     def qualNominalPaired(imgDir, sheetName, sheetDf):
@@ -91,6 +121,7 @@ class Statistics:
     @staticmethod
     def qualOrdinalPaired(imgDir,  sheetName, sheetDf, sheetScale, silent=True):
         print("######################################## ",sheetName," ########################################") if not silent else None
+        print(Statistics.describePlus(sheetDf)) if not silent else None
         meltedSheetDf = sheetDf.melt(var_name='Factor', value_name='Variable')
         contingencySheetDf = pd.crosstab(index=meltedSheetDf['Variable'], columns=meltedSheetDf['Factor'])
         statDf = pd.DataFrame(columns=['COMPARISON', 'TEST', 'STATISTICS', 'P-VALUE', 'EFFECT SIZE'])
@@ -112,13 +143,14 @@ class Statistics:
                 'P-VALUE':pvalue,
                 'EFFECT SIZE':wvalue
                 }, ignore_index=True)
-
+            print(sheetDf.columns.str.cat(sep=' | '), " -> Friedman (statistic:", qvalue, " p-value: ", pvalue, ", effect size:", wvalue, ")") if not silent else None
+                
         # BETWEEN MODALITY
         modality_names = sheetDf.columns.values
         uncorrectedStatIndex = len(statDf.index)
         for i in range(len(modality_names)):
             for j in range(i+1, len(modality_names)):
-                    stats_wilcoxon = pg.wilcoxon(sheetDf.loc[:, modality_names[i]], sheetDf.loc[:, modality_names[j]], correction=False, alternative='two-sided')
+                    stats_wilcoxon = pg.wilcoxon(sheetDf.loc[:, modality_names[i]], sheetDf.loc[:, modality_names[j]],  alternative='two-sided')
                     wvalue, alternative, pvalue, RBC, CLES = stats_wilcoxon.values[0]
                     statDf = statDf.append(
                         {
@@ -128,8 +160,12 @@ class Statistics:
                             'P-VALUE':pvalue,
                             'EFFECT SIZE': RBC
                         }, ignore_index=True)
-        reject, statDf.loc[uncorrectedStatIndex::,'P-VALUE'] = pg.multicomp(statDf.loc[uncorrectedStatIndex::,'P-VALUE'].values, alpha=0.05, method="holm")
-
+        reject, statDf.loc[uncorrectedStatIndex::,'P-VALUE'] = pg.multicomp(statDf.loc[uncorrectedStatIndex::,'P-VALUE'].values, alpha=0.05, method="bonf")
+        for i in range(len(modality_names)):
+            for j in range(i+1, len(modality_names)):
+                    stats = statDf.loc[statDf['COMPARISON'] == sheetDf.columns.values[i] + '|' +  sheetDf.columns.values[j], :]
+                    print(stats['COMPARISON'].values[0], " -> Wilcoxon (statistic:", stats['STATISTICS'].values[0], " p-value: ", stats['P-VALUE'].values[0], ", effectsize:", stats['EFFECT SIZE'].values[0], ")") if not silent else None
+                
         StackedBarPlotter.StackedBarPlotter(
          filename =  imgDir + '/' + sheetName + '.png', 
          title = sheetName,
@@ -140,6 +176,7 @@ class Statistics:
     @staticmethod
     def qualOrdinalUnpaired(imgDir, sheetName, sheetDf, sheetScale, silent=False):
         print("######################################## ",sheetName," ########################################") if not silent else None
+        print(Statistics.describePlus(sheetDf)) if not silent else None
         meltedSheetDf = sheetDf.melt(var_name='Factor', value_name='Variable')
         contingencySheetDf = pd.crosstab(index=meltedSheetDf['Variable'], columns=meltedSheetDf['Factor'])
         statDf = pd.DataFrame(columns=['COMPARISON', 'TEST', 'STATISTICS', 'P-VALUE', 'EFFECT SIZE'])
@@ -176,7 +213,7 @@ class Statistics:
                             'P-VALUE':pvalue,
                             'EFFECT SIZE': RBC
                         }, ignore_index=True)
-        reject, statDf.loc[uncorrectedStatIndex::,'P-VALUE'] = pg.multicomp(statDf.loc[uncorrectedStatIndex::,'P-VALUE'].values, alpha=0.05, method="holm")
+        reject, statDf.loc[uncorrectedStatIndex::,'P-VALUE'] = pg.multicomp(statDf.loc[uncorrectedStatIndex::,'P-VALUE'].values, alpha=0.05, method="bonf")
 
         StackedBarPlotter.StackedBarPlotter(
          filename =  imgDir + '/' + sheetName + '.png', 
@@ -188,64 +225,113 @@ class Statistics:
     @staticmethod
     def quantPaired(imgDir, sheetName, sheetDf, showDf=False, silent=True):
         print("######################################## ",sheetName," ########################################") if not silent else None
-        print(sheetDf.describe()) if not silent else None
+        print(Statistics.describePlus(sheetDf)) if not silent else None
+        normalityDf = Statistics.normalityAsumption(sheetDf)
+        allColumnsAreNormal = normalityDf.loc['norm'].sum()
+        print(normalityDf) if not silent else None
         statDf = pd.DataFrame(columns=['COMPARISON', 'TEST', 'STATISTICS', 'P-VALUE', 'EFFECT SIZE'])
-        if len(sheetDf.columns) > 2:
-            print(sheetDf) if showDf else None
-            aov = pg.rm_anova(sheetDf) # two-ways repeated-measures ANOVA
-            statistic = aov['F'].values[0]
-            pvalue = aov['p-GG-corr'].values[0] if 'p-GG-corr' in aov.columns.values else aov['p-unc'].values[0]
-            effsize = aov['np2'].values[0]
-            print( sheetDf.columns.str.cat(sep=' | '), " -> ANOVA (statistic:", statistic, " p-value: ", pvalue, ")") if not silent else None
-            statDf = statDf.append(
-                {'COMPARISON': 'ALL',
-                'TEST': "ANOVA",
-                'STATISTICS':statistic,
-                'P-VALUE':pvalue,
-                'EFFECT SIZE':effsize
-                }, ignore_index=True)
-        for i in range(len(sheetDf.columns.values)):
-            for j in range(i+1, len(sheetDf.columns.values)):
-                try:
-                    df = sheetDf[[sheetDf.columns.values[i], sheetDf.columns.values[j]]]
-                    print(df) if showDf else None
-                    statistic, pvalue = stats.ttest_ind(
-                        *[
-                                df.loc[~np.isnan(df[factor]), factor] 
-                                for factor in df.columns.values
-                        ]
-                        )
-                    ttest_stats = pg.ttest(df[df.columns[0]], df[df.columns[1]], paired=True)
-                    statistic = ttest_stats['T'].values[0]
-                    pvalue = ttest_stats['p-val'].values[0]
-                    effsize = ttest_stats['cohen-d'].values[0]
-                    print(sheetDf.columns.values[i],'|', sheetDf.columns.values[j],  " -> Student (statistic: ", statistic, ", p-value: ", pvalue,")")  if not silent else None
-                    statDf = statDf.append(
-                    {'COMPARISON': sheetDf.columns.values[i] + '|' + sheetDf.columns.values[j],
-                    'TEST': "Student",
+        if allColumnsAreNormal == len(normalityDf.columns.values):
+            print("Normality assumed")
+            if len(sheetDf.columns) > 2:
+                print(sheetDf) if showDf else None
+                aov = pg.rm_anova(sheetDf) # two-ways repeated-measures ANOVA
+                statistic = aov['F'].values[0]
+                pvalue = aov['p-GG-corr'].values[0] if 'p-GG-corr' in aov.columns.values else aov['p-unc'].values[0]
+                effsize = aov['np2'].values[0]
+                print( sheetDf.columns.str.cat(sep=' | '), " -> ANOVA (statistic:", statistic, " p-value: ", pvalue, ")") if not silent else None
+                statDf = statDf.append(
+                    {'COMPARISON': 'ALL',
+                    'TEST': "ANOVA",
                     'STATISTICS':statistic,
                     'P-VALUE':pvalue,
                     'EFFECT SIZE':effsize
                     }, ignore_index=True)
-                except ValueError as StudentError:
-                    print(sheetDf.columns.values[i],'|', sheetDf.columns.values[j],  " -> Student (",StudentError,")") if not silent else None
-                    statDf = statDf.append(
-                    {'COMPARISON': sheetDf.columns.values[i] + '|' + sheetDf.columns.values[j],
-                    'TEST': "Student",
-                    'STATISTICS':-1,
-                    'P-VALUE':-1,
-                    'EFFECT SIZE':-1
+            for i in range(len(sheetDf.columns.values)):
+                for j in range(i+1, len(sheetDf.columns.values)):
+                    try:
+                        df = sheetDf[[sheetDf.columns.values[i], sheetDf.columns.values[j]]]
+                        print(df) if showDf else None
+                        statistic, pvalue = stats.ttest_ind(
+                            *[
+                                    df.loc[~np.isnan(df[factor]), factor] 
+                                    for factor in df.columns.values
+                            ]
+                            )
+                        ttest_stats = pg.ttest(df[df.columns[0]], df[df.columns[1]], paired=True)
+                        statistic = ttest_stats['T'].values[0]
+                        pvalue = ttest_stats['p-val'].values[0]
+                        effsize = ttest_stats['cohen-d'].values[0]
+                        print(sheetDf.columns.values[i],'|', sheetDf.columns.values[j],  " -> Student (statistic: ", statistic, ", p-value: ", pvalue,")")  if not silent else None
+                        statDf = statDf.append(
+                        {'COMPARISON': sheetDf.columns.values[i] + '|' + sheetDf.columns.values[j],
+                        'TEST': "Student",
+                        'STATISTICS':statistic,
+                        'P-VALUE':pvalue,
+                        'EFFECT SIZE':effsize
+                        }, ignore_index=True)
+                    except ValueError as StudentError:
+                        print(sheetDf.columns.values[i],'|', sheetDf.columns.values[j],  " -> Student (",StudentError,")") if not silent else None
+                        statDf = statDf.append(
+                        {'COMPARISON': sheetDf.columns.values[i] + '|' + sheetDf.columns.values[j],
+                        'TEST': "Student",
+                        'STATISTICS':-1,
+                        'P-VALUE':-1,
+                        'EFFECT SIZE':-1
+                        }, ignore_index=True)
+        else :
+            print("Normality not assumed")
+             # ALL MODALITY
+            if len(sheetDf.columns) > 2:
+                sheetDf_long = sheetDf.melt(ignore_index=False).reset_index()
+                friedman_stats = pg.friedman(data=sheetDf_long, dv="value", within="variable", subject="index")
+                source, wvalue, ddof1, qvalue, pvalue = friedman_stats.values[0]
+                statDf = statDf.append(
+                    {'COMPARISON': 'ALL',
+                    'TEST': "Friedman",
+                    'STATISTICS':qvalue,
+                    'P-VALUE':pvalue,
+                    'EFFECT SIZE':wvalue
                     }, ignore_index=True)
+                print(sheetDf.columns.str.cat(sep=' | '), " -> Friedman (statistic:", qvalue, " p-value: ", pvalue, ", effect size:", wvalue, ")") if not silent else None
+                
+
+            # BETWEEN MODALITY
+            modality_names = sheetDf.columns.values
+            uncorrectedStatIndex = len(statDf.index)
+            for i in range(len(modality_names)):
+                for j in range(i+1, len(modality_names)):
+                    x = sheetDf.loc[:, modality_names[i]]
+                    y =  sheetDf.loc[:, modality_names[j]]
+                    stats_wilcoxon = pg.wilcoxon(x,y, alternative='two-sided')
+                    wvalue, alternative, pvalue, rbc, CLES = stats_wilcoxon.values[0]
+                    statDf = statDf.append(
+                            {
+                                'COMPARISON': modality_names[i] + '|' + modality_names[j],
+                                'TEST': "Wilcoxon",
+                                'STATISTICS':wvalue,
+                                'P-VALUE':pvalue,
+                                'EFFECT SIZE': rbc
+                            }, ignore_index=True)
+            reject, statDf.loc[uncorrectedStatIndex::,'P-VALUE'] = pg.multicomp(statDf.loc[uncorrectedStatIndex::,'P-VALUE'].values, alpha=0.05, method="bonf")
+            for i in range(len(modality_names)):
+                for j in range(i+1, len(modality_names)):
+                    stats = statDf.loc[statDf['COMPARISON'] == sheetDf.columns.values[i] + '|' +  sheetDf.columns.values[j], :]
+                    print(stats['COMPARISON'].values[0], " -> Wilcoxon (statistic:", stats['STATISTICS'].values[0], " p-value: ", stats['P-VALUE'].values[0], ", effectsize:", stats['EFFECT SIZE'].values[0], ")") if not silent else None
+                
         BoxPlotter.BoxPlotter(
-         filename =  imgDir + '/' + sheetName + '.png', 
-         title = sheetName,
-         sheetDf = sheetDf,
-         statDf = statDf)
+        filename =  imgDir + '/' + sheetName + '.png', 
+        title = sheetName,
+        sheetDf = sheetDf,
+        statDf = statDf)
+
+        
 
     @staticmethod
     def quantUnpaired(imgDir, sheetName, sheetDf, showDf=False, silent=True):
         print("######################################## ",sheetName," ########################################") if not silent else None
-        print(sheetDf.describe()) if not silent else None
+        print(Statistics.describePlus(sheetDf)) if not silent else None
+        normalityDf = Statistics.normalityAsumption(sheetDf)
+        print(normalityDf) if not silent else None
         statDf = pd.DataFrame(columns=['COMPARISON', 'TEST', 'STATISTICS', 'P-VALUE', 'EFFECT SIZE'])
         if len(sheetDf.columns) > 2:
             print(sheetDf) if showDf else None
@@ -302,7 +388,7 @@ class Statistics:
     @staticmethod
     def biQuantUnpaired(imgDir, sheetName, sheetDf, describeDf=False):
         print("######################################## ",sheetName," ########################################")
-        print(sheetDf.describe()) if describeDf else None
+        print(Statistics.describePlus(sheetDf)) if describeDf else None
         try:
             print(sheetDf)
             coefficient, pvalue = stats.pearsonr(sheetDf.iloc[:,0], sheetDf.iloc[:,1])
