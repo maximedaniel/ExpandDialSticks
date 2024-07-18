@@ -6,11 +6,12 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 import os
 from scipy import stats
-from mystats import statistics
+from mystatspackage import statistics, ConfidencePlotter
 import sys
 from anytree import Node, RenderTree
 from utils import *
-from . import ConfidencePlotter
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # Get the current working directory
 cwd = os.getcwd()

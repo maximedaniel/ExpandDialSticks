@@ -8,6 +8,8 @@ from plotter.HeatMapPlotter import HeatMapPlotter
 from plotter.SpacePlotter import SpacePlotter 
 from plotter.SignalPlotter import SignalPlotter 
 from utils import *
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 imgDir = 'img'
 BVP_HZ = 64
 EPOCH_START = -2

@@ -7,6 +7,8 @@ import sys
 from alive_progress import alive_bar
 from plotter.StackedBarPlotter import StackedBarPlotter 
 from utils import *
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 NB_SESSIONS = 4
 NB_TRIALS = 9
@@ -63,9 +65,19 @@ for participant_index in range(0, nb_participant):
     for task in TASK_NAMES:
         # PROCESS EACH MODALITY
         for modality in MODALITY_NAMES:
-            session_filename = '%s-%s.txt' %(task, modality)
+            session_name = '%s-%s' %(task, modality)
+            session_filename = '%s.txt' %session_name
             print("[Participant %d] Parsing %s..." %(participant_index, session_filename))
             isRestSession = True if 'REST' in session_filename else False
+            participant_sequence = df_seq.loc[participant_index]
+            # index of session_name in participant_sequence
+            session_column_name = participant_sequence[participant_sequence == session_name].index[0]
+            session_index = int(session_column_name[-1]) 
+            if isRestSession:
+                session_index = -session_index
+            print("Session name: %s" %session_name)
+            print("Session index: %s" %session_index)
+            #exit()
             # PHYSIO
             physio_file = open(os.path.join(data_directory, physio_directory, participant_directory, session_filename), 'r')
             KEY_GSR = "E4_Gsr"
@@ -82,7 +94,7 @@ for participant_index in range(0, nb_participant):
                         stamp = pd.Timestamp(float(parts[1].replace(',', '.')), unit='s') 
                         row = {
                             'PARTICIPANT':participant_index, 
-                            'SESSION': np.nan,
+                            'SESSION': session_index,
                             'TASK':task, 
                             'MODALITY': modality,
                             'DATE': stamp,
@@ -167,7 +179,7 @@ for participant_index in range(0, nb_participant):
 
                             row = {
                                 'PARTICIPANT':participant_index, 
-                                'SESSION':np.nan,
+                                'SESSION':session_index,
                                 'TASK':task, 
                                 'MODALITY': modality,
                                 'DATE': t, 
@@ -473,12 +485,14 @@ for participant_index in range(0, nb_participant):
                 if nb_sc_end != 9:
                     warn("Found %s/%s end sc (missing %s)" %(nb_sc_end, NB_TRIALS, NB_TRIALS-nb_sc_end))
 
-
+                df_concat = df_concat.infer_objects()
                 trial_start_indexes = df_concat[df_concat['TRIAL_START'] == 1].index
                 trial_end_indexes = df_concat[df_concat['TRIAL_END'] == 1].index
                 trial_i = 0
                 for(trial_start_index, trial_end_index) in zip(trial_start_indexes, trial_end_indexes):
                     df_trial = df_concat.loc[trial_start_index:trial_end_index]
+                    #print(df_trial)
+                    #print(df_trial.dtypes)
                     nb_gsr = df_trial[~np.isnan(df_trial['GSR'])].shape[0]
                     nb_bvp = df_trial[~np.isnan(df_trial['BVP'])].shape[0]
                     nb_tmp = df_trial[~np.isnan(df_trial['TMP'])].shape[0]
@@ -501,26 +515,3 @@ for participant_index in range(0, nb_participant):
     
 # Save all data
 df_final.to_csv(os.path.join(parse_directory, 'all.csv'))
-
-
-        #df_final.fillna(0, inplace=True)
-        #df_final['SYSTEM'] = df_final['SYSTEM'].astype(int)
-        #df_final['USER'] = df_final['USER'].astype(int)
-        # if saving: 
-        #     df_final.to_csv('parse/' + filename.replace('txt', 'csv'))
-        # if printing: 
-        #     print(df_final)
-        # if plotting: 
-        #     df_final.plot(subplots=True, style='.-')
-        #     plt.show()
-
-        # except IOError as e:
-        #     print(e)
-        #     df_physio.interpolate(inplace=True)
-        #     if saving: 
-        #         df_physio.to_csv('parse/' + filename.replace('txt', 'csv'))
-        #     if printing: 
-        #         print(df_physio)
-        #     if plotting: 
-        #         df_physio.plot(subplots=True, style='.-')
-        #         plt.show()

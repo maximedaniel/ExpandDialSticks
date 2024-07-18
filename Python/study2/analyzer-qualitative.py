@@ -6,6 +6,8 @@ import os
 from mystats import statistics
 import sys
 from anytree import Node, RenderTree
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # Get the current working directory
 cwd = os.getcwd()

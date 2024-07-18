@@ -976,7 +976,8 @@ class Statistics:
                             'pValue':pvalue,
                             'effectSize': RBC
                         }, ignore_index=True)
-        reject, statDf.loc[uncorrectedStatIndex::,'pValue'] = pg.multicomp(statDf.loc[uncorrectedStatIndex::,'pValue'].values, alpha=0.05, method="bonf")
+        uncorrected_pvalues = np.array(statDf.loc[uncorrectedStatIndex::,'pValue'].values, dtype=np.float64)
+        reject, statDf.loc[uncorrectedStatIndex::,'pValue'] = pg.multicomp(uncorrected_pvalues, alpha=0.05, method="bonf")
         return statDf
         
     @staticmethod
@@ -1186,7 +1187,9 @@ class Statistics:
                                     'pValue':pvalue,
                                     'effectSize': rbc
                                 }, ignore_index=True)
-            reject, statDf.loc[uncorrectedStatIndex::,'pValue'] = pg.multicomp(statDf.loc[uncorrectedStatIndex::,'pValue'].values, alpha=0.05, method="bonf")
+                        
+            uncorrected_pvalues = np.array(statDf.loc[uncorrectedStatIndex::,'pValue'].values, dtype=np.float64)
+            reject, statDf.loc[uncorrectedStatIndex::,'pValue'] = pg.multicomp(uncorrected_pvalues, alpha=0.05, method="bonf")
         return statDf
 
 
@@ -1257,60 +1260,63 @@ class Statistics:
     #      title = sheetName,
     #      sheetDf = contingencySheetTable)
 
-    # @staticmethod
-    # def qualOrdinalPaired(imgDir,  sheetName, sheetDf, sheetScale, silent=True):
-    #     print("######################################## ",sheetName," ########################################") if not silent else None
-    #     print(Statistics.describePlus(sheetDf)) if not silent else None
-    #     meltedSheetDf = sheetDf.melt(var_name='Factor', value_name='variable')
-    #     contingencySheetDf = pd.crosstab(index=meltedSheetDf['variable'], columns=meltedSheetDf['Factor'])
-    #     statDf = pd.DataFrame(columns=['COMPARISON', 'TEST', 'STATISTICS', 'P-VALUE', 'EFFECT SIZE'])
-    #     #fill empty scale value
-    #     for sheetStep in range(sheetScale):
-    #         if not sheetStep in contingencySheetDf.index.values:
-    #             contingencySheetDf.loc[sheetStep] = [0 for x in range(len(contingencySheetDf.columns.values))]
-    #     contingencySheetDf.sort_index(inplace=True)
+    @staticmethod
+    def qualOrdinalPaired(imgDir,  sheetName, sheetDf, sheetScale, silent=True):
+        print("######################################## ",sheetName," ########################################") if not silent else None
+        print(Statistics.describePlus(sheetDf)) if not silent else None
+        meltedSheetDf = sheetDf.melt(var_name='Factor', value_name='variable')
+        contingencySheetDf = pd.crosstab(index=meltedSheetDf['variable'], columns=meltedSheetDf['Factor'])
+        statDf = pd.DataFrame(columns=['COMPARISON', 'TEST', 'STATISTICS', 'P-VALUE', 'EFFECT SIZE'])
+        #fill empty scale value
+        for sheetStep in range(sheetScale):
+            if not sheetStep in contingencySheetDf.index.values:
+                contingencySheetDf.loc[sheetStep] = [0 for x in range(len(contingencySheetDf.columns.values))]
+        contingencySheetDf.sort_index(inplace=True)
 
-    #     # ALL MODALITY
-    #     if len(contingencySheetDf.columns) > 2:
-    #         sheetDf_long = sheetDf.melt(ignore_index=False).reset_index()
-    #         friedman_stats = pg.friedman(data=sheetDf_long, dv="value", within="variable", subject="index")
-    #         source, wvalue, ddof1, qvalue, pvalue = friedman_stats.values[0]
-    #         statDf = statDf.append(
-    #             {'COMPARISON': 'ALL',
-    #             'TEST': "Friedman",
-    #             'STATISTICS':qvalue,
-    #             'P-VALUE':pvalue,
-    #             'EFFECT SIZE':wvalue
-    #             }, ignore_index=True)
-    #         print(sheetDf.columns.str.cat(sep=' | '), " -> Friedman (statistic:", qvalue, " p-value: ", pvalue, ", effect size:", wvalue, ")") if not silent else None
+        # ALL MODALITY
+        if len(contingencySheetDf.columns) > 2:
+            sheetDf_long = sheetDf.melt(ignore_index=False).reset_index()
+            friedman_stats = pg.friedman(data=sheetDf_long, dv="value", within="variable", subject="index")
+            source, wvalue, ddof1, qvalue, pvalue = friedman_stats.values[0]
+            statDf = statDf.append(
+                {'COMPARISON': 'ALL',
+                'TEST': "Friedman",
+                'STATISTICS':qvalue,
+                'P-VALUE':pvalue,
+                'EFFECT SIZE':wvalue
+                }, ignore_index=True)
+            print(sheetDf.columns.str.cat(sep=' | '), " -> Friedman (statistic:", qvalue, " p-value: ", pvalue, ", effect size:", wvalue, ")") if not silent else None
                 
-    #     # BETWEEN MODALITY
-    #     modality_names = sheetDf.columns.values
-    #     uncorrectedStatIndex = len(statDf.index)
-    #     for i in range(len(modality_names)):
-    #         for j in range(i+1, len(modality_names)):
-    #                 stats_wilcoxon = pg.wilcoxon(sheetDf.loc[:, modality_names[i]], sheetDf.loc[:, modality_names[j]],  alternative='two-sided')
-    #                 wvalue, alternative, pvalue, RBC, CLES = stats_wilcoxon.values[0]
-    #                 statDf = statDf.append(
-    #                     {
-    #                         'COMPARISON': modality_names[i] + '|' + modality_names[j],
-    #                         'TEST': "Wilcoxon",
-    #                         'STATISTICS':wvalue,
-    #                         'P-VALUE':pvalue,
-    #                         'EFFECT SIZE': RBC
-    #                     }, ignore_index=True)
-    #     reject, statDf.loc[uncorrectedStatIndex::,'P-VALUE'] = pg.multicomp(statDf.loc[uncorrectedStatIndex::,'P-VALUE'].values, alpha=0.05, method="bonf")
-    #     for i in range(len(modality_names)):
-    #         for j in range(i+1, len(modality_names)):
-    #                 stats = statDf.loc[statDf['COMPARISON'] == sheetDf.columns.values[i] + '|' +  sheetDf.columns.values[j], :]
-    #                 print(stats['COMPARISON'].values[0], " -> Wilcoxon (statistic:", stats['STATISTICS'].values[0], " p-value: ", stats['P-VALUE'].values[0], ", effectsize:", stats['EFFECT SIZE'].values[0], ")") if not silent else None
+        # BETWEEN MODALITY
+        modality_names = sheetDf.columns.values
+        uncorrectedStatIndex = len(statDf.index)
+        for i in range(len(modality_names)):
+            for j in range(i+1, len(modality_names)):
+                    stats_wilcoxon = pg.wilcoxon(sheetDf.loc[:, modality_names[i]], sheetDf.loc[:, modality_names[j]],  alternative='two-sided')
+                    wvalue, alternative, pvalue, RBC, CLES = stats_wilcoxon.values[0]
+                    statDf = statDf.append(
+                        {
+                            'COMPARISON': modality_names[i] + '|' + modality_names[j],
+                            'TEST': "Wilcoxon",
+                            'STATISTICS':wvalue,
+                            'P-VALUE':pvalue,
+                            'EFFECT SIZE': RBC
+                        }, ignore_index=True)
+        statDf =  statDf.infer_objects()
+        
+        uncorrected_pvalues = np.array(statDf.loc[uncorrectedStatIndex::,'P-VALUE'].values, dtype=np.float64)
+        reject, statDf.loc[uncorrectedStatIndex::,'P-VALUE'] = pg.multicomp(uncorrected_pvalues, alpha=0.05, method="bonf")
+        for i in range(len(modality_names)):
+            for j in range(i+1, len(modality_names)):
+                    stats = statDf.loc[statDf['COMPARISON'] == sheetDf.columns.values[i] + '|' +  sheetDf.columns.values[j], :]
+                    print(stats['COMPARISON'].values[0], " -> Wilcoxon (statistic:", stats['STATISTICS'].values[0], " p-value: ", stats['P-VALUE'].values[0], ", effectsize:", stats['EFFECT SIZE'].values[0], ")") if not silent else None
                 
-    #     StackedBarPlotter.StackedBarPlotter(
-    #      filename =  imgDir + '/' + sheetName + '.png', 
-    #      title = sheetName,
-    #      dataDf = sheetDf,
-    #      histDf = contingencySheetDf,
-    #      statDf = statDf)
+        StackedBarPlotter.StackedBarPlotter(
+         filename =  imgDir + '/' + sheetName + '.png', 
+         title = sheetName,
+         dataDf = sheetDf,
+         histDf = contingencySheetDf,
+         statDf = statDf)
 
     # @staticmethod
     # def qualOrdinalUnpaired(imgDir, sheetName, sheetDf, sheetScale, silent=False):

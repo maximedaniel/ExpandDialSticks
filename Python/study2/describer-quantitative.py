@@ -5,6 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 from utils import *
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 imgDir = 'img'
 BVP_HZ = 64
 EPOCH_START = -2
@@ -40,7 +42,7 @@ INPUT_COLUMN_NAMES = ['DATE', 'PARTICIPANT', 'SESSION', 'TASK', 'MODALITY', 'GSR
        'PIN_POSITION29']
 
 OUTPUT_COLUMN_NAMES = [ 
-    'Date', 'Participant', 'Task', 'Modality', 'Trial' , 'Density',
+    'Date', 'Participant', 'Task', 'Modality', 'Session', 'Trial' , 'Density',
     'Target_X', 'Target_Y',
     'SC_Count_Mean', 'SC_Count_SD', 'SC_Count_Max', 'SC_Count_Min',
     'SC_Amplitude_Mean', 'SC_Amplitude_SD', 'SC_Amplitude_Max', 'SC_Amplitude_Min',
@@ -90,6 +92,7 @@ for participant in range (0, len(participants)):
             isRestSession = True if 'REST' in modality else False
             # PROCESS EACH SESSION
             df_session =  df_participant[(df_participant['TASK'] == task) & (df_participant['MODALITY'] == modality)]
+            session_index = df_session['SESSION'].unique()[0]
             sc_size_conditions = []
             # PROCESS EACH TRIAL
             trial_start_indexes = df_session[df_session['TRIAL_START'] == 1].index
@@ -109,6 +112,7 @@ for participant in range (0, len(participants)):
                     'Participant':participant, 
                     'Task':task, 
                     'Modality': modality,
+                    'Session': session_index,
                     'Trial' : trial_index,
                     'Density' : sc_density,
 

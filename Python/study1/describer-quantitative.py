@@ -9,10 +9,14 @@ from plotter.SpacePlotter import SpacePlotter
 from plotter.SignalPlotter import SignalPlotter 
 from utils import *
 import random
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 imgDir = 'img'
 BVP_HZ = 64
-EPOCH_START = -2
-EPOCH_DURATION = 10
+# EPOCH_START = -2
+# EPOCH_DURATION = 10
+EPOCH_START = -1
+EPOCH_DURATION = 7
 PRINTING = False
 PLOTTING = False
 SAVING = False
@@ -59,7 +63,7 @@ INPUT_COLUMN_NAMES = ['DATE', 'PARTICIPANT', 'SESSION', 'TASK', 'MODALITY', 'GSR
        'PIN_PROXIMITY29']
 
 OUTPUT_COLUMN_NAMES = [ 
-    'Date', 'Participant', 'Task', 'Modality', 'Trial' , 
+    'Date', 'Participant', 'Task', 'Modality', 'Session', 'Trial' , 
     'Target_X', 'Target_Y',
     'SC_Duration', 'SC_Count_Mean', 'SC_Count_SD', 'SC_Count_Max', 'SC_Count_Min',
     'SC_Amplitude_Mean', 'SC_Amplitude_SD', 'SC_Amplitude_Max', 'SC_Amplitude_Min',
@@ -110,6 +114,7 @@ for participant in range (len(participants)):
             isRestSession = True if 'REST' in modality else False
             # PROCESS EACH SESSION
             df_session =  df_participant[(df_participant['TASK'] == task) & (df_participant['MODALITY'] == modality)]
+            session_index = df_session['SESSION'].unique()[0]
             sc_size_conditions = []
             # PROCESS EACH TRIAL
             trial_start_indexes = df_session[df_session['TRIAL_START'] == 1].index
@@ -128,6 +133,7 @@ for participant in range (len(participants)):
                         'Participant':participant, 
                         'Task':task, 
                         'Modality': modality,
+                        'Session': session_index,
                         'Trial' : trial_index,
 
                         'Target_X': np.nan,
@@ -317,7 +323,7 @@ for participant in range (len(participants)):
                             )
                         df_sc_signals.set_index('DATE', inplace=True,  verify_integrity=True)
                         df_sc_signals.index = (df_sc_signals.index - df_sc_trigger.index[0]).total_seconds()
-                        sc_index_resampled = np.sort(np.concatenate((df_sc_signals.index.values, np.arange(EPOCH_START, sc_duration, 1/64))))
+                        sc_index_resampled = np.sort(np.concatenate((df_sc_signals.index.values, np.arange(EPOCH_START, sc_duration, 1/BVP_HZ))))
                         df_sc_signals = df_sc_signals.reindex(sc_index_resampled, fill_value=np.nan).interpolate(method='linear').fillna(0)
 
                         # PROCESS GSR and 

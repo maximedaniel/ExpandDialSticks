@@ -135,7 +135,7 @@ class StackedBarPlotter:
           # Compute MEAN and CI
           column_mean = dataDf[columnName].mean()
           column_ci = pg.compute_bootci(dataDf[columnName],func='mean')
-          print('%s -> %f[%f %f](95 CI)' %(columnName, column_mean, column_ci[0], column_ci[1]))
+          #print('%s -> %f[%f %f](95 CI)' %(columnName, column_mean, column_ci[0], column_ci[1]))
           axs[1].plot(column_mean, i, 'o', markersize=6, markerfacecolor='white', markeredgecolor='black', markeredgewidth=1.5) 
           axs[1].hlines(columnName, column_ci[0], column_ci[1], colors='black', linestyles='solid', linewidth=1.5)
           axs[1].barh(y=columnName, width=0.1, height=height, left=0, color='white')

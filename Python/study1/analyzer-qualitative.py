@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import os
-from mystats import statistics
+import os, sys; sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+from mystatspackage import statistics
 import sys
 from anytree import Node, RenderTree
 
@@ -64,24 +64,28 @@ factor_names_list = [['Task'],['Modality'], ['Task', 'Modality']]
 factor_types_list = [[str],[ str], [str, str]]
 
 variable_name_list = [
-    #'NOT_STRESSED⇔MAX_STRESSED', 
+    'NOT_STRESSED⇔MAX_STRESSED', 
     'NERVOUS⇔RELAXED',
     'CALM⇔AGITATED', 
     'SERENE⇔SURPRISED',
-    #'SLOW⇔FAST', 'RIGID⇔FLUID', 'CALM⇔BRUTAL',
-    #'PREDICTABLE⇔SURPRISING', 'SYNCHRONOUS⇔ASYNCHRONOUS'
+    'SLOW⇔FAST', 'RIGID⇔FLUID', 'CALM⇔BRUTAL',
+    'PREDICTABLE⇔SURPRISING', 'SYNCHRONOUS⇔ASYNCHRONOUS'
 ]
 variable_scale_list = [
-    7,5,
-    5,5,
+    7,
+    5,
+    5,
+    5,
     5,5,5,
     5,5
 ]
 reverse_scale_list = [
-    True, False,
-    True, True,
-    True, False, True,
-    True, False
+    False, 
+    False,
+    False, 
+    False,
+    False, False, False,
+    False, False
 ]
 for factor_names, factor_types in zip(factor_names_list, factor_types_list):
     multifactor_name = ' x '.join(factor_names)
@@ -128,12 +132,12 @@ for factor_names, factor_types in zip(factor_names_list, factor_types_list):
         # Fill variable dataframe
         for index, variable_name in enumerate(variable_name_list):
             dat = df_child[variable_name].values
-            # reverse_scale = reverse_scale_list[index]
-            # if reverse_scale:
-            #     print(dat)
-            #     dat = (variable_scale_list[index] + 1) - dat
-            #     print(dat)
-            #     exit()
+            reverse_scale = reverse_scale_list[index]
+            if reverse_scale:
+                #print(dat)
+                dat = (variable_scale_list[index] + 1) - dat
+                #print(dat)
+                #exit()
 
             df_variable = pd.DataFrame(
             columns=[child_name],

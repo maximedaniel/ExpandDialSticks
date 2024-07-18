@@ -4,16 +4,16 @@ import neurokit2 as nk
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
-import os
+import os, sys; sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 from scipy import stats
-from mystats import statistics
+from mystatspackage import statistics
 import sys
 from plotter.HeatMapPlotter import HeatMapPlotter 
 from plotter.SpacePlotter import SpacePlotter 
 from plotter.SignalPlotter import SignalPlotter 
 from anytree import Node, RenderTree
 from utils import *
-from mystats import ConfidencePlotter
+from mystatspackage import ConfidencePlotter
 
 # Get the current working directory
 cwd = os.getcwd()
@@ -54,6 +54,8 @@ INPUT_COLUMN_NAMES = [
 parse_directory = "parse"
 quant_file = 'quantitative-description.csv'
 df_quant = pd.read_csv(os.path.join(parse_directory, quant_file))
+print(set(df_quant.columns.values.tolist()))
+print(set(INPUT_COLUMN_NAMES))
 column_name_diff = list(set(df_quant.columns.values.tolist()) - set(INPUT_COLUMN_NAMES))
 if len(column_name_diff) != 0:
     err("Missing columns (%s)" %column_name_diff)
